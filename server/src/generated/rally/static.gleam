@@ -1,0 +1,52 @@
+//// Generated. Do not edit.
+////
+//// Static-file helper functions.
+//// Derived from Rally's static asset runtime contract.
+//// Emits path-normalization helpers used by generated/static_handler.gleam.
+
+import gleam/bool
+import gleam/list
+import gleam/option.{type Option, None, Some}
+import gleam/string
+
+pub fn strip_prefix(
+  request_path request_path: String,
+  url_prefix url_prefix: String,
+) -> Option(String) {
+  use <- bool.guard(
+    when: string.starts_with(request_path, url_prefix),
+    return: Some(string.drop_start(request_path, string.length(url_prefix))),
+  )
+  None
+}
+
+pub fn has_traversal(relative_path: String) -> Bool {
+  relative_path
+  |> string.split("/")
+  |> list.any(fn(seg) { seg == ".." || seg == "." || seg == "" })
+}
+
+pub fn resolve_path(
+  filesystem_root filesystem_root: String,
+  relative_path relative_path: String,
+) -> String {
+  let root = case string.ends_with(filesystem_root, "/") {
+    True -> string.drop_end(filesystem_root, 1)
+    False -> filesystem_root
+  }
+  root <> "/" <> relative_path
+}
+
+pub fn content_type(relative_path: String) -> String {
+  case ends_in(relative_path, [".mjs", ".js", ".css", ".map"]) {
+    Some(".mjs") | Some(".js") -> "text/javascript"
+    Some(".css") -> "text/css"
+    Some(".map") -> "application/json"
+    _ -> "application/octet-stream"
+  }
+}
+
+fn ends_in(path: String, exts: List(String)) -> Option(String) {
+  list.find(exts, fn(ext) { string.ends_with(path, ext) })
+  |> option.from_result
+}

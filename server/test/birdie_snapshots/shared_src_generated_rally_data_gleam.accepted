@@ -1,0 +1,20 @@
+---
+version: 2.0.0
+title: shared__src__generated__rally__data_gleam
+---
+//// Generated. Do not edit.
+////
+//// Shared remote-data types used by generated page and API state.
+//// Derived from Rally's shared runtime contract.
+//// Emits the stable RemoteData/Data types that generated page state can import.
+
+pub type RemoteData(value, error) {
+  NotAsked
+  Loading
+  Success(value)
+  Failure(error)
+}
+
+pub type Data(value) =
+  RemoteData(value, List(String))
+

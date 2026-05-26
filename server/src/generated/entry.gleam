@@ -1,0 +1,353 @@
+//// Generated. Do not edit.
+////
+//// HTTP and WebSocket server entry point that routes requests to configured
+//// Mounts.
+//// Derived from [[tools.rally.clients]], each Mount route root,
+//// generated/<mount_namespace>/router.gleam,
+//// generated/<mount_namespace>/ssr_handler.gleam,
+//// and generated/<mount_namespace>/ws_handler.gleam.
+
+import generated/admin/router as mount_0_router
+import generated/admin/ssr_handler as mount_0_ssr_handler
+import generated/admin/ws_handler as mount_0_ws_handler
+import generated/public/router as mount_1_router
+import generated/public/ssr_handler as mount_1_ssr_handler
+import generated/public/ws_handler as mount_1_ws_handler
+import generated/rally/authentication as authentication_runtime
+import generated/rally/env
+import generated/rally/session
+import generated/static_handler
+import gleam/bit_array
+import gleam/bool
+import gleam/bytes_tree
+import gleam/dict
+import gleam/http.{Get, Post}
+import gleam/http/request.{type Request, Request}
+import gleam/http/response.{type Response}
+import gleam/int
+import gleam/list
+import gleam/option
+import gleam/result
+import gleam/string
+import gleam/uri
+import mist.{type Connection, type ResponseData}
+import server/admin/authentication
+import server/server_context.{type ServerContext}
+
+type Mount {
+  Mount0
+  Mount1
+  NoMount
+}
+
+pub fn handle_request(
+  req req: Request(Connection),
+  server_context server_context: ServerContext,
+) -> Response(ResponseData) {
+  let Request(path: path, ..) = req
+  case select_mount(path) {
+    Mount0 -> mount_0_handle_request(req, server_context)
+    Mount1 -> mount_1_handle_request(req, server_context)
+    NoMount -> not_found()
+  }
+}
+
+fn select_mount(path: String) -> Mount {
+  use <- bool.guard(when: matches_route_root(path, "/admin"), return: Mount0)
+  use <- bool.guard(when: matches_route_root(path, "/"), return: Mount1)
+  NoMount
+}
+
+fn matches_route_root(path: String, route_root: String) -> Bool {
+  case route_root {
+    "/" -> True
+    _ -> path == route_root || string.starts_with(path, route_root <> "/")
+  }
+}
+
+fn mount_0_handle_request(
+  req: Request(Connection),
+  server_context: ServerContext,
+) -> Response(ResponseData) {
+  let Request(path: path, method: method, ..) = req
+  case path, method {
+    "/admin/sign_in", Get -> redirect_to("/admin/sign_in/password")
+    "/admin/sign_in/password", Get -> mount_0_handle_ssr(req, server_context)
+    "/admin/sign_in/code", Get -> mount_0_handle_ssr(req, server_context)
+    "/admin/sign_in", Post -> mount_0_handle_sign_in(req)
+    "/admin/sign_out", Get -> mount_0_sign_out(req)
+    "/admin/ws", _ ->
+      case admin_authenticated(req) {
+        True -> mount_0_handle_ws(req, server_context)
+        False -> unauthorized()
+      }
+    _, _ ->
+      case static_handler.try_serve(path) {
+        option.Some(resp) -> resp
+        option.None ->
+          case method {
+            Get ->
+              case admin_authenticated(req) {
+                True -> mount_0_handle_ssr(req, server_context)
+                False -> redirect_to("/admin/sign_in/password")
+              }
+            _ -> not_found()
+          }
+      }
+  }
+}
+
+fn mount_0_handle_ws(
+  req: Request(Connection),
+  server_context: ServerContext,
+) -> Response(ResponseData) {
+  let session_id = get_session_id(req)
+  let hostname = request_header(req, "host")
+  mist.websocket(
+    req,
+    mount_0_ws_handler.handler,
+    fn(conn) {
+      mount_0_ws_handler.on_init(
+        conn: conn,
+        server_context: server_context,
+        session_id: session_id,
+        hostname: hostname,
+      )
+    },
+    mount_0_ws_handler.on_close,
+  )
+}
+
+fn mount_0_handle_ssr(
+  req: Request(Connection),
+  server_context: ServerContext,
+) -> Response(ResponseData) {
+  let session_id = get_session_id(req)
+  let hostname = request_header(req, "host")
+  let req_uri = request.to_uri(req)
+  let route = mount_0_router.parse_route(req_uri)
+  let query = case req_uri.query {
+    option.Some(q) ->
+      uri.parse_query(q)
+      |> result.unwrap([])
+      |> dict.from_list
+    option.None -> dict.new()
+  }
+  mount_0_ssr_handler.handle_request(
+    route: route,
+    server_context: server_context,
+    session_id: session_id,
+    hostname: hostname,
+    query: query,
+  )
+  |> set_session_cookie_if_missing(req: req, session_id:)
+}
+
+fn mount_1_handle_request(
+  req: Request(Connection),
+  server_context: ServerContext,
+) -> Response(ResponseData) {
+  let Request(path: path, method: method, ..) = req
+  case path == "/ws" {
+    True -> mount_1_handle_ws(req, server_context)
+    False ->
+      case static_handler.try_serve(path) {
+        option.Some(resp) -> resp
+        option.None ->
+          case method {
+            Get -> mount_1_handle_ssr(req, server_context)
+            _ -> not_found()
+          }
+      }
+  }
+}
+
+fn mount_1_handle_ws(
+  req: Request(Connection),
+  server_context: ServerContext,
+) -> Response(ResponseData) {
+  let session_id = get_session_id(req)
+  let hostname = request_header(req, "host")
+  mist.websocket(
+    req,
+    mount_1_ws_handler.handler,
+    fn(conn) {
+      mount_1_ws_handler.on_init(
+        conn: conn,
+        server_context: server_context,
+        session_id: session_id,
+        hostname: hostname,
+      )
+    },
+    mount_1_ws_handler.on_close,
+  )
+}
+
+fn mount_1_handle_ssr(
+  req: Request(Connection),
+  server_context: ServerContext,
+) -> Response(ResponseData) {
+  let session_id = get_session_id(req)
+  let hostname = request_header(req, "host")
+  let req_uri = request.to_uri(req)
+  let route = mount_1_router.parse_route(req_uri)
+  let query = case req_uri.query {
+    option.Some(q) ->
+      uri.parse_query(q)
+      |> result.unwrap([])
+      |> dict.from_list
+    option.None -> dict.new()
+  }
+  mount_1_ssr_handler.handle_request(
+    route: route,
+    server_context: server_context,
+    session_id: session_id,
+    hostname: hostname,
+    query: query,
+  )
+  |> set_session_cookie_if_missing(req: req, session_id:)
+}
+
+fn request_header(req: Request(Connection), name: String) -> String {
+  request.get_header(req, name) |> result.unwrap("")
+}
+
+fn admin_authenticated(req: Request(Connection)) -> Bool {
+  authentication.is_authenticated(
+    cookie_header: request.get_header(req, "cookie"),
+    session_id: get_session_id(req),
+  )
+}
+
+fn mount_0_handle_sign_in(req: Request(Connection)) -> Response(ResponseData) {
+  let session_id = get_session_id(req)
+  case read_sign_in_form(req) {
+    Ok(form) ->
+      case accepts_sign_in(form) {
+        True ->
+          redirect_to("/admin/games")
+          |> set_cookie_header(authentication.issue_cookie(session_id:))
+          |> set_session_cookie_if_missing(req: req, session_id:)
+        False ->
+          redirect_to("/admin/sign_in/password")
+          |> set_session_cookie_if_missing(req: req, session_id:)
+      }
+    Error(Nil) ->
+      redirect_to("/admin/sign_in/password")
+      |> set_session_cookie_if_missing(req: req, session_id:)
+  }
+}
+
+fn mount_0_sign_out(req: Request(Connection)) -> Response(ResponseData) {
+  let session_id = get_session_id(req)
+  redirect_to("/admin/sign_in/password")
+  |> set_cookie_header(authentication.clear_cookie())
+  |> set_session_cookie_if_missing(req: req, session_id:)
+}
+
+type SignInForm {
+  SignInForm(email: String, password: String, code: String)
+}
+
+fn read_sign_in_form(req: Request(Connection)) -> Result(SignInForm, Nil) {
+  use body_req <- result.try(
+    mist.read_body(req, max_body_limit: 4096)
+    |> result.replace_error(Nil),
+  )
+  use body <- result.try(bit_array.to_string(body_req.body))
+  let pairs =
+    uri.parse_query(body)
+    |> result.unwrap([])
+  Ok(SignInForm(
+    email: form_value(pairs, "email"),
+    password: form_value(pairs, "password"),
+    code: form_value(pairs, "code"),
+  ))
+}
+
+fn form_value(pairs: List(#(String, String)), name: String) -> String {
+  list.key_find(pairs, name)
+  |> result.unwrap("")
+}
+
+fn accepts_sign_in(form: SignInForm) -> Bool {
+  let SignInForm(email:, password:, code:) = form
+  authentication.verify_password(email:, password:)
+  || authentication.verify_sign_in_code(email:, code:)
+}
+
+fn redirect_to(path: String) -> Response(ResponseData) {
+  response.new(303)
+  |> response.set_header("location", path)
+  |> response.set_body(mist.Bytes(bytes_tree.from_string("")))
+}
+
+fn unauthorized() -> Response(ResponseData) {
+  response.new(401)
+  |> response.set_body(mist.Bytes(bytes_tree.from_string("Unauthorized")))
+}
+
+fn get_session_id(req: Request(Connection)) -> String {
+  case request.get_header(req, "cookie") {
+    Ok(cookie) ->
+      session.extract_session_id(cookie) |> result.unwrap(session.generate_id())
+    Error(Nil) -> session.generate_id()
+  }
+}
+
+fn set_session_cookie_if_missing(
+  resp resp: Response(ResponseData),
+  req req: Request(Connection),
+  session_id session_id: String,
+) -> Response(ResponseData) {
+  let has_session = case request.get_header(req, "cookie") {
+    Ok(cookie) -> result.is_ok(session.extract_session_id(cookie))
+    Error(Nil) -> False
+  }
+  case has_session {
+    True -> resp
+    False ->
+      response.prepend_header(
+        resp,
+        "set-cookie",
+        session.set_cookie_header(session_id:, secure: env.secure_cookies()),
+      )
+  }
+}
+
+fn set_cookie_header(
+  resp: Response(ResponseData),
+  cookie: authentication_runtime.Cookie,
+) -> Response(ResponseData) {
+  case cookie {
+    authentication_runtime.SetCookie(name:, value:, max_age:) ->
+      response.prepend_header(
+        resp,
+        "set-cookie",
+        name
+          <> "="
+          <> value
+          <> "; Path=/admin; HttpOnly; SameSite=Lax; Max-Age="
+          <> int_to_string(max_age)
+          <> case env.secure_cookies() {
+          True -> "; Secure"
+          False -> ""
+        },
+      )
+    authentication_runtime.ClearCookie(name:) ->
+      response.prepend_header(
+        resp,
+        "set-cookie",
+        name <> "=; Path=/admin; HttpOnly; SameSite=Lax; Max-Age=0",
+      )
+  }
+}
+
+fn int_to_string(value: Int) -> String {
+  int.to_string(value)
+}
+
+fn not_found() -> Response(ResponseData) {
+  response.new(404)
+  |> response.set_body(mist.Bytes(bytes_tree.from_string("Not found")))
+}

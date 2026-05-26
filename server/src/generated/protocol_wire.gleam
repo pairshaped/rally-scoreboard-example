@@ -1,0 +1,43 @@
+//// Generated. Do not edit.
+////
+//// Server protocol facade for WebSocket frames.
+//// Derived from Rally's ETF framing rules and the shared root API types
+//// when this app uses shared/api/to_server.gleam and shared/api/to_client.gleam.
+//// Root API frames use plain ETF values with a fixed "to_server" or
+//// "to_client" envelope module.
+
+import gleam/dynamic.{type Dynamic}
+import libero/error.{type DecodeError, DecodeError}
+import libero/wire as libero_wire
+import shared/api/to_client.{type ToClient}
+import shared/api/to_server.{type ToServer}
+
+pub fn decode_request(
+  data: BitArray,
+) -> Result(#(String, Int, Dynamic), DecodeError) {
+  libero_wire.decode_request(data)
+}
+
+pub fn encode_response(request_id request_id: Int, value value: a) -> BitArray {
+  libero_wire.encode_response(request_id:, value:)
+}
+
+pub fn coerce(value: a) -> b {
+  libero_wire.coerce(value)
+}
+
+/// Decode a root API ToServer frame from the client.
+/// The envelope module must be exactly "to_server".
+pub fn decode_to_server(data: BitArray) -> Result(ToServer, DecodeError) {
+  case decode_request(data) {
+    Ok(#("to_server", _, value)) -> Ok(coerce(value))
+    Ok(#(_, _, _)) -> Error(DecodeError("expected to_server request envelope"))
+    Error(error) -> Error(error)
+  }
+}
+
+/// Encode a typed server emission for all active ToClient receivers.
+/// The client runtime fans this out through receiver_dispatch.to_client.
+pub fn encode_to_client(msg: ToClient) -> BitArray {
+  libero_wire.encode_push("to_client", msg)
+}

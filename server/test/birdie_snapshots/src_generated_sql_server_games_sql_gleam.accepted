@@ -1,0 +1,331 @@
+---
+version: 2.0.0
+title: src__generated__sql__server__games_sql_gleam
+---
+import gleam/dynamic/decode
+import gleam/option.{type Option}
+import sqlight
+
+/// Generated from src/server/sql/games/create.sql
+pub type CreateRow {
+  CreateRow(
+    id: Int,
+    home_code: String,
+    away_code: String,
+    home_score: Int,
+    away_score: Int,
+    period: String,
+    final: Int,
+  )
+}
+
+/// Generated from src/server/sql/games/create.sql
+pub fn create(
+  db db: sqlight.Connection,
+  home_code home_code: String,
+  away_code away_code: String,
+) -> Result(List(CreateRow), sqlight.Error) {
+  sqlight.query(
+    "INSERT INTO games (home_code, away_code, home_score, away_score, period, final) VALUES (:home_code, :away_code, 0, 0, 'Scheduled', 0) RETURNING id, home_code, away_code, home_score, away_score, period, final",
+    on: db,
+    with: [sqlight.text(home_code), sqlight.text(away_code)],
+    expecting: {
+      use id <- decode.field(0, decode.int)
+      use home_code <- decode.field(1, decode.string)
+      use away_code <- decode.field(2, decode.string)
+      use home_score <- decode.field(3, decode.int)
+      use away_score <- decode.field(4, decode.int)
+      use period <- decode.field(5, decode.string)
+      use final <- decode.field(6, decode.int)
+      decode.success(CreateRow(
+        id:,
+        home_code:,
+        away_code:,
+        home_score:,
+        away_score:,
+        period:,
+        final:,
+      ))
+    },
+  )
+}
+
+/// Generated from src/server/sql/games/final_result.sql
+pub type FinalResultRow {
+  FinalResultRow(
+    id: Int,
+    home_code: String,
+    away_code: String,
+    home_score: Int,
+    away_score: Int,
+    period: String,
+    final: Int,
+  )
+}
+
+/// Generated from src/server/sql/games/final_result.sql
+pub fn final_result(
+  db db: sqlight.Connection,
+  home_score home_score: Int,
+  away_score away_score: Int,
+  game_id game_id: Int,
+) -> Result(List(FinalResultRow), sqlight.Error) {
+  sqlight.query(
+    "UPDATE games SET home_score = :home_score, away_score = :away_score, period = 'Final', final = 1 WHERE id = :game_id RETURNING id, home_code, away_code, home_score, away_score, period, final",
+    on: db,
+    with: [
+      sqlight.int(home_score),
+      sqlight.int(away_score),
+      sqlight.int(game_id),
+    ],
+    expecting: {
+      use id <- decode.field(0, decode.int)
+      use home_code <- decode.field(1, decode.string)
+      use away_code <- decode.field(2, decode.string)
+      use home_score <- decode.field(3, decode.int)
+      use away_score <- decode.field(4, decode.int)
+      use period <- decode.field(5, decode.string)
+      use final <- decode.field(6, decode.int)
+      decode.success(FinalResultRow(
+        id:,
+        home_code:,
+        away_code:,
+        home_score:,
+        away_score:,
+        period:,
+        final:,
+      ))
+    },
+  )
+}
+
+/// Generated from src/server/sql/games/get.sql
+pub type GetRow {
+  GetRow(
+    id: Int,
+    home_code: String,
+    home_name: String,
+    away_code: String,
+    away_name: String,
+    home_score: Int,
+    away_score: Int,
+    period: String,
+    final: Int,
+  )
+}
+
+/// Generated from src/server/sql/games/get.sql
+pub fn get(
+  db db: sqlight.Connection,
+  game_id game_id: Int,
+) -> Result(List(GetRow), sqlight.Error) {
+  sqlight.query(
+    "SELECT g.id, g.home_code, home.name AS home_name, g.away_code, away.name AS away_name, g.home_score, g.away_score, g.period, g.final FROM games AS g INNER JOIN teams AS home ON g.home_code = home.code INNER JOIN teams AS away ON g.away_code = away.code WHERE g.id = :game_id",
+    on: db,
+    with: [sqlight.int(game_id)],
+    expecting: {
+      use id <- decode.field(0, decode.int)
+      use home_code <- decode.field(1, decode.string)
+      use home_name <- decode.field(2, decode.string)
+      use away_code <- decode.field(3, decode.string)
+      use away_name <- decode.field(4, decode.string)
+      use home_score <- decode.field(5, decode.int)
+      use away_score <- decode.field(6, decode.int)
+      use period <- decode.field(7, decode.string)
+      use final <- decode.field(8, decode.int)
+      decode.success(GetRow(
+        id:,
+        home_code:,
+        home_name:,
+        away_code:,
+        away_name:,
+        home_score:,
+        away_score:,
+        period:,
+        final:,
+      ))
+    },
+  )
+}
+
+/// Generated from src/server/sql/games/list_admin.sql
+pub type ListAdminRow {
+  ListAdminRow(
+    id: Int,
+    home_code: String,
+    away_code: String,
+    home_score: Int,
+    away_score: Int,
+    period: String,
+    final: Int,
+  )
+}
+
+/// Generated from src/server/sql/games/list_admin.sql
+pub fn list_admin(
+  db db: sqlight.Connection,
+) -> Result(List(ListAdminRow), sqlight.Error) {
+  sqlight.query(
+    "SELECT g.id, g.home_code, g.away_code, g.home_score, g.away_score, g.period, g.final FROM games AS g ORDER BY g.id",
+    on: db,
+    with: [],
+    expecting: {
+      use id <- decode.field(0, decode.int)
+      use home_code <- decode.field(1, decode.string)
+      use away_code <- decode.field(2, decode.string)
+      use home_score <- decode.field(3, decode.int)
+      use away_score <- decode.field(4, decode.int)
+      use period <- decode.field(5, decode.string)
+      use final <- decode.field(6, decode.int)
+      decode.success(ListAdminRow(
+        id:,
+        home_code:,
+        away_code:,
+        home_score:,
+        away_score:,
+        period:,
+        final:,
+      ))
+    },
+  )
+}
+
+/// Generated from src/server/sql/games/list_public.sql
+pub type ListPublicRow {
+  ListPublicRow(
+    id: Int,
+    home_code: String,
+    home_name: String,
+    away_code: String,
+    away_name: String,
+    home_score: Int,
+    away_score: Int,
+    period: String,
+    final: Int,
+  )
+}
+
+/// Generated from src/server/sql/games/list_public.sql
+pub fn list_public(
+  db db: sqlight.Connection,
+  team_filter team_filter: String,
+) -> Result(List(ListPublicRow), sqlight.Error) {
+  sqlight.query(
+    "SELECT g.id, g.home_code, home.name AS home_name, g.away_code, away.name AS away_name, g.home_score, g.away_score, g.period, g.final FROM games AS g INNER JOIN teams AS home ON g.home_code = home.code INNER JOIN teams AS away ON g.away_code = away.code WHERE :team_filter = '' OR g.home_code = :team_filter OR g.away_code = :team_filter ORDER BY g.id",
+    on: db,
+    with: [sqlight.text(team_filter)],
+    expecting: {
+      use id <- decode.field(0, decode.int)
+      use home_code <- decode.field(1, decode.string)
+      use home_name <- decode.field(2, decode.string)
+      use away_code <- decode.field(3, decode.string)
+      use away_name <- decode.field(4, decode.string)
+      use home_score <- decode.field(5, decode.int)
+      use away_score <- decode.field(6, decode.int)
+      use period <- decode.field(7, decode.string)
+      use final <- decode.field(8, decode.int)
+      decode.success(ListPublicRow(
+        id:,
+        home_code:,
+        home_name:,
+        away_code:,
+        away_name:,
+        home_score:,
+        away_score:,
+        period:,
+        final:,
+      ))
+    },
+  )
+}
+
+/// Generated from src/server/sql/games/standings.sql
+pub type StandingsRow {
+  StandingsRow(
+    team_code: Option(String),
+    team_name: String,
+    wins: Int,
+    losses: Int,
+    points_for: Int,
+    points_against: Int,
+  )
+}
+
+/// Generated from src/server/sql/games/standings.sql
+pub fn standings(
+  db db: sqlight.Connection,
+) -> Result(List(StandingsRow), sqlight.Error) {
+  sqlight.query(
+    "WITH team_games AS ( SELECT home_code AS team_code, home_score AS points_for, away_score AS points_against, CASE WHEN home_score > away_score THEN 1 ELSE 0 END AS win, CASE WHEN home_score < away_score THEN 1 ELSE 0 END AS loss FROM games WHERE final = 1 UNION ALL SELECT away_code AS team_code, away_score AS points_for, home_score AS points_against, CASE WHEN away_score > home_score THEN 1 ELSE 0 END AS win, CASE WHEN away_score < home_score THEN 1 ELSE 0 END AS loss FROM games WHERE final = 1 ) SELECT t.code AS team_code, t.name AS team_name, COALESCE(SUM(team_games.win), 0) AS wins, COALESCE(SUM(team_games.loss), 0) AS losses, COALESCE(SUM(team_games.points_for), 0) AS points_for, COALESCE(SUM(team_games.points_against), 0) AS points_against FROM teams AS t LEFT JOIN team_games ON t.code = team_games.team_code GROUP BY t.code, t.name ORDER BY wins DESC, points_for DESC, t.code",
+    on: db,
+    with: [],
+    expecting: {
+      use team_code <- decode.field(0, decode.optional(decode.string))
+      use team_name <- decode.field(1, decode.string)
+      use wins <- decode.field(2, decode.int)
+      use losses <- decode.field(3, decode.int)
+      use points_for <- decode.field(4, decode.int)
+      use points_against <- decode.field(5, decode.int)
+      decode.success(StandingsRow(
+        team_code:,
+        team_name:,
+        wins:,
+        losses:,
+        points_for:,
+        points_against:,
+      ))
+    },
+  )
+}
+
+/// Generated from src/server/sql/games/update_score.sql
+pub type UpdateScoreRow {
+  UpdateScoreRow(
+    id: Int,
+    home_code: String,
+    away_code: String,
+    home_score: Int,
+    away_score: Int,
+    period: String,
+    final: Int,
+  )
+}
+
+/// Generated from src/server/sql/games/update_score.sql
+pub fn update_score(
+  db db: sqlight.Connection,
+  home_score home_score: Int,
+  away_score away_score: Int,
+  period period: String,
+  game_id game_id: Int,
+) -> Result(List(UpdateScoreRow), sqlight.Error) {
+  sqlight.query(
+    "UPDATE games SET home_score = :home_score, away_score = :away_score, period = :period, final = 0 WHERE id = :game_id RETURNING id, home_code, away_code, home_score, away_score, period, final",
+    on: db,
+    with: [
+      sqlight.int(home_score),
+      sqlight.int(away_score),
+      sqlight.text(period),
+      sqlight.int(game_id),
+    ],
+    expecting: {
+      use id <- decode.field(0, decode.int)
+      use home_code <- decode.field(1, decode.string)
+      use away_code <- decode.field(2, decode.string)
+      use home_score <- decode.field(3, decode.int)
+      use away_score <- decode.field(4, decode.int)
+      use period <- decode.field(5, decode.string)
+      use final <- decode.field(6, decode.int)
+      decode.success(UpdateScoreRow(
+        id:,
+        home_code:,
+        away_code:,
+        home_score:,
+        away_score:,
+        period:,
+        final:,
+      ))
+    },
+  )
+}
+

@@ -1,0 +1,20 @@
+build/
+tmp/
+manifest.toml
+
+# Per-package build + manifest output
+client/build/
+client/manifest.toml
+server/build/
+server/manifest.toml
+shared/build/
+shared/manifest.toml
+
+# Runtime database files. Keep migrations checked in.
+server/db/*
+!server/db/migrations/
+!server/db/migrations/**
+
+erl_crash.dump
+*.bak
+.DS_Store

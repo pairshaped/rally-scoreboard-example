@@ -1,0 +1,23 @@
+//// Generated. Do not edit.
+////
+//// Server-side effect runner for WebSocket handlers.
+//// Derived from Rally's server effect runtime contract.
+//// Runs Lustre effects for generated WebSocket handlers and encodes emitted ToClient values.
+
+import gleam/dynamic
+import lustre/effect.{type Effect}
+
+/// Run a backend-produced `Effect(ToClient)`, invoking `dispatch` for
+/// each emitted ToClient value so the WS handler can encode and send it.
+pub fn run_to_client_effect(effect_: Effect(a), dispatch: fn(a) -> Nil) -> Nil {
+  effect.perform(
+    effect_,
+    fn(msg) { dispatch(msg) },
+    fn(_name, _payload) { Nil },
+    fn(_selector) { Nil },
+    fn() { dynamic.nil() },
+    fn(_key, _value) { Nil },
+    fn(_name, _decoder) { Nil },
+    fn(_name) { Nil },
+  )
+}

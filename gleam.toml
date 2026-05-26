@@ -1,0 +1,23 @@
+name = "scoreboard_tools"
+version = "0.1.0"
+target = "erlang"
+
+[dev_dependencies]
+rally = { path = "../rally" }
+glinter = ">= 2.19.0 and < 3.0.0"
+gleeunit = ">= 1.0.0 and < 2.0.0"
+
+[tools.glinter]
+stats = true
+warnings_as_errors = false
+
+[[tools.rally.clients]]
+namespace = "public"
+route_root = "/"
+user_logging = true
+issue_logging = true
+
+[[tools.rally.clients]]
+namespace = "admin"
+user_logging = true
+issue_logging = true

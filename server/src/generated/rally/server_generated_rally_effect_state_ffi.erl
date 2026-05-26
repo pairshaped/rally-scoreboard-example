@@ -1,0 +1,130 @@
+%% Generated. Do not edit.
+%%
+%% App-local FFI backing for the generated effect_state module.
+%% Derived from Rally's WebSocket effect-state runtime contract.
+%% Called by generated/rally/effect_state.gleam for per-socket process state.
+
+-module(server_generated_rally_effect_state_ffi).
+-export([put_ws_state/3, get_ws_conn/0, get_ws_page/0,
+         get_stored_server_context/0,
+         push_outgoing_frame/1, drain_outgoing_frames/0,
+         put_ws_session/1, get_ws_session/0,
+         put_ws_hostname/1, get_ws_hostname/0,
+         put_ws_request_context/1, get_ws_request_context/0,
+         put_ws_identity/1, get_ws_identity/0,
+         put_ws_authentication_timestamp/1, get_ws_authentication_timestamp/0,
+         clear_ws_authentication_state/0,
+         put_ws_server_shared_state/1, get_ws_server_shared_state/0,
+         put_backend_model/1, get_backend_model/0]).
+
+put_ws_state(Conn, Ctx, Page) ->
+    put(rally_ws_conn, Conn),
+    put(rally_ws_ctx, Ctx),
+    put(rally_ws_page, Page),
+    nil.
+
+get_ws_conn() ->
+    case get(rally_ws_conn) of
+        undefined -> {error, nil};
+        Val -> {ok, Val}
+    end.
+
+get_ws_page() ->
+    case get(rally_ws_page) of
+        undefined -> <<>>;
+        Val -> Val
+    end.
+
+get_stored_server_context() ->
+    case get(rally_ws_ctx) of
+        undefined -> {error, nil};
+        Val -> {ok, Val}
+    end.
+
+push_outgoing_frame(Frame) ->
+    case get(rally_outgoing_frames) of
+        undefined -> put(rally_outgoing_frames, [Frame]);
+        Frames -> put(rally_outgoing_frames, [Frame | Frames])
+    end,
+    nil.
+
+drain_outgoing_frames() ->
+    case get(rally_outgoing_frames) of
+        undefined -> [];
+        Frames -> put(rally_outgoing_frames, []), lists:reverse(Frames)
+    end.
+
+put_ws_session(SessionId) ->
+    put(rally_ws_session, SessionId),
+    nil.
+
+get_ws_session() ->
+    case get(rally_ws_session) of
+        undefined -> <<>>;
+        Val -> Val
+    end.
+
+put_ws_request_context(Ctx) ->
+    put(rally_ws_request_context, Ctx),
+    nil.
+
+get_ws_request_context() ->
+    case get(rally_ws_request_context) of
+        undefined -> {error, nil};
+        Val -> {ok, Val}
+    end.
+
+put_ws_hostname(Hostname) ->
+    put(rally_ws_hostname, Hostname),
+    nil.
+
+get_ws_hostname() ->
+    case get(rally_ws_hostname) of
+        undefined -> <<>>;
+        Val -> Val
+    end.
+
+put_ws_identity(Identity) ->
+    put(rally_ws_identity, Identity),
+    nil.
+
+get_ws_identity() ->
+    case get(rally_ws_identity) of
+        undefined -> {error, nil};
+        Val -> {ok, Val}
+    end.
+
+put_ws_authentication_timestamp(Timestamp) ->
+    put(rally_ws_authentication_timestamp, Timestamp),
+    nil.
+
+get_ws_authentication_timestamp() ->
+    case get(rally_ws_authentication_timestamp) of
+        undefined -> 0;
+        Val -> Val
+    end.
+
+clear_ws_authentication_state() ->
+    erase(rally_ws_identity),
+    put(rally_ws_authentication_timestamp, 0),
+    nil.
+
+put_ws_server_shared_state(State) ->
+    put(rally_ws_server_shared_state, State),
+    nil.
+
+get_ws_server_shared_state() ->
+    case get(rally_ws_server_shared_state) of
+        undefined -> {error, nil};
+        Val -> {ok, Val}
+    end.
+
+put_backend_model(Model) ->
+    put(rally_backend_model, Model),
+    nil.
+
+get_backend_model() ->
+    case get(rally_backend_model) of
+        undefined -> {error, nil};
+        Val -> {ok, Val}
+    end.

@@ -1,0 +1,50 @@
+// Generated. Do not edit.
+//
+// Plain ETF constructor registry for the root API graph.
+// Derived from shared/api/to_server.gleam, shared/api/to_client.gleam,
+// and every exported wire-visible custom type under shared/api/domain/.
+//
+// Module paths are intentionally absent from wire identity. Constructor
+// atoms must be unique across the whole shared API graph.
+
+import { registerConstructor } from "../../libero/libero/etf/wire_ffi.mjs";
+import * as toServer from "../../scoreboard_shared/shared/api/to_server.mjs";
+import * as toClient from "../../scoreboard_shared/shared/api/to_client.mjs";
+import * as game from "../../scoreboard_shared/shared/api/domain/game.mjs";
+import * as standing from "../../scoreboard_shared/shared/api/domain/standing.mjs";
+
+registerConstructor("load_games", toServer.LoadGames, 0);
+registerConstructor("load_game", toServer.LoadGame, 1);
+registerConstructor("load_standings", toServer.LoadStandings, 0);
+registerConstructor("load_admin_games", toServer.LoadAdminGames, 0);
+registerConstructor("create_game", toServer.CreateGame, 2);
+registerConstructor("update_score", toServer.UpdateScore, 4);
+registerConstructor("mark_final", toServer.MarkFinal, 1);
+registerConstructor("correct_result", toServer.CorrectResult, 3);
+registerConstructor("games_loaded", toClient.GamesLoaded, 1);
+registerConstructor("game_loaded", toClient.GameLoaded, 1);
+registerConstructor("standings_loaded", toClient.StandingsLoaded, 1);
+registerConstructor("power_rankings_loaded", toClient.PowerRankingsLoaded, 1);
+registerConstructor("game_score_updated", toClient.GameScoreUpdated, 1);
+registerConstructor("standings_updated", toClient.StandingsUpdated, 1);
+registerConstructor("games_load_failed", toClient.GamesLoadFailed, 1);
+registerConstructor("admin_games_loaded", toClient.AdminGamesLoaded, 1);
+registerConstructor("game_created", toClient.GameCreated, 1);
+registerConstructor("score_update_saved", toClient.ScoreUpdateSaved, 1);
+registerConstructor("result_saved", toClient.ResultSaved, 1);
+registerConstructor("admin_error", toClient.AdminError, 1);
+registerConstructor("team", game.Team, 2);
+registerConstructor("public_game_summary", game.PublicGameSummary, 6);
+registerConstructor("game_detail", game.GameDetail, 7);
+registerConstructor("game_score_update", game.GameScoreUpdate, 5);
+registerConstructor("admin_game_summary", game.AdminGameSummary, 7);
+registerConstructor("admin_game_detail", game.AdminGameDetail, 7);
+registerConstructor("scheduled", game.Scheduled, 0);
+registerConstructor("live", game.Live, 1);
+registerConstructor("final", game.Final, 0);
+registerConstructor("standing_row", standing.StandingRow, 6);
+registerConstructor("power_ranking_row", standing.PowerRankingRow, 6);
+
+export function ensure_decoders() {
+  return true;
+}

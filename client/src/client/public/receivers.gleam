@@ -1,0 +1,52 @@
+//// Public ToClient receiver hub.
+////
+//// The generated public receiver dispatch delegates here so multiple public
+//// pages can react to the same server-emitted message without transport code
+//// knowing about page state.
+
+import gleam/option.{None, Some}
+import shared/api/to_client
+import shared/public/pages/game_detail
+import shared/public/pages/games
+import shared/public/pages/standings
+
+pub type Msg {
+  GamesPage(games.Msg)
+  GameDetailPage(game_detail.Msg)
+  StandingsPage(standings.Msg)
+  Notice(String)
+}
+
+fn receive_for_games(event: to_client.ToClient) -> List(Msg) {
+  case games.receive(event) {
+    Some(msg) -> [GamesPage(msg)]
+    None -> []
+  }
+}
+
+fn receive_for_game_detail(event: to_client.ToClient) -> List(Msg) {
+  case game_detail.receive(event) {
+    Some(msg) -> [GameDetailPage(msg)]
+    None -> []
+  }
+}
+
+fn receive_for_standings(event: to_client.ToClient) -> List(Msg) {
+  case standings.receive(event) {
+    Some(msg) -> [StandingsPage(msg)]
+    None -> []
+  }
+}
+
+pub fn receive_active(event: to_client.ToClient) -> List(Msg) {
+  receive_for_games(event)
+  |> append(receive_for_game_detail(event))
+  |> append(receive_for_standings(event))
+}
+
+fn append(left: List(a), right: List(a)) -> List(a) {
+  case left {
+    [] -> right
+    [first, ..rest] -> [first, ..append(rest, right)]
+  }
+}

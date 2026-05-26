@@ -1,0 +1,43 @@
+// Generated. Do not edit.
+//
+// Workspace protocol facade used by the shared client transport.
+// Importing codec_ffi.mjs registers the shared API constructors before
+// this facade decodes typed ETF values.
+// Derived from shared/api/to_server.gleam, shared/api/to_client.gleam,
+// and client/src/generated/codec_ffi.mjs.
+
+import "./codec_ffi.mjs";
+import { encode_request, decode_server_frame as libero_decode_server_frame, decode_safe, identity } from "../../libero/libero/rpc_ffi.mjs";
+import { Ok, Error as ResultError } from "../../gleam_stdlib/gleam.mjs";
+import { DecodeError } from "../../libero/libero/error.mjs";
+
+function normalizeInput(input) {
+  if (input instanceof Uint8Array) return input;
+  if (input instanceof ArrayBuffer) return new Uint8Array(input);
+  if (input && input.rawBuffer instanceof Uint8Array) return input.rawBuffer;
+  return new Uint8Array(input);
+}
+
+function decodeError(message) {
+  return new ResultError(new DecodeError(message));
+}
+
+export function decode_server_frame(data) {
+  try {
+    const bytes = normalizeInput(data);
+    if (bytes.length < 1) return decodeError("invalid server frame: empty");
+    if (bytes[0] !== 1) return libero_decode_server_frame(data);
+    const payloadResult = decode_safe(bytes.subarray(1));
+    if (payloadResult instanceof ResultError) return payloadResult;
+    const tuple = payloadResult[0];
+    if (Array.isArray(tuple) && tuple.length === 2 && typeof tuple[0] === "string") {
+      return new Ok({ kind: "push", module: tuple[0], value: tuple[1] });
+    }
+    return decodeError("invalid push frame payload: expected [module, value] tuple");
+  } catch (e) {
+    return decodeError(e && e.message ? e.message : String(e));
+  }
+}
+
+export { encode_request, identity };
+export { encode_flags, decode_flags_typed } from "../../libero/libero/wire.mjs";
