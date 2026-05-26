@@ -1,8 +1,10 @@
 # Scoreboard
 
-Scoreboard is Rally's golden path example.
+Scoreboard is the golden example app for a potential code generator framework.
 
-It is a small sports app with a public scoreboard and an admin score desk. The point is to exercise Rally's root API app shape with a domain small enough to keep the generator work honest.
+It is a small sports app with a public scoreboard and an admin score desk. The point is to exercise every feature we want the Generator Framework to support, using a domain small enough to keep the generator work honest.
+
+This project does not implement the Generator Framework and does not run app generation itself. The generated app code checked in here is the hand-written target the future generator should match. Marmot is the exception: it generates typed SQL modules from the SQL files in `server/src/server/sql/`.
 
 ## Shape
 
@@ -10,7 +12,7 @@ It is a small sports app with a public scoreboard and an admin score desk. The p
 - `server/` owns handlers, fake data, request context, server context, and backend modules.
 - `client/` owns receiver mapping and browser-side app entry modules.
 
-The workspace root is the Scoreboard tooling package. App code lives in `client/`, `server/`, and `shared/`. The sibling `../rally/` package is used as the local Rally dependency.
+The workspace root is the Scoreboard tooling package. App code lives in `client/`, `server/`, and `shared/`. The sibling `../rally/` package is used as the local framework dependency.
 
 The server package is SQLite-backed. Handwritten SQL lives under `server/src/server/sql/`, migrations live under `server/db/migrations/`, and Marmot writes typed query modules under `server/src/generated/sql/`.
 
@@ -43,4 +45,4 @@ Admin pages can create games, update scores, mark final results, and correct res
 
 The app intentionally uses one shared API graph for public and admin messages. Wire-visible constructor names must be globally unique across that graph, regardless of module path.
 
-Generated code is checked in here as the hand-written target for Rally. Server tests snapshot every generated module so future generator work has a tight comparison loop.
+Generated code is checked in here as the hand-written target for the Generator Framework. Server tests snapshot every generated module so future generator work has a tight comparison loop.
