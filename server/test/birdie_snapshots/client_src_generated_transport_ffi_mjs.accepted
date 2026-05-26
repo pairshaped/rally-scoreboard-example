@@ -6,9 +6,9 @@ title: client__src__generated__transport_ffi_mjs
 //
 // @ts-check
 //
-// Rally WebSocket transport layer.
+// Runtime WebSocket transport layer.
 //
-// Derived from Rally's client transport template. It imports encode/decode
+// Derived from the Generator Framework's client transport template. It imports encode/decode
 // from the generated protocol_wire.mjs facade and handles the WebSocket connection lifecycle,
 // reconnects, ToClient push handlers, page-init acknowledgements, SSR flags,
 // and debug logging.
@@ -127,7 +127,7 @@ if (typeof window !== "undefined") {
 // Server-to-client frames are decoded through Libero's boundary API.
 // decode_server_frame returns `{ kind: "push", module, value }` for
 // server ToClient emissions and `{ kind: "response", requestId, value }`
-// for page-init acknowledgements. Rally never inspects tag bytes or slices
+// for page-init acknowledgements. The runtime never inspects tag bytes or slices
 // frame headers: Libero owns that boundary.
 //
 // Reconnection is automatic. On unexpected close (network blip, server
@@ -214,7 +214,7 @@ function handleAuthenticationError(frame) {
     return true;
   }
 
-  if (debugEnabled()) console.error("[rally] Authentication error: authentication:forbidden");
+  if (debugEnabled()) console.error("[runtime] Authentication error: authentication:forbidden");
   return true;
 }
 
@@ -294,7 +294,7 @@ export function ensureSocket(url) {
   ws.addEventListener("message", (event) => {
     const result = decode_server_frame(event.data);
     if (result instanceof ResultError) {
-      if (debugEnabled()) console.warn("rally: failed to decode server frame", result[0]);
+      if (debugEnabled()) console.warn("runtime: failed to decode server frame", result[0]);
       return;
     }
     const frame = result[0];
@@ -315,7 +315,7 @@ export function ensureSocket(url) {
             ? frame.errors.map(e => (e && e[1]) || "").join("; ")
             : String(frame.errors))
         : "protocol error";
-      if (debugEnabled()) console.error("[rally] protocol error:", msg);
+      if (debugEnabled()) console.error("[runtime] protocol error:", msg);
       return;
     }
 

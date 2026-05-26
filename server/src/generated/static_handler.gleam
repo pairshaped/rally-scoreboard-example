@@ -3,10 +3,10 @@
 //// Static asset handler for client build output. The SSR shell imports
 //// `/_build/client/generated/app.mjs` from the browser; this module maps that prefix
 //// onto the local gleam build directory so the SPA actually loads.
-//// Derived from the Rally client build output path, generated/rally/static.gleam,
+//// Derived from the runtime client build output path, generated/runtime/static.gleam,
 //// and the configured static URL prefix.
 
-import generated/rally/static
+import generated/runtime/static
 import gleam/bytes_tree
 import gleam/http/response.{type Response}
 import gleam/option.{type Option, None, Some}

@@ -1,0 +1,116 @@
+---
+version: 2.0.0
+title: src__generated__runtime__effect_state_gleam
+---
+//// Generated. Do not edit.
+////
+//// Internal WebSocket process state and push-frame helpers used by the
+//// generated server effect and ws_handler modules.
+//// Derived from the Generator Framework's WebSocket effect-state runtime contract.
+//// Binds to server_generated_runtime_effect_state_ffi.erl for per-socket process state.
+
+@external(erlang, "server_generated_runtime_effect_state_ffi", "put_ws_state")
+pub fn put_ws_state(_conn: a, _server_context: b, _page: String) -> Nil {
+  Nil
+}
+
+@external(erlang, "server_generated_runtime_effect_state_ffi", "get_stored_server_context")
+pub fn get_stored_server_context() -> Result(a, Nil) {
+  Error(Nil)
+}
+
+@external(erlang, "server_generated_runtime_effect_state_ffi", "get_ws_page")
+pub fn get_ws_page() -> String {
+  ""
+}
+
+@external(erlang, "server_generated_runtime_effect_state_ffi", "get_ws_conn")
+pub fn get_ws_conn() -> Result(a, Nil) {
+  Error(Nil)
+}
+
+@external(erlang, "server_generated_runtime_effect_state_ffi", "push_outgoing_frame")
+pub fn push_outgoing_frame(_frame: a) -> Nil {
+  Nil
+}
+
+@external(erlang, "server_generated_runtime_effect_state_ffi", "drain_outgoing_frames")
+pub fn drain_outgoing_frames() -> List(a) {
+  []
+}
+
+@external(erlang, "server_generated_runtime_effect_state_ffi", "put_ws_session")
+pub fn put_ws_session(_session_id: String) -> Nil {
+  Nil
+}
+
+@external(erlang, "server_generated_runtime_effect_state_ffi", "get_ws_session")
+pub fn get_ws_session() -> String {
+  ""
+}
+
+@external(erlang, "server_generated_runtime_effect_state_ffi", "put_ws_request_context")
+pub fn put_ws_request_context(_request_context: a) -> Nil {
+  Nil
+}
+
+@external(erlang, "server_generated_runtime_effect_state_ffi", "get_ws_request_context")
+pub fn get_ws_request_context() -> Result(a, Nil) {
+  Error(Nil)
+}
+
+@external(erlang, "server_generated_runtime_effect_state_ffi", "put_ws_hostname")
+pub fn put_ws_hostname(_hostname: String) -> Nil {
+  Nil
+}
+
+@external(erlang, "server_generated_runtime_effect_state_ffi", "get_ws_hostname")
+pub fn get_ws_hostname() -> String {
+  ""
+}
+
+@external(erlang, "server_generated_runtime_effect_state_ffi", "put_ws_identity")
+pub fn put_ws_identity(_identity: a) -> Nil {
+  Nil
+}
+
+@external(erlang, "server_generated_runtime_effect_state_ffi", "get_ws_identity")
+pub fn get_ws_identity() -> Result(a, Nil) {
+  Error(Nil)
+}
+
+@external(erlang, "server_generated_runtime_effect_state_ffi", "put_ws_authentication_timestamp")
+pub fn put_ws_authentication_timestamp(_timestamp: Int) -> Nil {
+  Nil
+}
+
+@external(erlang, "server_generated_runtime_effect_state_ffi", "get_ws_authentication_timestamp")
+pub fn get_ws_authentication_timestamp() -> Int {
+  0
+}
+
+@external(erlang, "server_generated_runtime_effect_state_ffi", "clear_ws_authentication_state")
+pub fn clear_ws_authentication_state() -> Nil {
+  Nil
+}
+
+@external(erlang, "server_generated_runtime_effect_state_ffi", "put_ws_server_shared_state")
+pub fn put_ws_server_shared_state(_state: a) -> Nil {
+  Nil
+}
+
+@external(erlang, "server_generated_runtime_effect_state_ffi", "get_ws_server_shared_state")
+pub fn get_ws_server_shared_state() -> Result(a, Nil) {
+  Error(Nil)
+}
+
+@external(erlang, "server_generated_runtime_effect_state_ffi", "put_backend_model")
+pub fn put_backend_model(_model: a) -> Nil {
+  Nil
+}
+
+@external(erlang, "server_generated_runtime_effect_state_ffi", "get_backend_model")
+pub fn get_backend_model() -> Result(a, Nil) {
+  Error(Nil)
+}
+

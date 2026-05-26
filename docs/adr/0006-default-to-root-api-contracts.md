@@ -363,7 +363,7 @@ user_logging = true
 issue_logging = true
 ```
 
-Both logging flags default to `false` when omitted. `rally init` writes both flags as `true` so new apps visibly opt in to local observability instead of inheriting hidden database writes. `user_logging` records authenticated user activity for the Mount; unauthenticated activity never writes user log rows. User log rows include `created_at`, user id, user email, session id, Mount, route, and message type. User email is stored because the Generator Framework's local system database is not joined to app-owned user tables. `issue_logging` records runtime issues for the Mount and does not require authentication, but includes authenticated user id and email when they are available. Issue log rows include `created_at`, Mount, route, kind, message, optional message type, optional trace, and optional context. Timing is not part of the local logging schema unless the runtime already has that timing without extra instrumentation. Normal server logs and query timing logs are not written to the Generator Framework's system DB; query timing is dev-only logger output. Both logging modes store Mount and route, not page module names, because logs describe handled app activity rather than UI implementation. The local logging schema has `user_logs` and `issue_logs`, separate from jobs and app data.
+Both logging flags default to `false` when omitted. the framework initializer writes both flags as `true` so new apps visibly opt in to local observability instead of inheriting hidden database writes. `user_logging` records authenticated user activity for the Mount; unauthenticated activity never writes user log rows. User log rows include `created_at`, user id, user email, session id, Mount, route, and message type. User email is stored because the Generator Framework's local system database is not joined to app-owned user tables. `issue_logging` records runtime issues for the Mount and does not require authentication, but includes authenticated user id and email when they are available. Issue log rows include `created_at`, Mount, route, kind, message, optional message type, optional trace, and optional context. Timing is not part of the local logging schema unless the runtime already has that timing without extra instrumentation. Normal server logs and query timing logs are not written to the Generator Framework's system DB; query timing is dev-only logger output. Both logging modes store Mount and route, not page module names, because logs describe handled app activity rather than UI implementation. The local logging schema has `user_logs` and `issue_logs`, separate from jobs and app data.
 
 The Generator Framework's system database is meant to have an app-facing system portal. The portal will let authorized users examine and search user logs, issue logs, and jobs from inside the deployed app. This makes local observability useful without a third-party service and gives teams a place to inspect background job state alongside runtime issues. The portal is a future generated Mount or reserved system route; application Mounts do not hand-roll access to system tables.
 
@@ -399,7 +399,7 @@ The shared package generated layout is:
 shared/src/generated/public/route.gleam
 shared/src/generated/admin/route.gleam
 
-shared/src/generated/rally/data.gleam
+shared/src/generated/runtime/data.gleam
 ```
 
 `route.gleam` is Mount-specific because routes are Mount-specific. `data.gleam` is package-level because the `RemoteData` helper is not public/admin-specific.
@@ -417,9 +417,9 @@ client/src/generated/codec_ffi.mjs
 client/src/generated/router.gleam
 client/src/generated/router_ffi.mjs
 
-client/src/generated/rally/effect.gleam
-client/src/generated/rally/client_effect_ffi.mjs
-client/src/generated/rally/authentication.gleam
+client/src/generated/runtime/effect.gleam
+client/src/generated/runtime/client_effect_ffi.mjs
+client/src/generated/runtime/authentication.gleam
 
 client/src/generated/public/router.gleam
 client/src/generated/public/receiver_dispatch.gleam
@@ -444,25 +444,25 @@ server/src/generated/ws_runtime.gleam
 server/src/generated/server_generated_protocol_atoms_ffi.erl
 server/src/generated/server_generated_protocol_wire_ffi.erl
 
-server/src/generated/rally/authentication.gleam
-server/src/generated/rally/db.gleam
-server/src/generated/rally/dispatch.gleam
-server/src/generated/rally/effect.gleam
-server/src/generated/rally/effect_runner.gleam
-server/src/generated/rally/effect_state.gleam
-server/src/generated/rally/env.gleam
-server/src/generated/rally/jobs.gleam
-server/src/generated/rally/session.gleam
-server/src/generated/rally/static.gleam
-server/src/generated/rally/system.gleam
-server/src/generated/rally/system_db.gleam
-server/src/generated/rally/trace.gleam
+server/src/generated/runtime/authentication.gleam
+server/src/generated/runtime/db.gleam
+server/src/generated/runtime/dispatch.gleam
+server/src/generated/runtime/effect.gleam
+server/src/generated/runtime/effect_runner.gleam
+server/src/generated/runtime/effect_state.gleam
+server/src/generated/runtime/env.gleam
+server/src/generated/runtime/jobs.gleam
+server/src/generated/runtime/session.gleam
+server/src/generated/runtime/static.gleam
+server/src/generated/runtime/system.gleam
+server/src/generated/runtime/system_db.gleam
+server/src/generated/runtime/trace.gleam
 
-server/src/generated/rally/server_generated_rally_authentication_ffi.erl
-server/src/generated/rally/server_generated_rally_db_ffi.erl
-server/src/generated/rally/server_generated_rally_effect_state_ffi.erl
-server/src/generated/rally/server_generated_rally_system_db_ffi.erl
-server/src/generated/rally/server_generated_rally_trace_ffi.erl
+server/src/generated/runtime/server_generated_runtime_authentication_ffi.erl
+server/src/generated/runtime/server_generated_runtime_db_ffi.erl
+server/src/generated/runtime/server_generated_runtime_effect_state_ffi.erl
+server/src/generated/runtime/server_generated_runtime_system_db_ffi.erl
+server/src/generated/runtime/server_generated_runtime_trace_ffi.erl
 
 server/src/generated/sql/**/*.gleam
 
@@ -479,9 +479,9 @@ server/src/generated/admin/ssr_handler.gleam
 server/src/generated/admin/ws_handler.gleam
 ```
 
-Server runtime modules under `server/src/generated/rally` are generated once. A runtime module does not become Mount-specific just because two Mounts call it. If a runtime helper needs per-Mount state, it accepts a Mount key or stores scoped values internally; the Generator Framework does not duplicate the whole module under `generated/public/rally` and `generated/admin/rally`.
+Server runtime modules under `server/src/generated/runtime` are generated once. A runtime module does not become Mount-specific just because two Mounts call it. If a runtime helper needs per-Mount state, it accepts a Mount key or stores scoped values internally; the Generator Framework does not duplicate the whole module under `generated/public/runtime` and `generated/admin/runtime`.
 
-Server `dispatch`, `request_context`, `router`, `ssr_handler`, and `ws_handler` are Mount-specific. The static asset handler is generated once at `server/src/generated/static_handler.gleam` because all Mounts serve the same client build tree. The WebSocket runtime is generated once at `server/src/generated/ws_runtime.gleam`; Mount WebSocket handlers adapt their route and backend modules into that runtime. Mount modules import package-level generated runtime modules from `generated/rally` and package-level protocol modules from `generated`.
+Server `dispatch`, `request_context`, `router`, `ssr_handler`, and `ws_handler` are Mount-specific. The static asset handler is generated once at `server/src/generated/static_handler.gleam` because all Mounts serve the same client build tree. The WebSocket runtime is generated once at `server/src/generated/ws_runtime.gleam`; Mount WebSocket handlers adapt their route and backend modules into that runtime. Mount modules import package-level generated runtime modules from `generated/runtime` and package-level protocol modules from `generated`.
 
 The Generator Framework does not generate Mount RPC dispatch, page dispatch, or server-side receiver stubs for the root API path. Page init, `ToServer`, and `ToClient` use the package-level protocol wire module.
 
@@ -494,18 +494,18 @@ Good:
 ```text
 server/src/generated/server_generated_protocol_wire_ffi.erl
 server/src/generated/server_generated_protocol_atoms_ffi.erl
-server/src/generated/rally/server_generated_rally_authentication_ffi.erl
-server/src/generated/rally/server_generated_rally_db_ffi.erl
+server/src/generated/runtime/server_generated_runtime_authentication_ffi.erl
+server/src/generated/runtime/server_generated_runtime_db_ffi.erl
 ```
 
 Avoid:
 
 ```text
-server/src/generated/public/rally/server_public_generated_rally_authentication_ffi.erl
-server/src/generated/admin/rally/server_admin_generated_rally_authentication_ffi.erl
+server/src/generated/public/runtime/server_public_generated_runtime_authentication_ffi.erl
+server/src/generated/admin/runtime/server_admin_generated_runtime_authentication_ffi.erl
 server/src/server_public_generated_protocol_wire_ffi.erl
-server/src/server_public_generated_rally_authentication_ffi.erl
-server/src/server_generated_rally_db_ffi.erl
+server/src/server_public_generated_runtime_authentication_ffi.erl
+server/src/server_generated_runtime_db_ffi.erl
 ```
 
 ## Transport
@@ -556,8 +556,8 @@ Type aliases are transparent on the wire, as they are in Gleam. Domain identitie
 27. User-owned app code is Mount-first: `server/src/server/{mount_namespace}`, `client/src/client/{mount_namespace}`, and `shared/src/shared/{mount_namespace}`. The exception is `shared/src/shared/api`, which is one global wire graph and has no public/admin subdivision.
 28. Each package has exactly one generated root: `client/src/generated`, `server/src/generated`, or `shared/src/generated`.
 29. Generated files are Mount-namespaced only when they depend on Mount-specific inputs. Mount-specific generated files live under `generated/public` or `generated/admin`.
-30. Generated runtime helpers, codecs, package protocol wire modules, SQL modules, setup modules, and transport modules are package-level generated files. They live under `generated`, `generated/rally`, or `generated/sql`, not under `generated/{mount_namespace}/rally`.
+30. Generated runtime helpers, codecs, package protocol wire modules, SQL modules, setup modules, and transport modules are package-level generated files. They live under `generated`, `generated/runtime`, or `generated/sql`, not under `generated/{mount_namespace}/runtime`.
 31. Generated Erlang FFI files live under the owning package's generated root beside the Gleam module that imports them. The Generator Framework does not write generated `.erl` files into package `src/` roots.
 32. Client shells use Modem for same-Mount navigation and leave cross-Mount, sign-out, external, and SSR-intent links as normal anchors.
-33. Mount logging is explicit. `user_logging` and `issue_logging` default to `false` when omitted; `rally init` writes both as `true` in each Mount block. User logging only writes for authenticated users and stores user id plus email. Issue logging writes runtime issues for the Mount with or without authentication, including user id and email when known.
+33. Mount logging is explicit. `user_logging` and `issue_logging` default to `false` when omitted; the framework initializer writes both as `true` in each Mount block. User logging only writes for authenticated users and stores user id plus email. Issue logging writes runtime issues for the Mount with or without authentication, including user id and email when known.
 34. Generated sign-in codes use uppercase `0-9A-Z`; verification trims and normalizes the lookup scope and submitted code to uppercase before hashing.

@@ -4,7 +4,7 @@
 //// dispatch calls them to mutate the database and emit ToClient messages.
 
 import generated/admin/request_context.{type RequestContext}
-import generated/rally/effect.{type Effect}
+import generated/runtime/effect.{type Effect}
 import generated/sql/server/games_sql
 import gleam/bool
 import gleam/list

@@ -1,6 +1,6 @@
 //// Per-server request context shared by handlers.
 ////
-//// Rally passes this through generated runtimes so page handlers can use app
+//// The Generator Framework passes this through generated runtimes so page handlers can use app
 //// and system database connections without importing server boot code.
 
 import sqlight

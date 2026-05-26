@@ -12,7 +12,7 @@ This project does not implement the Generator Framework and does not run app gen
 - `server/` owns handlers, fake data, request context, server context, and backend modules.
 - `client/` owns receiver mapping and browser-side app entry modules.
 
-The workspace root is the Scoreboard tooling package. App code lives in `client/`, `server/`, and `shared/`. The sibling `../rally/` package is used as the local framework dependency.
+The workspace root is the Scoreboard tooling package. App code lives in `client/`, `server/`, and `shared/`. The sibling `../runtime/` package is used as the local framework dependency.
 
 The server package is SQLite-backed. Handwritten SQL lives under `server/src/server/sql/`, migrations live under `server/db/migrations/`, and Marmot writes typed query modules under `server/src/generated/sql/`.
 

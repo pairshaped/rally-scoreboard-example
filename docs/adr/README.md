@@ -8,4 +8,4 @@ This repo does not implement the Generator Framework and does not run app genera
 
 The ADRs describe the intended design, not a history of how the current files moved here.
 
-Lowercase `rally` remains in literal paths, module namespaces, and config names where the current generated code still uses that namespace.
+Lowercase `rally` remains in literal config names where the current generated code still uses that namespace.

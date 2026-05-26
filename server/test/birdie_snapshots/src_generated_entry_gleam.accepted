@@ -17,9 +17,9 @@ import generated/admin/ws_handler as mount_0_ws_handler
 import generated/public/router as mount_1_router
 import generated/public/ssr_handler as mount_1_ssr_handler
 import generated/public/ws_handler as mount_1_ws_handler
-import generated/rally/authentication as authentication_runtime
-import generated/rally/env
-import generated/rally/session
+import generated/runtime/authentication as authentication_runtime
+import generated/runtime/env
+import generated/runtime/session
 import generated/static_handler
 import gleam/bit_array
 import gleam/bool

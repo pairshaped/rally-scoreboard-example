@@ -4,7 +4,7 @@
 //// specific game by id.
 
 import generated/public/request_context.{type RequestContext}
-import generated/rally/effect.{type Effect}
+import generated/runtime/effect.{type Effect}
 import generated/sql/server/games_sql
 import server/helpers/db
 import server/public/model.{type Model}

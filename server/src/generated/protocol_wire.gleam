@@ -1,7 +1,7 @@
 //// Generated. Do not edit.
 ////
 //// Server protocol facade for WebSocket frames.
-//// Derived from Rally's ETF framing rules and the shared root API types
+//// Derived from the Generator Framework's ETF framing rules and the shared root API types
 //// when this app uses shared/api/to_server.gleam and shared/api/to_client.gleam.
 //// Root API frames use plain ETF values with a fixed "to_server" or
 //// "to_client" envelope module.

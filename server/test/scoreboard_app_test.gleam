@@ -1,17 +1,17 @@
 //// Structural tests for the Scoreboard golden-path app.
 ////
 //// These tests assert the desired root API shape directly against the example
-//// files, independent of Rally generator internals.
+//// files, independent of Generator Framework generator internals.
 
-import generated/rally/authentication as authentication_runtime
-import generated/rally/db
-import generated/rally/effect as server_effect
-import generated/rally/effect_runner
-import generated/rally/effect_state
-import generated/rally/jobs
-import generated/rally/system
-import generated/rally/system_db
-import generated/rally/trace
+import generated/runtime/authentication as authentication_runtime
+import generated/runtime/db
+import generated/runtime/effect as server_effect
+import generated/runtime/effect_runner
+import generated/runtime/effect_state
+import generated/runtime/jobs
+import generated/runtime/system
+import generated/runtime/system_db
+import generated/runtime/trace
 import gleam/dynamic/decode
 import gleam/list
 import gleam/option
@@ -36,7 +36,7 @@ pub fn shell_uses_mount_client_and_oat_test() {
   let admin_shell = read("src/server/admin/shell.html")
 
   public_shell |> contains("@knadh/oat/oat.min.css") |> should.be_true
-  public_shell |> contains("data-rally-client") |> should.be_true
+  public_shell |> contains("data-runtime-client") |> should.be_true
   public_shell
   |> contains(
     "import { main } from \"/_build/client/scoreboard_public_client.mjs\"",
@@ -48,9 +48,9 @@ pub fn shell_uses_mount_client_and_oat_test() {
 
   admin_shell |> contains("@knadh/oat/oat.min.css") |> should.be_true
   admin_shell |> contains(":root[data-theme=\"dark\"]") |> should.be_true
-  admin_shell |> contains("rally_dark_mode") |> should.be_true
+  admin_shell |> contains("scoreboard_dark_mode") |> should.be_true
   admin_shell |> contains("<body data-theme=\"dark\">") |> should.be_false
-  admin_shell |> contains("data-rally-client") |> should.be_true
+  admin_shell |> contains("data-runtime-client") |> should.be_true
   admin_shell
   |> contains(
     "import { main } from \"/_build/client/scoreboard_admin_client.mjs\"",
@@ -58,7 +58,7 @@ pub fn shell_uses_mount_client_and_oat_test() {
   |> should.be_true
   admin_shell |> contains("/_build/client/generated/app.mjs") |> should.be_false
   public_shell |> contains(":root[data-theme=\"dark\"]") |> should.be_true
-  public_shell |> contains("rally_dark_mode") |> should.be_true
+  public_shell |> contains("scoreboard_dark_mode") |> should.be_true
   public_shell |> contains("<body data-theme=\"dark\">") |> should.be_false
   public_shell |> contains("body[data-theme=\"dark\"]") |> should.be_false
 }
@@ -74,10 +74,10 @@ pub fn generated_ssr_uses_mount_client_once_test() {
   admin_ssr |> contains("scoreboard_public_client.mjs") |> should.be_false
   admin_ssr |> contains("generated/app.mjs") |> should.be_false
   admin_ssr |> contains(":root[data-theme=\\\"dark\\\"]") |> should.be_true
-  admin_ssr |> contains("rally_dark_mode") |> should.be_true
+  admin_ssr |> contains("scoreboard_dark_mode") |> should.be_true
   admin_ssr |> contains("<body data-theme=\\\"dark\\\">") |> should.be_false
   public_ssr |> contains(":root[data-theme=\\\"dark\\\"]") |> should.be_true
-  public_ssr |> contains("rally_dark_mode") |> should.be_true
+  public_ssr |> contains("scoreboard_dark_mode") |> should.be_true
   public_ssr |> contains("<body data-theme=\\\"dark\\\">") |> should.be_false
 }
 
@@ -178,7 +178,7 @@ pub fn root_config_opts_mounts_into_local_logging_test() {
 }
 
 pub fn system_db_uses_user_and_issue_logs_test() {
-  let source = read("src/generated/rally/system_db.gleam")
+  let source = read("src/generated/runtime/system_db.gleam")
 
   source |> contains("CREATE TABLE IF NOT EXISTS user_logs") |> should.be_true
   source |> contains("CREATE TABLE IF NOT EXISTS issue_logs") |> should.be_true
@@ -198,24 +198,24 @@ pub fn system_db_uses_user_and_issue_logs_test() {
 }
 
 pub fn db_query_timing_logs_are_dev_only_test() {
-  let source = read("src/generated/rally/db.gleam")
+  let source = read("src/generated/runtime/db.gleam")
 
-  source |> contains("import generated/rally/env") |> should.be_true
+  source |> contains("import generated/runtime/env") |> should.be_true
   source
   |> contains("use <- bool.guard(when: !env.is_dev(), return: Nil)")
   |> should.be_true
   source |> contains("add_db_timing") |> should.be_false
   source |> contains("get_db_timing") |> should.be_false
   source |> contains("init_db_timing") |> should.be_false
-  file_exists("src/generated/rally/server_generated_rally_db_ffi.erl")
+  file_exists("src/generated/runtime/server_generated_runtime_db_ffi.erl")
   |> should.be_false
 }
 
 pub fn system_db_connection_is_passed_explicitly_test() {
   let server = read("src/scoreboard_server.gleam")
   let context = read("src/server/server_context.gleam")
-  let system = read("src/generated/rally/system.gleam")
-  let system_db = read("src/generated/rally/system_db.gleam")
+  let system = read("src/generated/runtime/system.gleam")
+  let system_db = read("src/generated/runtime/system_db.gleam")
 
   server
   |> contains("server_context.new(db:, system_db: system_conn)")
@@ -229,12 +229,14 @@ pub fn system_db_connection_is_passed_explicitly_test() {
   system |> contains("system_db.get_conn") |> should.be_false
   system_db |> contains("store_conn") |> should.be_false
   system_db |> contains("get_conn") |> should.be_false
-  file_exists("src/generated/rally/server_generated_rally_system_db_ffi.erl")
+  file_exists(
+    "src/generated/runtime/server_generated_runtime_system_db_ffi.erl",
+  )
   |> should.be_false
 }
 
 pub fn generated_sign_in_codes_use_uppercase_alphanumeric_text_test() {
-  let source = read("src/generated/rally/authentication.gleam")
+  let source = read("src/generated/runtime/authentication.gleam")
   let secret_key = "test-secret"
   let code = authentication_runtime.generate_sign_in_code()
   let stored =
@@ -374,9 +376,9 @@ pub fn admin_sign_in_pages_are_client_routes_test() {
   let route = read("../shared/src/generated/admin/route.gleam")
   let router = read("../client/src/generated/admin/router.gleam")
   let authentication_effect =
-    read("../client/src/generated/rally/authentication.gleam")
+    read("../client/src/generated/runtime/authentication.gleam")
   let client_effect_ffi =
-    read("../client/src/generated/rally/client_effect_ffi.mjs")
+    read("../client/src/generated/runtime/client_effect_ffi.mjs")
 
   route |> contains("AdminSignInPassword") |> should.be_true
   route |> contains("AdminSignInCode") |> should.be_true
@@ -440,15 +442,15 @@ pub fn generated_files_stay_under_top_level_generated_dirs_test() {
   |> should.be_false
   file_exists("../client/src/client/admin/generated/router.gleam")
   |> should.be_false
-  file_exists("../shared/src/generated/public/rally/data.gleam")
+  file_exists("../shared/src/generated/public/runtime/data.gleam")
   |> should.be_false
-  file_exists("../shared/src/generated/admin/rally/data.gleam")
+  file_exists("../shared/src/generated/admin/runtime/data.gleam")
   |> should.be_false
   file_exists("src/generated/public/page_dispatch.gleam") |> should.be_false
   file_exists("src/generated/admin/page_dispatch.gleam") |> should.be_false
   file_exists("src/generated/public/rpc_dispatch.gleam") |> should.be_false
   file_exists("src/generated/admin/rpc_dispatch.gleam") |> should.be_false
-  file_exists("src/generated/rally/dispatch.gleam") |> should.be_false
+  file_exists("src/generated/runtime/dispatch.gleam") |> should.be_false
   file_exists("src/generated/public/receiver_dispatch.gleam")
   |> should.be_false
   file_exists("src/generated/admin/receiver_dispatch.gleam")
@@ -487,9 +489,9 @@ pub fn generated_ws_handlers_delegate_to_package_runtime_test() {
 pub fn mount_clients_use_generated_routers_and_effects_test() {
   let public_client = read("../client/src/scoreboard_public_client.gleam")
   let admin_client = read("../client/src/scoreboard_admin_client.gleam")
-  let client_effect = read("../client/src/generated/rally/effect.gleam")
+  let client_effect = read("../client/src/generated/runtime/effect.gleam")
   let client_effect_ffi =
-    read("../client/src/generated/rally/client_effect_ffi.mjs")
+    read("../client/src/generated/runtime/client_effect_ffi.mjs")
 
   public_client |> contains("import modem") |> should.be_true
   public_client |> contains("modem.initial_uri()") |> should.be_true
@@ -682,7 +684,7 @@ pub fn to_server_frames_are_fire_and_forget_test() {
 }
 
 pub fn generated_runtime_has_no_legacy_rpc_or_generic_push_api_test() {
-  let server_effect = read("src/generated/rally/effect.gleam")
+  let server_effect = read("src/generated/runtime/effect.gleam")
   let protocol_wire = read("src/generated/protocol_wire.gleam")
   let runtime = read("src/generated/ws_runtime.gleam")
   let public_ws = read("src/generated/public/ws_handler.gleam")

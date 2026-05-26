@@ -1,11 +1,11 @@
 //// Demo authentication for the admin Mount.
 ////
-//// This intentionally exercises Rally's generated authentication helpers in
+//// This intentionally exercises the Generator Framework's generated authentication helpers in
 //// the golden-path app. Password sign-in accepts admin@example.com/admin.
 //// Sign-in code authentication shows a fixed demo code on the page,
 //// pretending it was emailed.
 
-import generated/rally/authentication as authentication_runtime
+import generated/runtime/authentication as authentication_runtime
 import gleam/list
 import gleam/string
 

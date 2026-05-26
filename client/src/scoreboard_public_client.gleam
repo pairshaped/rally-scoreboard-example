@@ -8,7 +8,7 @@ import generated/codec
 import generated/public/receiver_dispatch as public_receiver_dispatch
 import generated/public/route as public_route
 import generated/public/router as public_router
-import generated/rally/effect as public_effect
+import generated/runtime/effect as public_effect
 import generated/setup
 import generated/transport
 import gleam/int

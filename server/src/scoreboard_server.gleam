@@ -1,13 +1,13 @@
 //// Scoreboard server entry point.
 ////
 //// Opens the app and system SQLite databases prepared by the migration
-//// script, then starts the Mist server through generated Rally routing.
+//// script, then starts the Mist server through generated runtime routing.
 
 import envoy
 import generated/entry
-import generated/rally/db
-import generated/rally/system
-import generated/rally/system_db
+import generated/runtime/db
+import generated/runtime/system
+import generated/runtime/system_db
 import gleam/erlang/process
 import gleam/int
 import gleam/io

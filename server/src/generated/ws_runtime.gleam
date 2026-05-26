@@ -1,14 +1,14 @@
 //// Generated. Do not edit.
 ////
 //// Shared WebSocket runtime for root API Mounts.
-//// Derived from Rally's root API transport contract. Mount-specific
+//// Derived from the Generator Framework's root API transport contract. Mount-specific
 //// ws_handler modules inject route building, request-context creation,
 //// backend init, and ToServer handling callbacks.
 
 import generated/protocol_wire
-import generated/rally/effect_runner
-import generated/rally/effect_state
-import generated/rally/env
+import generated/runtime/effect_runner
+import generated/runtime/effect_state
+import generated/runtime/env
 import gleam/bit_array
 import gleam/bool
 import gleam/dynamic
@@ -71,7 +71,7 @@ pub fn handler(
     ServerContext,
   ) -> #(model, Effect(ToClient)),
 ) -> mist.Next(Nil, a) {
-  debug_log("[rally:ws] handler called")
+  debug_log("[runtime:ws] handler called")
   case msg {
     mist.Binary(data) ->
       handle_binary(
@@ -107,7 +107,7 @@ fn handle_binary(
   ) -> #(model, Effect(ToClient)),
 ) -> mist.Next(Nil, a) {
   debug_log(
-    "[rally:ws] Binary frame: "
+    "[runtime:ws] Binary frame: "
     <> int.to_string(bit_array.byte_size(data))
     <> " bytes",
   )
@@ -125,11 +125,13 @@ fn handle_binary(
     Ok(#("to_server", _request_id, _value)) ->
       handle_to_server_frame(state:, data:, conn:, handle_to_server:)
     Ok(#(_module, _request_id, _value)) -> {
-      debug_log("[rally:ws] unknown module in request")
+      debug_log("[runtime:ws] unknown module in request")
       mist.continue(state)
     }
     Error(reason) -> {
-      debug_log("[rally:ws] decode_request failed: " <> string.inspect(reason))
+      debug_log(
+        "[runtime:ws] decode_request failed: " <> string.inspect(reason),
+      )
       mist.continue(state)
     }
   }
@@ -145,11 +147,11 @@ fn handle_page_init(
   make_request_context make_request_context: fn(route, String, String) ->
     request_context,
 ) -> mist.Next(Nil, a) {
-  debug_log("[rally:ws] page_init: " <> page)
+  debug_log("[runtime:ws] page_init: " <> page)
   case effect_state.get_stored_server_context() {
     Error(Nil) -> {
       io.println_error(
-        "[rally:ws] missing server_context; failing page_init for " <> page,
+        "[runtime:ws] missing server_context; failing page_init for " <> page,
       )
       let response_frame =
         protocol_wire.encode_response(
@@ -192,11 +194,12 @@ fn handle_to_server_frame(
     ServerContext,
   ) -> #(model, Effect(ToClient)),
 ) -> mist.Next(Nil, a) {
-  debug_log("[rally:ws] to_server command")
+  debug_log("[runtime:ws] to_server command")
   case protocol_wire.decode_to_server(data) {
     Error(reason) -> {
       io.println_error(
-        "[rally:ws] failed to decode ToServer frame: " <> string.inspect(reason),
+        "[runtime:ws] failed to decode ToServer frame: "
+        <> string.inspect(reason),
       )
       mist.continue(state)
     }
@@ -272,10 +275,11 @@ fn load_backend_model(
 fn to_server_context_error_message(error: ToServerContextError) -> String {
   case error {
     MissingServerContext ->
-      "[rally:ws] missing server_context; dropping ToServer"
+      "[runtime:ws] missing server_context; dropping ToServer"
     MissingRequestContext ->
-      "[rally:ws] missing request_context; dropping ToServer"
-    MissingBackendModel -> "[rally:ws] missing backend_model; dropping ToServer"
+      "[runtime:ws] missing request_context; dropping ToServer"
+    MissingBackendModel ->
+      "[runtime:ws] missing backend_model; dropping ToServer"
   }
 }
 

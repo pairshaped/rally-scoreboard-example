@@ -4,7 +4,7 @@
 //// and power rankings from final game results.
 
 import generated/public/request_context.{type RequestContext}
-import generated/rally/effect.{type Effect}
+import generated/runtime/effect.{type Effect}
 import generated/sql/server/games_sql
 import gleam/list
 import gleam/option.{None, Some}

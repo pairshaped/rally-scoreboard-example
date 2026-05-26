@@ -316,7 +316,7 @@
   </style>
   <script>
     (function() {
-      var match = document.cookie.match(/(?:^|; )rally_dark_mode=(\d)/);
+      var match = document.cookie.match(/(?:^|; )scoreboard_dark_mode=(\d)/);
       var dark = match
         ? match[1] === "1"
         : window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -326,7 +326,7 @@
 </head>
 <body>
   <div id="app"></div>
-  <script type="module" data-rally-client>
+  <script type="module" data-runtime-client>
     import { main } from "/_build/client/scoreboard_admin_client.mjs";
     main();
   </script>

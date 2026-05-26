@@ -8,8 +8,8 @@ import generated/admin/receiver_dispatch as admin_receiver_dispatch
 import generated/admin/route as admin_route
 import generated/admin/router as admin_router
 import generated/codec
-import generated/rally/authentication
-import generated/rally/effect as admin_effect
+import generated/runtime/authentication
+import generated/runtime/effect as admin_effect
 import generated/setup
 import generated/transport
 import gleam/bool

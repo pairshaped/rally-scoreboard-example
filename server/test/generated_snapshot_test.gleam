@@ -1,7 +1,7 @@
 //// Birdie snapshots for Scoreboard's checked-in generated files.
 ////
 //// These snapshots make the hand-written generated target visible while the
-//// Rally generators are rebuilt to match it.
+//// Generator Framework generators are rebuilt to match it.
 
 import birdie
 import gleam/list

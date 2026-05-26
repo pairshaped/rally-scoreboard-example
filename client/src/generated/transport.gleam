@@ -1,7 +1,7 @@
 //// Generated. Do not edit.
 ////
 //// Typed Gleam facade over the generated JavaScript WebSocket transport.
-//// Derived from Rally's root API client runtime. Mount-aware apps normally
+//// Derived from the Generator Framework's root API client runtime. Mount-aware apps normally
 //// call generated/setup.gleam, which chooses the right WebSocket URL.
 
 import gleam/dynamic.{type Dynamic}

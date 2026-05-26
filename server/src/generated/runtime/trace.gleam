@@ -1,0 +1,21 @@
+//// Generated. Do not edit.
+////
+//// Panic-catching and trace-id helpers.
+//// Derived from the Generator Framework's server trace runtime contract.
+//// Wraps generated dispatch calls with panic capture and trace ids.
+
+// nolint: stringly_typed_error
+pub fn try_call(action: fn() -> a) -> Result(a, String) {
+  do_try_call(action)
+}
+
+pub fn new_trace_id() -> String {
+  unique_id()
+}
+
+@external(erlang, "server_generated_runtime_trace_ffi", "unique_id")
+fn unique_id() -> String
+
+// nolint: stringly_typed_error
+@external(erlang, "server_generated_runtime_trace_ffi", "try_call")
+fn do_try_call(action: fn() -> a) -> Result(a, String)

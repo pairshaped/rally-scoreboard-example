@@ -5,7 +5,7 @@
 // for each Mount. It registers the Lustre effect transport, chooses the
 // WebSocket URL from the current path, and sends page_init after connect
 // so the server can create a RequestContext for this socket.
-import { registerTransport } from "./rally/client_effect_ffi.mjs";
+import { registerTransport } from "./runtime/client_effect_ffi.mjs";
 import * as transport from "./transport_ffi.mjs";
 
 export function setup() {

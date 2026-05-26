@@ -1,7 +1,7 @@
 //// Client-side contract tests for the Scoreboard example.
 ////
 //// These tests keep the hand-written receiver hub and generated receiver
-//// dispatch aligned while Rally generation is being rebuilt toward this app.
+//// dispatch aligned while Generator Framework generation is being rebuilt toward this app.
 
 import client/public/receivers
 import generated/public/receiver_dispatch

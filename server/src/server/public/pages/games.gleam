@@ -4,7 +4,7 @@
 //// summaries and emit ToClient messages for the public receiver hub.
 
 import generated/public/request_context.{type RequestContext}
-import generated/rally/effect.{type Effect}
+import generated/runtime/effect.{type Effect}
 import generated/sql/server/games_sql
 import gleam/dict
 import gleam/list
