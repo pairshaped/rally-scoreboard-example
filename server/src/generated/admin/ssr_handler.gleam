@@ -2,7 +2,11 @@
 ////
 //// Server-rendered HTML handler for the admin Mount.
 //// Derived from server/admin/pages load/view functions, generated/admin/route.gleam,
-//// and server/server_context.gleam.
+//// server/admin/shell.html, and server/server_context.gleam.
+////
+//// Each SSR branch runs the same page load used by the ToServer handler,
+//// renders the shared page view, and embeds the matching ToClient value as
+//// base64 ETF for browser init.
 
 import generated/admin/route.{type Route}
 import generated/runtime/ssr

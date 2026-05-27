@@ -5,6 +5,9 @@
 //// server/admin/backend.gleam, and server/admin/model.gleam.
 //// The shared ws_runtime owns framing. This file binds it to the
 //// Mount-specific route and backend code.
+////
+//// Admin sockets also read the session cookie so RequestContext can include
+//// the authenticated user. Sign-in pages do not create this socket.
 
 import generated/admin/request_context.{type RequestContext, RequestContext}
 import generated/admin/route

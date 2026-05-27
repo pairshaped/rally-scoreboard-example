@@ -5,6 +5,10 @@
 // for each Mount. It registers the Lustre effect transport, chooses the
 // WebSocket URL from the current path, and sends page_init after connect
 // so the server can create a RequestContext for this socket.
+//
+// The generator emits routePageInit from the same discovered routes as the
+// client and server routers. Sign-in pages return null because they are
+// SSR-only and should not open an authenticated WebSocket.
 import { registerTransport } from "./runtime/client_effect_ffi.mjs";
 import * as transport from "./transport_ffi.mjs";
 import { decode_safe } from "../../libero/libero/rpc_ffi.mjs";
@@ -40,7 +44,7 @@ export function readCurrentQuery() {
   return query;
 }
 
-/** Decode the SSR-embedded shared state (base64 ETF) into an Option(ToClient). */
+/** Decode the SSR-embedded ToClient payload (base64 ETF) into an Option(ToClient). */
 export function readSharedState() {
   if (typeof window === "undefined") return new None();
   const raw = window.__RUNTIME_CLIENT_SHARED_STATE__;

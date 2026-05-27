@@ -5,6 +5,9 @@
 //// server/public/backend.gleam, and server/public/model.gleam.
 //// The shared ws_runtime owns framing. This file binds it to the
 //// Mount-specific route and backend code.
+////
+//// Public sockets join the live-update scope. Custom BEAM messages from that
+//// scope are treated as ToClient values and encoded through the root API path.
 
 import generated/protocol_wire
 import generated/public/request_context.{type RequestContext, RequestContext}

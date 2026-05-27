@@ -4,6 +4,10 @@
 //// Derived from the Generator Framework's root API transport contract. Mount-specific
 //// ws_handler modules inject route building, request-context creation,
 //// backend init, and ToServer handling callbacks.
+////
+//// This module owns frame decoding, page_init handling, backend model storage,
+//// effect execution, and ToClient push encoding. It is generated once because
+//// those behaviors are transport-wide rather than Mount-specific.
 
 import generated/protocol_wire
 import generated/runtime/effect_runner

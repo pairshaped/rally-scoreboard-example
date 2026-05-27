@@ -6,6 +6,10 @@
 //// generated/<mount_namespace>/router.gleam,
 //// generated/<mount_namespace>/ssr_handler.gleam,
 //// and generated/<mount_namespace>/ws_handler.gleam.
+////
+//// This is package-level generated code because it arbitrates across Mounts:
+//// route-root selection, static assets, session cookies, authentication
+//// redirects, SSR requests, and WebSocket upgrades all enter here.
 
 import generated/admin/router as mount_admin_router
 import generated/admin/ssr_handler as mount_admin_ssr_handler

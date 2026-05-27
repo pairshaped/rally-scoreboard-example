@@ -3,6 +3,11 @@
 //// SSR shell assembly and hydration helpers shared by Mount SSR handlers.
 //// Mount SSR handlers import this module so shell injection, hydration
 //// script assembly, and response construction stay in one place.
+//// Derived from the Generator Framework's SSR runtime contract.
+////
+//// This helper is package-level because shell assembly is the same for every
+//// Mount. Mount-specific SSR handlers decide which page data to load and
+//// which shared Lustre view to render.
 
 import generated/runtime/env
 import gleam/bytes_tree

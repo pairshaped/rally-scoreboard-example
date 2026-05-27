@@ -1,7 +1,11 @@
 //// Generated. Do not edit.
 ////
 //// Server route parser for the public Mount.
-//// Derived from server/public/pages route modules and [[tools.rally.clients]].
+//// Derived from server/public/pages route modules, the Mount route root
+//// (`/`), and [[tools.rally.clients]].
+////
+//// HTTP SSR, WebSocket page_init, and the client router share the same Route
+//// shape so request context construction does not duplicate route semantics.
 
 import generated/public/route.{type Route}
 import gleam/result

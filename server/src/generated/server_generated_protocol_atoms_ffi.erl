@@ -2,10 +2,12 @@
 %%
 %% Pre-registers all atoms that may appear in client ETF payloads,
 %% so binary_to_term([safe]) can decode them without rejecting unknown
-%% atoms. Includes framework atoms, handler function names, bare
-%% constructor names, and the 10-char hex wire-identity hashes that
-%% the per-type transformer functions emit on the wire.
+%% atoms. Includes framework atoms, handler function names, and the
+%% bare constructor names from the root API graph.
 %% Derived from the shared API codec graph.
+%%
+%% The Generator Framework rejects duplicate constructor atoms before
+%% codegen, so this root API target does not need hash-based wire names.
 %%
 %% ensure/0 uses persistent_term as a one-shot guard so the
 %% binary_to_atom calls only run once per VM lifetime.

@@ -9,9 +9,9 @@
 %% intentionally absent: they do not cross the wire.
 %%
 %% Constructor atoms are unique across the whole shared API graph,
-%% so encode/decode functions are identity transforms. Hex-hash
-%% translation is only needed when constructor names collide across
-%% modules, which does not happen in the shared API.
+%% so encode/decode functions are identity transforms. The Generator
+%% Framework fails generation on collisions instead of adding hidden
+%% module paths, hashes, or other disambiguators to the root API wire.
 
 -module(server_generated_protocol_wire_ffi).
 -export([
