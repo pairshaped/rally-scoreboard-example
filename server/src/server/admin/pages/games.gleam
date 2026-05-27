@@ -2,6 +2,11 @@
 ////
 //// These functions are named after ToServer constructors. Generated admin
 //// dispatch calls them to mutate the database and emit ToClient messages.
+////
+//// Live-update fanout (GameScoreUpdated, StandingsUpdated) is API-shaped
+//// but not yet wired: the ToClient types and client receiver dispatch are
+//// in place, but server-side cross-connection broadcast requires a pubsub
+//// mechanism that the generated runtime does not yet provide.
 
 import generated/admin/request_context.{type RequestContext}
 import generated/runtime/effect.{type Effect}
@@ -80,8 +85,7 @@ pub fn mark_final(
       case
         final_admin_result(db: context.db, game_id:, home_score:, away_score:)
       {
-        Ok(admin_game) ->
-          effect.send_to_client(to_client.ResultSaved(game: admin_game))
+        Ok(game) -> effect.send_to_client(to_client.ResultSaved(game:))
         Error(reason) ->
           effect.send_to_client(
             to_client.AdminError(reason: db.to_string(reason)),

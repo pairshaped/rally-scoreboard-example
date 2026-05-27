@@ -1,8 +1,10 @@
 //// Admin backend model.
 ////
-//// Holds server-side state owned by the admin Mount. The example keeps it
-//// intentionally small so dispatch and transport shape stay easy to inspect.
+//// Holds server-side state owned by the admin Mount. This example has no
+//// per-connection server state, so Model is a unit value. Apps that need
+//// per-connection state (cached lookups, session counters, etc.) add
+//// fields here.
 
 pub type Model {
-  Model(audit_note: String)
+  Model
 }

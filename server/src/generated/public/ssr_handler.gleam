@@ -10,6 +10,7 @@ import gleam/bit_array
 import gleam/bytes_tree
 import gleam/dict
 import gleam/http/response
+import gleam/list
 import gleam/string
 import mist.{type ResponseData}
 import simplifile
@@ -26,23 +27,24 @@ pub fn handle_request(
   server_context _server_context: ServerContext,
   session_id session_id: String,
   hostname hostname: String,
-  query _query: dict.Dict(String, String),
+  query query: dict.Dict(String, String),
 ) -> response.Response(ResponseData) {
   ensure_atoms()
-  serve_html_shell(route, session_id, hostname)
+  serve_html_shell(route, session_id, hostname, query)
 }
 
 fn serve_html_shell(
   route: router.Route,
   session_id: String,
   hostname: String,
+  query: dict.Dict(String, String),
 ) -> response.Response(ResponseData) {
   let html = case simplifile.read(shell_path) {
     Ok(content) ->
-      inject_hydration(content, route, session_id, hostname)
+      inject_hydration(content, route, session_id, hostname, query)
       <> browser_env_script()
     Error(_) ->
-      inject_hydration(fallback_shell(), route, session_id, hostname)
+      inject_hydration(fallback_shell(), route, session_id, hostname, query)
       <> browser_env_script()
   }
   response.new(200)
@@ -55,8 +57,9 @@ fn inject_hydration(
   route: router.Route,
   session_id: String,
   hostname: String,
+  query: dict.Dict(String, String),
 ) -> String {
-  let flags_base64 = build_flags_base64(route, session_id, hostname)
+  let flags_base64 = build_flags_base64(route, session_id, hostname, query)
   let scripts =
     "<script>window.__RUNTIME_FLAGS__='"
     <> flags_base64
@@ -68,6 +71,7 @@ fn build_flags_base64(
   route: router.Route,
   session_id: String,
   hostname: String,
+  query: dict.Dict(String, String),
 ) -> String {
   let #(name, params_json) = route_info(route)
   let json =
@@ -79,10 +83,28 @@ fn build_flags_base64(
     <> json_escape(session_id)
     <> "\",\"hostname\":\""
     <> json_escape(hostname)
-    <> "\"}"
+    <> "\",\"query\":"
+    <> query_json(query)
+    <> "}"
   json
   |> bit_array.from_string
   |> bit_array.base64_encode(True)
+}
+
+fn query_json(query: dict.Dict(String, String)) -> String {
+  let pairs =
+    dict.fold(query, [], fn(acc, k, v) {
+      [#("\"" <> json_escape(k) <> "\"", "\"" <> json_escape(v) <> "\""), ..acc]
+    })
+  "{"
+  <> string.join(
+    list.map(pairs, fn(pair) {
+      let #(k, v) = pair
+      k <> ":" <> v
+    }),
+    ",",
+  )
+  <> "}"
 }
 
 fn route_info(route: router.Route) -> #(String, String) {

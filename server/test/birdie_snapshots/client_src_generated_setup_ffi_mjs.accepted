@@ -22,10 +22,19 @@ export function setup() {
   transport.registerOnConnect(() => {
     const wsUrl = currentWsUrl();
     const page = routePageInit();
-    if (wsUrl && page) transport.send_page_init(wsUrl, page.module, page.params);
+    if (wsUrl && page) transport.send_page_init(wsUrl, page.module, page.params, page.query);
   });
   const wsUrl = currentWsUrl();
   if (wsUrl) transport.ensureSocket(wsUrl);
+}
+
+/** Read query params from the current browser URL. */
+export function readCurrentQuery() {
+  if (typeof window === "undefined") return {};
+  const params = new URLSearchParams(window.location.search);
+  const query = {};
+  params.forEach((value, key) => { query[key] = value; });
+  return query;
 }
 
 function currentWsUrl() {
@@ -52,26 +61,27 @@ function ssrFlags() {
 }
 
 function routePageInit() {
-  if (typeof window === "undefined") return { module: "Games", params: null };
+  if (typeof window === "undefined") return { module: "Games", params: null, query: {} };
 
   const flags = ssrFlags();
   if (flags && flags.route) {
     if (flags.route === "AdminSignInPassword" || flags.route === "AdminSignInCode") {
       return null;
     }
-    return { module: flags.route, params: flags.params || null };
+    return { module: flags.route, params: flags.params || null, query: flags.query || {} };
   }
 
   const path = window.location.pathname.replace(/\/+$/, "") || "/";
+  const query = readCurrentQuery();
   if (path === "/admin/sign_in" || path === "/admin/sign_in/password" || path === "/admin/sign_in/code") {
     return null;
   }
-  if (path === "/admin/games") return { module: "AdminGames", params: null };
-  if (path === "/standings") return { module: "Standings", params: null };
+  if (path === "/admin/games") return { module: "AdminGames", params: null, query };
+  if (path === "/standings") return { module: "Standings", params: null, query };
   const gameMatch = path.match(/^\/games\/([^/]+)$/);
-  if (gameMatch) return { module: "GamesId", params: decodeURIComponent(gameMatch[1]) };
+  if (gameMatch) return { module: "GamesId", params: decodeURIComponent(gameMatch[1]), query };
   const teamMatch = path.match(/^\/teams\/([^/]+)$/);
-  if (teamMatch) return { module: "Team", params: decodeURIComponent(teamMatch[1]) };
-  return { module: "Games", params: null };
+  if (teamMatch) return { module: "Team", params: decodeURIComponent(teamMatch[1]), query };
+  return { module: "Games", params: null, query };
 }
 

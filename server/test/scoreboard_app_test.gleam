@@ -106,7 +106,7 @@ pub fn public_root_route_renders_games_test() {
   |> contains("[] -> Games")
   |> should.be_true
   setup
-  |> contains("return { module: \"Games\", params: null }")
+  |> contains("module: \"Games\", params: null")
   |> should.be_true
 }
 

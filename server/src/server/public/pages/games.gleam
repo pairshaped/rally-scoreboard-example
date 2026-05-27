@@ -70,7 +70,7 @@ pub fn game_summary_from_row(
   )
 }
 
-fn game_status(final: Int, period: String) -> game.GameStatus {
+pub fn game_status(final: Int, period: String) -> game.GameStatus {
   case final {
     1 -> game.Final
     _ -> game.Live(period)

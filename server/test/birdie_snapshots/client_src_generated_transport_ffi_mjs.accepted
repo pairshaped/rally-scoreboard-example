@@ -338,7 +338,6 @@ export function ensureSocket(url) {
     if (debugEnabled()) {
       console.log("%c-- disconnected --", "color: #e83333; font-weight: bold");
     }
-    clearPending();
     for (const listener of onDisconnectListeners) {
       try { listener("connection closed"); } catch (_) { /* swallow */ }
     }
@@ -398,17 +397,21 @@ export function send(url, module, msg) {
 }
 
 /**
- * Send a page init frame with route params. Uses request_id 0 as the
- * init sentinel. The server initializes the page's ServerModel with
- * these params instead of requiring a separate Load message.
+ * Send a page init frame with route params and query params. Uses
+ * request_id 0 as the init sentinel. The server initializes the page's
+ * ServerModel with these params instead of requiring a separate Load
+ * message. The value is a two-element array [routeParam, queryObject]
+ * so the server can extract both route identity and query context.
  * @param {string} url WebSocket URL
  * @param {string} module page name
  * @param {any} params route params value
+ * @param {object} [query] query params as a plain object
  */
-export function send_page_init(url, module, params) {
+export function send_page_init(url, module, params, query) {
   ensureSocket(url);
-  const payload = toWebSocketPayload(encode_request(module, 0, params));
-  logFrame("->", `page_init ${module}`, params);
+  const queryObj = query || {};
+  const payload = toWebSocketPayload(encode_request(module, 0, [params, queryObj]));
+  logFrame("->", `page_init ${module}`, params, { query: queryObj });
   if (ws && ws.readyState === WebSocket.OPEN) {
     ws.send(payload);
   } else {

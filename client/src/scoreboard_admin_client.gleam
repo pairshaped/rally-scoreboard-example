@@ -41,6 +41,7 @@ type Model {
     home_code: String,
     away_code: String,
     dark_mode: Bool,
+    signed_in: Bool,
   )
 }
 
@@ -81,6 +82,7 @@ fn init(_flags: Nil) -> #(Model, Effect(Msg)) {
       home_code: "TOR",
       away_code: "NYC",
       dark_mode: admin_effect.read_dark_mode(),
+      signed_in: admin_effect.has_auth_cookie("scoreboard_admin"),
     ),
     effect.batch([
       register_receivers(),
@@ -210,7 +212,11 @@ fn handle_games(
 
 fn view(model: Model) -> Element(Msg) {
   html.div([attribute.class("scoreboard-app")], [
-    topbar(route: model.route, dark_mode: model.dark_mode),
+    topbar(
+      route: model.route,
+      dark_mode: model.dark_mode,
+      signed_in: model.signed_in,
+    ),
     case model.route {
       admin_route.AdminSignInPassword -> sign_in_view(route: model.route)
       admin_route.AdminSignInCode -> sign_in_view(route: model.route)
@@ -249,8 +255,8 @@ fn view(model: Model) -> Element(Msg) {
 fn topbar(
   route route: admin_route.Route,
   dark_mode dark_mode: Bool,
+  signed_in signed_in: Bool,
 ) -> Element(Msg) {
-  let signed_in = is_signed_in(route)
   html.header([attribute.class("topbar")], [
     html.div([attribute.class("brand")], [
       html.span([attribute.class("brand-mark")], [html.text("S")]),
@@ -337,13 +343,6 @@ fn line_attrs(
     attribute.attribute("x2", x2),
     attribute.attribute("y2", y2),
   ]
-}
-
-fn is_signed_in(route: admin_route.Route) -> Bool {
-  case route {
-    admin_route.AdminGames -> True
-    _ -> False
-  }
 }
 
 fn admin_link(
@@ -620,7 +619,7 @@ fn not_found_view() -> Element(Msg) {
   html.main([attribute.class("panel")], [
     html.h1([], [html.text("Not found")]),
     html.p([attribute.class("muted")], [
-      html.text("The admin router did not match this URL."),
+      html.text("This page does not exist."),
     ]),
   ])
 }

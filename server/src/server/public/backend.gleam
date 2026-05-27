@@ -14,10 +14,12 @@ import shared/api/to_server.{type ToServer}
 
 pub type Msg {
   FromClient(ToServer, RequestContext)
+  SessionConnected
+  SessionDisconnected
 }
 
 pub fn init() -> Model {
-  Model(notice: "")
+  Model
 }
 
 pub fn update(
@@ -25,11 +27,15 @@ pub fn update(
   model model: Model,
   server_context server_context: ServerContext,
 ) -> #(Model, Effect(ToClient)) {
-  let FromClient(to_server_msg, request_context) = msg
-  generated_dispatch.to_server(
-    msg: to_server_msg,
-    request_context:,
-    server_context:,
-    backend_model: model,
-  )
+  case msg {
+    FromClient(to_server_msg, request_context) ->
+      generated_dispatch.to_server(
+        msg: to_server_msg,
+        request_context:,
+        server_context:,
+        backend_model: model,
+      )
+    SessionConnected -> #(model, effect.none())
+    SessionDisconnected -> #(model, effect.none())
+  }
 }

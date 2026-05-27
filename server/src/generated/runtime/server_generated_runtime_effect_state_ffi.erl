@@ -15,7 +15,8 @@
          put_ws_authentication_timestamp/1, get_ws_authentication_timestamp/0,
          clear_ws_authentication_state/0,
          put_ws_server_shared_state/1, get_ws_server_shared_state/0,
-         put_backend_model/1, get_backend_model/0]).
+         put_backend_model/1, get_backend_model/0,
+         put_ws_cookie_header/1, get_ws_cookie_header/0]).
 
 put_ws_state(Conn, Ctx, Page) ->
     put(runtime_ws_conn, Conn),
@@ -127,4 +128,14 @@ get_backend_model() ->
     case get(runtime_backend_model) of
         undefined -> {error, nil};
         Val -> {ok, Val}
+    end.
+
+put_ws_cookie_header(CookieHeader) ->
+    put(runtime_ws_cookie_header, CookieHeader),
+    nil.
+
+get_ws_cookie_header() ->
+    case get(runtime_ws_cookie_header) of
+        undefined -> <<>>;
+        Val -> Val
     end.

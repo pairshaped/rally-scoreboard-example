@@ -107,6 +107,7 @@ fn mount_admin_handle_ws(
 ) -> Response(ResponseData) {
   let session_id = get_session_id(req)
   let hostname = request_header(req, "host")
+  let cookie_header = request.get_header(req, "cookie")
   mist.websocket(
     req,
     mount_admin_ws_handler.handler,
@@ -116,6 +117,7 @@ fn mount_admin_handle_ws(
         server_context: server_context,
         session_id: session_id,
         hostname: hostname,
+        cookie_header: cookie_header,
       )
     },
     mount_admin_ws_handler.on_close,

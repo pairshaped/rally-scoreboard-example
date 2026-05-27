@@ -26,7 +26,10 @@ pub fn main() -> Nil {
     Ok(Nil)
   })
   let server_context = server_context.new(db:, system_db: system_conn)
-  let assert Ok(port) = server_port()
+  let port = case server_port() {
+    Ok(p) -> p
+    Error(InvalidPort(_)) -> panic as "Invalid PORT value"
+  }
 
   io.println("Listening on http://localhost:" <> int.to_string(port))
   let assert Ok(_) =

@@ -114,3 +114,13 @@ pub fn get_backend_model() -> Result(a, Nil) {
   Error(Nil)
 }
 
+@external(erlang, "server_generated_runtime_effect_state_ffi", "put_ws_cookie_header")
+pub fn put_ws_cookie_header(_cookie_header: String) -> Nil {
+  Nil
+}
+
+@external(erlang, "server_generated_runtime_effect_state_ffi", "get_ws_cookie_header")
+pub fn get_ws_cookie_header() -> String {
+  ""
+}
+

@@ -8,6 +8,7 @@ import generated/runtime/effect.{type Effect}
 import generated/sql/server/games_sql
 import server/helpers/db
 import server/public/model.{type Model}
+import server/public/pages/games.{game_status}
 import server/server_context.{type ServerContext}
 import shared/api/domain/game
 import shared/api/to_client.{type ToClient}
@@ -55,16 +56,10 @@ fn game_detail_from_row(row: games_sql.GetRow) -> game.GameDetail {
     home_score: row.home_score,
     away_score: row.away_score,
     status: game_status(row.final, row.period),
+    // Demo data: a real app would load scoring events from a table.
     scoring_summary: [
       row.home_code <> " opened the scoring",
       row.away_code <> " answered late",
     ],
   )
-}
-
-fn game_status(final: Int, period: String) -> game.GameStatus {
-  case final {
-    1 -> game.Final
-    _ -> game.Live(period)
-  }
 }

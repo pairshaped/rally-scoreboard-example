@@ -60,14 +60,9 @@ fn make_request_context(
   route route: route.Route,
   session_id session_id: String,
   hostname hostname: String,
+  query query: dict.Dict(String, String),
 ) -> RequestContext {
-  RequestContext(
-    route:,
-    query: dict.new(),
-    session_id:,
-    user_id: option.None,
-    hostname:,
-  )
+  RequestContext(route:, query:, session_id:, user_id: option.None, hostname:)
 }
 
 fn handle_to_server(

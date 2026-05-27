@@ -15,6 +15,7 @@ import generated/runtime/effect_state
 import generated/runtime/env
 import gleam/bit_array
 import gleam/bool
+import gleam/dict
 import gleam/dynamic
 import gleam/erlang/process
 import gleam/int
@@ -66,8 +67,12 @@ pub fn handler(
   msg msg: WebsocketMessage(a),
   conn conn: WebsocketConnection,
   build_route build_route: fn(String, dynamic.Dynamic) -> route,
-  make_request_context make_request_context: fn(route, String, String) ->
-    request_context,
+  make_request_context make_request_context: fn(
+    route,
+    String,
+    String,
+    dict.Dict(String, String),
+  ) -> request_context,
   handle_to_server handle_to_server: fn(
     ToServer,
     request_context,
@@ -101,8 +106,12 @@ fn handle_binary(
   data data: BitArray,
   conn conn: WebsocketConnection,
   build_route build_route: fn(String, dynamic.Dynamic) -> route,
-  make_request_context make_request_context: fn(route, String, String) ->
-    request_context,
+  make_request_context make_request_context: fn(
+    route,
+    String,
+    String,
+    dict.Dict(String, String),
+  ) -> request_context,
   handle_to_server handle_to_server: fn(
     ToServer,
     request_context,
@@ -148,8 +157,12 @@ fn handle_page_init(
   request_id request_id: Int,
   value value: dynamic.Dynamic,
   build_route build_route: fn(String, dynamic.Dynamic) -> route,
-  make_request_context make_request_context: fn(route, String, String) ->
-    request_context,
+  make_request_context make_request_context: fn(
+    route,
+    String,
+    String,
+    dict.Dict(String, String),
+  ) -> request_context,
 ) -> mist.Next(Nil, a) {
   debug_log("[runtime:ws] page_init: " <> page)
   case effect_state.get_stored_server_context() {
@@ -169,12 +182,14 @@ fn handle_page_init(
     Ok(server_context) -> {
       let Nil = effect_state.put_ws_state(conn, server_context, page)
 
-      let route = build_route(page, value)
+      let #(route_param, query) = split_page_init_value(value)
+      let route = build_route(page, route_param)
       let request_context =
         make_request_context(
           route,
           effect_state.get_ws_session(),
           effect_state.get_ws_hostname(),
+          query,
         )
       let Nil = effect_state.put_ws_request_context(request_context)
 
@@ -184,6 +199,19 @@ fn handle_page_init(
       send_pending_frames(conn)
       mist.continue(state)
     }
+  }
+}
+
+fn split_page_init_value(
+  value: dynamic.Dynamic,
+) -> #(dynamic.Dynamic, dict.Dict(String, String)) {
+  let list_value: List(dynamic.Dynamic) = protocol_wire.coerce(value)
+  case list_value {
+    [route_param, query_dynamic] -> {
+      let query: dict.Dict(String, String) = protocol_wire.coerce(query_dynamic)
+      #(route_param, query)
+    }
+    _ -> #(value, dict.new())
   }
 }
 

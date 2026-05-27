@@ -8,13 +8,15 @@
 
 import generated/admin/request_context.{type RequestContext, RequestContext}
 import generated/admin/route
+import generated/runtime/effect_state
 import generated/ws_runtime
 import gleam/dict
 import gleam/dynamic
 import gleam/erlang/process
-import gleam/option
+import gleam/option.{None}
 import lustre/effect.{type Effect}
 import mist.{type WebsocketConnection, type WebsocketMessage}
+import server/admin/authentication
 import server/admin/backend
 import server/admin/model.{type Model}
 import server/server_context.{type ServerContext}
@@ -26,7 +28,12 @@ pub fn on_init(
   server_context server_context: ServerContext,
   session_id session_id: String,
   hostname hostname: String,
+  cookie_header cookie_header: Result(String, Nil),
 ) -> #(Nil, option.Option(process.Selector(dynamic.Dynamic))) {
+  effect_state.put_ws_cookie_header(case cookie_header {
+    Ok(h) -> h
+    Error(Nil) -> ""
+  })
   ws_runtime.on_init(
     conn:,
     server_context:,
@@ -59,14 +66,16 @@ fn make_request_context(
   route route: route.Route,
   session_id session_id: String,
   hostname hostname: String,
+  query query: dict.Dict(String, String),
 ) -> RequestContext {
-  RequestContext(
-    route:,
-    query: dict.new(),
-    session_id:,
-    user_id: option.None,
-    hostname:,
-  )
+  let user_id = {
+    let cookie = effect_state.get_ws_cookie_header()
+    case cookie {
+      "" -> None
+      h -> authentication.authenticated_user_id(Ok(h), session_id)
+    }
+  }
+  RequestContext(route:, query:, session_id:, user_id:, hostname:)
 }
 
 fn handle_to_server(

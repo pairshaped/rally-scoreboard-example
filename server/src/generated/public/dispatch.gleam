@@ -6,8 +6,11 @@
 //// that define matching `*_to_server` handlers. The WebSocket runtime
 //// decodes one typed ToServer value, then calls this function so the
 //// backend can update its model and emit zero or more ToClient messages.
-//// If a constructor has no discovered handler yet, the Generator Framework keeps the
-//// branch explicit and returns no effect.
+////
+//// Constructors handled by the other Mount (admin) are explicit no-ops
+//// here. The shared API graph means every Mount sees every constructor.
+//// Apps that need cross-Mount rejection, logging, or forwarding should
+//// add it in backend.update before delegating to generated dispatch.
 
 import generated/public/request_context.{type RequestContext}
 import lustre/effect.{type Effect}

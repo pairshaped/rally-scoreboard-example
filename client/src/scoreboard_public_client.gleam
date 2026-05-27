@@ -11,6 +11,7 @@ import generated/public/router as public_router
 import generated/runtime/effect as public_effect
 import generated/setup
 import generated/transport
+import gleam/dict.{type Dict}
 import gleam/int
 import gleam/list
 import gleam/option.{type Option, None, Some}
@@ -43,6 +44,7 @@ type Model {
     team: Option(public_team_page.Model),
     notice: String,
     dark_mode: Bool,
+    query: Dict(String, String),
   )
 }
 
@@ -76,6 +78,7 @@ fn init(_flags: Nil) -> #(Model, Effect(Msg)) {
       team: None,
       notice: "",
       dark_mode: public_effect.read_dark_mode(),
+      query: dict.new(),
     ),
     effect.batch([
       register_receivers(),
@@ -86,7 +89,7 @@ fn init(_flags: Nil) -> #(Model, Effect(Msg)) {
         ),
         UrlChanged,
       ),
-      load_route(route),
+      load_route(route, dict.new()),
     ]),
   )
 }
@@ -101,7 +104,11 @@ fn register_receivers() -> Effect(Msg) {
   })
 }
 
-fn load_route(route: public_route.Route) -> Effect(Msg) {
+fn load_route(
+  route: public_route.Route,
+  query: Dict(String, String),
+) -> Effect(Msg) {
+  let _query = query
   case route {
     public_route.Games ->
       public_effect.send_to_server(public_to_server.LoadGames)
@@ -119,6 +126,16 @@ fn load_route(route: public_route.Route) -> Effect(Msg) {
   }
 }
 
+fn query_from_uri(uri: Uri) -> Dict(String, String) {
+  case uri.query {
+    Some(q) ->
+      uri.parse_query(q)
+      |> result.unwrap([])
+      |> dict.from_list
+    None -> dict.new()
+  }
+}
+
 fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
   case msg {
     Navigate(route) -> #(
@@ -127,7 +144,8 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
     )
     UrlChanged(uri) -> {
       let route = public_router.parse_uri(uri)
-      #(Model(..model, route:), load_route(route))
+      let query = query_from_uri(uri)
+      #(Model(..model, route:, query:), load_route(route, query))
     }
     Received(public_receivers.GamesPage(page_msg)) ->
       handle_games(model, page_msg)
@@ -363,6 +381,15 @@ fn line_attrs(
   ]
 }
 
+fn section_head(title: String, subtitle: String) -> Element(Msg) {
+  html.div([attribute.class("section-head")], [
+    html.div([], [
+      html.h1([], [html.text(title)]),
+      html.p([attribute.class("muted")], [html.text(subtitle)]),
+    ]),
+  ])
+}
+
 fn nav_link(
   route route: public_route.Route,
   label label: String,
@@ -396,15 +423,6 @@ fn nav_link_external(
     ],
     [html.text(label)],
   )
-}
-
-fn section_head(title: String, subtitle: String) -> Element(Msg) {
-  html.div([attribute.class("section-head")], [
-    html.div([], [
-      html.h1([], [html.text(title)]),
-      html.p([attribute.class("muted")], [html.text(subtitle)]),
-    ]),
-  ])
 }
 
 fn view_game_grid(games: List(public_game.PublicGameSummary)) -> Element(Msg) {
@@ -616,7 +634,7 @@ fn not_found_view() -> Element(Msg) {
   html.main([attribute.class("panel")], [
     html.h1([], [html.text("Not found")]),
     html.p([attribute.class("muted")], [
-      html.text("The public router did not match this URL."),
+      html.text("This page does not exist."),
     ]),
   ])
 }

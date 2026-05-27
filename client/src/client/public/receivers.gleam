@@ -4,6 +4,7 @@
 //// pages can react to the same server-emitted message without transport code
 //// knowing about page state.
 
+import gleam/list
 import gleam/option.{None, Some}
 import shared/api/to_client
 import shared/public/pages/game_detail
@@ -49,14 +50,7 @@ fn receive_for_team(event: to_client.ToClient) -> List(Msg) {
 
 pub fn receive_active(event: to_client.ToClient) -> List(Msg) {
   receive_for_games(event)
-  |> append(receive_for_game_detail(event))
-  |> append(receive_for_standings(event))
-  |> append(receive_for_team(event))
-}
-
-fn append(left: List(a), right: List(a)) -> List(a) {
-  case left {
-    [] -> right
-    [first, ..rest] -> [first, ..append(rest, right)]
-  }
+  |> list.append(receive_for_game_detail(event))
+  |> list.append(receive_for_standings(event))
+  |> list.append(receive_for_team(event))
 }

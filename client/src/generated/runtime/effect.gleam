@@ -33,6 +33,15 @@ fn do_send_to_server(_msg: a) -> Nil {
   Nil
 }
 
+@external(javascript, "./client_effect_ffi.mjs", "hasAuthCookie")
+fn do_has_auth_cookie(_cookie_name: String) -> Bool {
+  False
+}
+
+pub fn has_auth_cookie(cookie_name cookie_name: String) -> Bool {
+  do_has_auth_cookie(cookie_name)
+}
+
 @external(javascript, "./client_effect_ffi.mjs", "setDarkMode")
 fn do_set_dark_mode(_enabled: Bool) -> Nil {
   Nil
