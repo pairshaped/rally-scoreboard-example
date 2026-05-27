@@ -445,13 +445,25 @@ async function openWs(path = "/ws", opts = {}) {
     ? new WebSocket(url, { headers: { Cookie: cookies } })
     : new WebSocket(url);
   ws.binaryType = "arraybuffer";
-  await Promise.race([
-    once(ws, "open"),
+  const outcome = await Promise.race([
+    once(ws, "open").then(() => "opened"),
+    once(ws, "error").then(() => "error"),
     (async () => {
       while (!serverDied) await sleep(200);
       throw serverDied;
     })(),
+    sleep(10_000).then(() => {
+      ws.close();
+      return "timeout";
+    }),
   ]);
+  if (outcome === "error") {
+    ws.close();
+    throw new Error(`WebSocket error opening ${path}`);
+  }
+  if (outcome === "timeout") {
+    throw new Error(`Timed out opening ${path} (server alive)`);
+  }
   rejectIfServerDead();
   return ws;
 }
