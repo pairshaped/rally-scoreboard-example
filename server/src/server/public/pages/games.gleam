@@ -10,6 +10,7 @@ import gleam/dict
 import gleam/list
 import gleam/option.{None, Some}
 import server/helpers/db
+import server/helpers/domain
 import server/public/model.{type Model}
 import server/server_context.{type ServerContext}
 import shared/api/domain/game
@@ -66,15 +67,8 @@ pub fn game_summary_from_row(
     ),
     home_score: row.home_score,
     away_score: row.away_score,
-    status: game_status(row.final, row.period),
+    status: domain.game_status(row.final, row.period),
   )
-}
-
-pub fn game_status(final: Int, period: String) -> game.GameStatus {
-  case final {
-    1 -> game.Final
-    _ -> game.Live(period)
-  }
 }
 
 pub fn load_games_for_ssr(

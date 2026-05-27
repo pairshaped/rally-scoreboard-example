@@ -1,9 +1,13 @@
 //// Public standings page — view tests.
 
+import gleam/option.{None, Some}
 import gleam/string
 import gleeunit/should
 import lustre/element
-import shared/api/domain/standing.{type StandingRow, StandingRow}
+import shared/api/domain/standing.{
+  type StandingRow, PowerRankingRow, StandingRow,
+}
+import shared/api/to_client
 import shared/public/pages/standings
 
 fn on_navigate_team(_slug: String) -> Nil {
@@ -63,4 +67,38 @@ pub fn page_includes_table_header_test() {
   html |> string.contains("L") |> should.be_true
   html |> string.contains("PF") |> should.be_true
   html |> string.contains("PA") |> should.be_true
+}
+
+// --- receive mapping tests ---
+
+pub fn standings_receive_maps_loaded_to_msg_test() {
+  let rows = [make_row("TOR", 10, 2)]
+  standings.receive(to_client.StandingsLoaded(rows:))
+  |> should.equal(Some(standings.LoadedStandings(rows)))
+}
+
+pub fn standings_receive_maps_updated_to_msg_test() {
+  let rows = [make_row("TOR", 10, 2)]
+  standings.receive(to_client.StandingsUpdated(rows:))
+  |> should.equal(Some(standings.LoadedStandings(rows)))
+}
+
+pub fn standings_receive_maps_power_rankings_to_msg_test() {
+  let pr =
+    PowerRankingRow(
+      team_code: "TOR",
+      team_name: "Toronto",
+      slug: "tor",
+      wins: 10,
+      losses: 2,
+      points_for: 500,
+      points_against: 80,
+    )
+  standings.receive(to_client.PowerRankingsLoaded(rows: [pr]))
+  |> should.equal(Some(standings.LoadedPowerRankings([pr])))
+}
+
+pub fn standings_receive_returns_none_for_unknown_test() {
+  standings.receive(to_client.GamesLoaded(games: []))
+  |> should.equal(None)
 }

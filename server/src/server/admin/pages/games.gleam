@@ -12,9 +12,9 @@ import generated/runtime/live_updates
 import generated/sql/server/games_sql
 import gleam/bool
 import gleam/list
-import gleam/option
 import server/admin/model.{type Model}
 import server/helpers/db
+import server/helpers/domain
 import server/server_context.{type ServerContext}
 import shared/api/domain/game as admin_game
 import shared/api/domain/standing
@@ -164,20 +164,7 @@ fn live_standings(
   db: sqlight.Connection,
 ) -> Result(List(standing.StandingRow), db.QueryError) {
   case games_sql.standings(db:) {
-    Ok(rows) ->
-      Ok(
-        list.map(rows, fn(row) {
-          standing.StandingRow(
-            team_code: option.unwrap(row.team_code, ""),
-            team_name: row.team_name,
-            slug: row.team_slug,
-            wins: row.wins,
-            losses: row.losses,
-            points_for: row.points_for,
-            points_against: row.points_against,
-          )
-        }),
-      )
+    Ok(rows) -> Ok(list.map(rows, domain.standing_from_row))
     Error(err) -> Error(db.from_sqlight(err))
   }
 }
@@ -261,7 +248,7 @@ fn admin_summary_from_row(
     away_code: row.away_code,
     home_score: row.home_score,
     away_score: row.away_score,
-    status: admin_status(row.final, row.period),
+    status: domain.game_status(row.final, row.period),
     needs_attention: row.final == 0,
   )
 }
@@ -275,7 +262,7 @@ fn admin_detail_from_create(
     away_code: row.away_code,
     home_score: row.home_score,
     away_score: row.away_score,
-    status: admin_status(row.final, row.period),
+    status: domain.game_status(row.final, row.period),
     period: row.period,
   )
 }
@@ -289,7 +276,7 @@ fn admin_detail_from_update_score(
     away_code: row.away_code,
     home_score: row.home_score,
     away_score: row.away_score,
-    status: admin_status(row.final, row.period),
+    status: domain.game_status(row.final, row.period),
     period: row.period,
   )
 }
@@ -303,16 +290,9 @@ fn admin_detail_from_final(
     away_code: row.away_code,
     home_score: row.home_score,
     away_score: row.away_score,
-    status: admin_status(row.final, row.period),
+    status: domain.game_status(row.final, row.period),
     period: row.period,
   )
-}
-
-fn admin_status(final: Int, period: String) -> admin_game.GameStatus {
-  case final {
-    1 -> admin_game.Final
-    _ -> admin_game.Live(period)
-  }
 }
 
 pub fn load_admin_games_for_ssr(

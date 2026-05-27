@@ -425,13 +425,3 @@ export function registerPushHandler(module, callback) {
   pushHandlers.set(module, callback);
 }
 
-/**
- * Read SSR flags from window.__RUNTIME_FLAGS__ and clear them.
- * Returns the base64 ETF string or empty string if not present.
- */
-export function read_flags() {
-  const flags = window.__RUNTIME_FLAGS__ || "";
-  delete window.__RUNTIME_FLAGS__;
-  return flags;
-}
-

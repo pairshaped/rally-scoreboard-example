@@ -87,7 +87,7 @@ pub fn view_standings_page(
     html.section([attribute.class("panel")], [
       ui.section_head(
         "League table",
-        "Standing rows and power rows share a namespace.",
+        "Standings and power rankings share the same ToClient receiver path.",
       ),
       view_standings(rows, on_navigate_team),
     ]),

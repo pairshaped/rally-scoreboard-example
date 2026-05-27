@@ -14,7 +14,7 @@ import generated/setup
 import generated/transport
 import gleam/bool
 import gleam/list
-import gleam/option.{type Option, None, Some}
+import gleam/option.{type Option, None}
 import gleam/result
 import gleam/string
 import gleam/uri.{type Uri}
@@ -35,7 +35,6 @@ type Model {
   Model(
     route: admin_route.Route,
     games: List(admin_game.AdminGameSummary),
-    selected: Option(admin_game.AdminGameDetail),
     notice: String,
     home_code: String,
     away_code: String,
@@ -56,18 +55,26 @@ type Msg {
   MarkFinal(Int)
   SetDarkMode(Bool)
   SignOut
-  Noop
 }
 
 pub fn main() -> Nil {
   let assert True = codec.ensure_decoders()
   setup.setup()
+
+  let flags = case setup.read_shared_state() {
+    option.Some(value) -> {
+      let event: admin_to_client.ToClient = transport.coerce(value)
+      option.Some(event)
+    }
+    option.None -> option.None
+  }
+
   let app = lustre.application(init, update, view)
-  let assert Ok(_) = lustre.start(app, "#app", Nil)
+  let assert Ok(_) = lustre.start(app, "#app", flags)
   Nil
 }
 
-fn init(_flags: Nil) -> #(Model, Effect(Msg)) {
+fn init(flags: Option(admin_to_client.ToClient)) -> #(Model, Effect(Msg)) {
   let route =
     modem.initial_uri()
     |> result.map(admin_router.parse_uri)
@@ -76,16 +83,14 @@ fn init(_flags: Nil) -> #(Model, Effect(Msg)) {
     Model(
       route:,
       games: [],
-      selected: None,
       notice: "",
       home_code: "TOR",
       away_code: "NYC",
       dark_mode: admin_effect.read_dark_mode(),
       signed_in: admin_effect.has_auth_cookie("scoreboard_admin"),
     )
-  let #(model, hydrated) = case setup.read_shared_state() {
-    option.Some(value) -> {
-      let event: admin_to_client.ToClient = transport.coerce(value)
+  let #(model, hydrated) = case flags {
+    option.Some(event) -> {
       let msgs = admin_receiver_dispatch.to_client(event)
       let model =
         list.fold(msgs, model, fn(m, receiver_msg) {
@@ -190,7 +195,6 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
       admin_effect.set_dark_mode(enabled),
     )
     SignOut -> #(model, authentication.sign_out(path: "/admin/sign_out"))
-    Noop -> #(model, effect.none())
   }
 }
 
@@ -207,7 +211,6 @@ fn handle_games(
       Model(
         ..model,
         games: upsert_game(games: model.games, detail: game),
-        selected: Some(game),
         notice: "Game created.",
       ),
       effect.none(),
@@ -216,7 +219,6 @@ fn handle_games(
       Model(
         ..model,
         games: upsert_game(games: model.games, detail: game),
-        selected: Some(game),
         notice: "Saved.",
       ),
       effect.none(),
@@ -243,7 +245,7 @@ fn view(model: Model) -> Element(Msg) {
           html.section([attribute.class("panel")], [
             ui.section_head(
               "Score desk",
-              "Admin messages stay on the admin root API.",
+              "Admin commands route through the admin Mount dispatch.",
             ),
             admin_games_page.view_games(
               model.games,

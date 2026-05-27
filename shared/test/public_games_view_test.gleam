@@ -1,11 +1,14 @@
 //// Public games page — view tests.
 
+import gleam/option.{None, Some}
 import gleam/string
 import gleeunit/should
 import lustre/element
 import shared/api/domain/game.{
-  type PublicGameSummary, Final, Live, PublicGameSummary, Scheduled, Team,
+  type GameScoreUpdate, type PublicGameSummary, Final, GameScoreUpdate, Live,
+  PublicGameSummary, Scheduled, Team,
 }
+import shared/api/to_client
 import shared/public/pages/games
 
 fn on_navigate_team(_slug: String) -> Nil {
@@ -93,4 +96,38 @@ pub fn page_includes_section_header_test() {
   render_view([])
   |> string.contains("Today")
   |> should.be_true
+}
+
+// --- receive mapping tests ---
+
+fn make_score_update() -> GameScoreUpdate {
+  GameScoreUpdate(
+    game_id: 1,
+    home_score: 90,
+    away_score: 75,
+    period: "Q3",
+    status: Live("Q3"),
+  )
+}
+
+pub fn games_receive_maps_loaded_to_msg_test() {
+  let game_list = [make_game(1, "TOR", "NYC", 85, 72)]
+  games.receive(to_client.GamesLoaded(games: game_list))
+  |> should.equal(Some(games.LoadedGames(game_list)))
+}
+
+pub fn games_receive_maps_score_update_to_msg_test() {
+  let update = make_score_update()
+  games.receive(to_client.GameScoreUpdated(update:))
+  |> should.equal(Some(games.UpdatedScore(update)))
+}
+
+pub fn games_receive_maps_failed_to_msg_test() {
+  games.receive(to_client.GamesLoadFailed(reason: "boom"))
+  |> should.equal(Some(games.LoadFailed("boom")))
+}
+
+pub fn games_receive_returns_none_for_unknown_event_test() {
+  games.receive(to_client.StandingsLoaded(rows: []))
+  |> should.equal(None)
 }

@@ -4,26 +4,23 @@ title: src__generated__admin__ssr_handler_gleam
 ---
 //// Generated. Do not edit.
 ////
-//// Server-side rendered HTML handler for the admin Mount.
-//// Derived from server/admin/pages load/view functions, generated/admin/router.gleam,
-//// generated/runtime/env.gleam, and server/server_context.gleam.
+//// Server-rendered HTML handler for the admin Mount.
+//// Derived from server/admin/pages load/view functions, generated/admin/route.gleam,
+//// and server/server_context.gleam.
 
-import generated/admin/router
-import generated/runtime/env
-import gleam/bit_array
-import gleam/bytes_tree
+import generated/admin/route.{type Route}
+import generated/runtime/ssr
 import gleam/dict
 import gleam/http/response
-import gleam/list
-import gleam/string
+import gleam/io
 import libero/wire as libero_wire
 import lustre/element
 import mist.{type ResponseData}
 import server/admin/pages/games as admin_games_handler
+import server/helpers/db
 import server/server_context.{type ServerContext}
 import shared/admin/pages/games as admin_games_page
 import shared/api/to_client
-import simplifile
 
 @external(erlang, "server_generated_protocol_atoms_ffi", "ensure")
 fn ensure_atoms() -> Nil
@@ -31,91 +28,31 @@ fn ensure_atoms() -> Nil
 const shell_path = "src/server/admin/shell.html"
 
 pub fn handle_request(
-  route route: router.Route,
+  route route: Route,
   server_context server_context: ServerContext,
   session_id session_id: String,
   hostname hostname: String,
   query query: dict.Dict(String, String),
 ) -> response.Response(ResponseData) {
+  let _ = session_id
+  let _ = hostname
+  let _ = query
   ensure_atoms()
-  serve_html_shell(route, server_context, session_id, hostname, query)
-}
-
-fn serve_html_shell(
-  route: router.Route,
-  server_context: ServerContext,
-  session_id: String,
-  hostname: String,
-  query: dict.Dict(String, String),
-) -> response.Response(ResponseData) {
-  let #(page_html, shared_state) = load_route_data(route, server_context)
-  let html = case simplifile.read(shell_path) {
-    Ok(content) ->
-      inject_shell_content(
-        content,
-        route,
-        session_id,
-        hostname,
-        query,
-        page_html,
-        shared_state,
-      )
-      |> append_string(browser_env_script())
-    Error(_) ->
-      inject_shell_content(
-        fallback_shell(),
-        route,
-        session_id,
-        hostname,
-        query,
-        page_html,
-        shared_state,
-      )
-  }
-  response.new(200)
-  |> response.set_header("content-type", "text/html")
-  |> response.set_body(mist.Bytes(bytes_tree.from_string(html)))
-}
-
-fn inject_shell_content(
-  shell: String,
-  route: router.Route,
-  session_id: String,
-  hostname: String,
-  query: dict.Dict(String, String),
-  page_html: String,
-  shared_state: String,
-) -> String {
-  let flags_base64 = build_flags_base64(route, session_id, hostname, query)
-  let scripts =
-    "<script>window.__RUNTIME_FLAGS__='"
-    <> flags_base64
-    <> "'</script>\n<script>window.__RUNTIME_CLIENT_SHARED_STATE__='"
-    <> shared_state
-    <> "'</script>\n"
-  shell
-  |> string.replace(each: "</head>", with: scripts <> "</head>")
-  |> inject_page_html(page_html)
-}
-
-fn inject_page_html(shell: String, page_html: String) -> String {
-  case page_html {
-    "" -> shell
-    _ ->
-      string.replace(
-        shell,
-        each: "<div id=\"app\"></div>",
-        with: "<div id=\"app\">" <> page_html <> "</div>",
-      )
-  }
+  let #(page_html, shared_state_base64) = load_route_data(route, server_context)
+  ssr.render_shell_response(
+    shell_path:,
+    page_html:,
+    shared_state_base64:,
+    fallback_shell: admin_fallback_shell(),
+  )
 }
 
 fn load_route_data(
-  route: router.Route,
+  route: Route,
   server_context: ServerContext,
 ) -> #(String, String) {
   case route {
-    router.AdminGames ->
+    route.AdminGames ->
       case admin_games_handler.load_admin_games_for_ssr(server_context) {
         Ok(games) -> {
           let nil_on_adjust = fn(_, _, _, _) { Nil }
@@ -131,79 +68,36 @@ fn load_route_data(
             libero_wire.encode_flags(to_client.AdminGamesLoaded(games:)),
           )
         }
-        Error(_) -> #("", "")
+        Error(reason) -> {
+          let _ =
+            io.println_error(
+              "SSR admin/games load failed: " <> db.to_string(reason),
+            )
+          #(
+            admin_games_page.view_games(
+              [],
+              nil_on_adjust,
+              nil_on_adjust,
+              nil_on_final,
+            )
+              |> element.to_string,
+            "",
+          )
+        }
       }
     _ -> #("", "")
   }
 }
 
-fn build_flags_base64(
-  route: router.Route,
-  session_id: String,
-  hostname: String,
-  query: dict.Dict(String, String),
-) -> String {
-  let #(name, params_json) = route_info(route)
-  let json =
-    "{\"route\":\""
-    <> name
-    <> "\",\"params\":"
-    <> params_json
-    <> ",\"session_id\":\""
-    <> json_escape(session_id)
-    <> "\",\"hostname\":\""
-    <> json_escape(hostname)
-    <> "\",\"query\":"
-    <> query_json(query)
-    <> "}"
-  json
-  |> bit_array.from_string
-  |> bit_array.base64_encode(True)
+fn nil_on_adjust(_a, _b, _c, _d) -> Nil {
+  Nil
 }
 
-fn query_json(query: dict.Dict(String, String)) -> String {
-  let pairs =
-    dict.fold(query, [], fn(acc, k, v) {
-      [#("\"" <> json_escape(k) <> "\"", "\"" <> json_escape(v) <> "\""), ..acc]
-    })
-  "{"
-  <> string.join(
-    list.map(pairs, fn(pair) {
-      let #(k, v) = pair
-      k <> ":" <> v
-    }),
-    ",",
-  )
-  <> "}"
+fn nil_on_final(_a) -> Nil {
+  Nil
 }
 
-fn route_info(route: router.Route) -> #(String, String) {
-  case route {
-    router.AdminSignInPassword -> #("AdminSignInPassword", "null")
-    router.AdminSignInCode -> #("AdminSignInCode", "null")
-    router.AdminGames -> #("AdminGames", "null")
-    router.NotFound(_) -> #("NotFound", "null")
-  }
-}
-
-fn json_escape(value: String) -> String {
-  value
-  |> string.replace(each: "\\", with: "\\\\")
-  |> string.replace(each: "\"", with: "\\\"")
-  |> string.replace(each: "\n", with: "\\n")
-  |> string.replace(each: "\r", with: "\\r")
-  |> string.replace(each: "\t", with: "\\t")
-}
-
-fn browser_env_script() -> String {
-  "<script>window.__APP_ENV__='" <> env.app_env_name() <> "'</script>"
-}
-
-fn fallback_shell() -> String {
+fn admin_fallback_shell() -> String {
   "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n</head>\n<body>\n  <div id=\"app\"></div>\n  <script type=\"module\" data-runtime-client>\n    import { main } from \"/_build/client/scoreboard_admin_client.mjs\";\n    main();\n  </script>\n</body>\n</html>\n"
-}
-
-fn append_string(to: String, suffix: String) -> String {
-  to <> suffix
 }
 

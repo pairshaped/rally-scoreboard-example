@@ -14,6 +14,8 @@ pub type ToClient {
   GamesLoaded(games: List(PublicGameSummary))
   GameLoaded(game: GameDetail)
   StandingsLoaded(rows: List(StandingRow))
+  // Exercises same-shape different-constructor wire types alongside StandingsLoaded.
+  // No server handler emits this yet; kept as a placeholder for the generator.
   PowerRankingsLoaded(rows: List(PowerRankingRow))
   GameScoreUpdated(update: GameScoreUpdate)
   StandingsUpdated(rows: List(StandingRow))

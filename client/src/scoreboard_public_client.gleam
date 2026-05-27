@@ -43,6 +43,9 @@ type Model {
     team: Option(public_team_page.Model),
     notice: String,
     dark_mode: Bool,
+    // Route query params are stored so app code can react to query-driven
+    // filters (e.g. ?team=TOR). The initial load and page-init paths both
+    // forward query to the server through RequestContext.
     query: Dict(String, String),
   )
 }
@@ -52,18 +55,26 @@ type Msg {
   Navigate(public_route.Route)
   UrlChanged(Uri)
   SetDarkMode(Bool)
-  Noop
 }
 
 pub fn main() -> Nil {
   let assert True = codec.ensure_decoders()
   setup.setup()
+
+  let flags = case setup.read_shared_state() {
+    option.Some(value) -> {
+      let event: public_to_client.ToClient = transport.coerce(value)
+      option.Some(event)
+    }
+    option.None -> option.None
+  }
+
   let app = lustre.application(init, update, view)
-  let assert Ok(_) = lustre.start(app, "#app", Nil)
+  let assert Ok(_) = lustre.start(app, "#app", flags)
   Nil
 }
 
-fn init(_flags: Nil) -> #(Model, Effect(Msg)) {
+fn init(flags: Option(public_to_client.ToClient)) -> #(Model, Effect(Msg)) {
   let uri_result = modem.initial_uri()
   let route =
     uri_result
@@ -84,9 +95,8 @@ fn init(_flags: Nil) -> #(Model, Effect(Msg)) {
       dark_mode: public_effect.read_dark_mode(),
       query:,
     )
-  let #(model, hydrated) = case setup.read_shared_state() {
-    option.Some(value) -> {
-      let event: public_to_client.ToClient = transport.coerce(value)
+  let #(model, hydrated) = case flags {
+    option.Some(event) -> {
       let msgs = public_receiver_dispatch.to_client(event)
       let model =
         list.fold(msgs, model, fn(m, receiver_msg) {
@@ -226,15 +236,10 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
       handle_standings(model, page_msg)
     Received(public_receivers.TeamPage(page_msg)) ->
       handle_team(model, page_msg)
-    Received(public_receivers.Notice(notice)) -> #(
-      Model(..model, notice:),
-      effect.none(),
-    )
     SetDarkMode(enabled) -> #(
       Model(..model, dark_mode: enabled),
       public_effect.set_dark_mode(enabled),
     )
-    Noop -> #(model, effect.none())
   }
 }
 

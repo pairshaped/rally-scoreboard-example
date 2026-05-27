@@ -52,7 +52,10 @@ pub fn view_team_detail(
       ) = detail
       html.div([], [
         html.section([attribute.class("panel")], [
-          ui.section_head(name, "Team details loaded by slug."),
+          ui.section_head(
+            name,
+            "Loaded by URL slug through the shared wire contract.",
+          ),
           html.div([attribute.class("stat-card")], [
             html.div([], [
               html.strong([], [html.text(code)]),

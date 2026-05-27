@@ -362,8 +362,8 @@ The SSR contract:
 
 - SSR handlers run the route's page load on HTTP request, producing the same `ToClient` result the client would receive over WebSocket.
 - The server converts the `ToClient` result into the shared page model and renders the shared Lustre view to an HTML string with `lustre/element.to_string`.
-- The HTML response embeds hydration flags: route, params, query, and the loaded page data as a base64-encoded ETF `ToClient` value in `__RUNTIME_CLIENT_SHARED_STATE__`.
-- Client init reads hydration flags. When loaded page data exists, the client seeds its model from that data and skips the initial `ToServer Load*` command.
+- The HTML response embeds the loaded page data as a base64-encoded ETF `ToClient` value in `__RUNTIME_CLIENT_SHARED_STATE__`. Route, params, and query are not embedded; the client derives them from `window.location` via `modem.initial_uri()`.
+- Client init reads the embedded `ToClient` as Lustre init flags (`Option(ToClient)`). When hydration data exists, the client seeds its model through the existing receiver path and skips the initial `ToServer Load*` command. When hydration data is absent (SSR load failure, non-SSR navigation), the client sends the initial `Load*` command over WebSocket as normal.
 - After hydration, SPA navigation still sends `page_init + ToServer` through the WebSocket connection.
 - Live fanout (`ToClient` broadcast via `pg`) is unchanged and remains the post-boot update path.
 
@@ -583,7 +583,7 @@ Type aliases are transparent on the wire, as they are in Gleam. Domain identitie
 34. Client shells use Modem for same-Mount navigation and leave cross-Mount, sign-out, external, and SSR-intent links as normal anchors.
 35. Mount logging is explicit. `user_logging` and `issue_logging` default to `false` when omitted; the framework initializer writes both as `true` in each Mount block. User logging only writes for authenticated users and stores user id plus email. Issue logging writes runtime issues for the Mount with or without authentication, including user id and email when known.
 36. Generated sign-in codes use uppercase `0-9A-Z`; verification trims and normalizes the lookup scope and submitted code to uppercase before hashing.
-37. SSR handlers run the route's page load on HTTP request, render the same shared Lustre view the client uses, and embed route, params, query, and loaded page data as hydration flags in the HTML response.
+37. SSR handlers run the route's page load on HTTP request, render the same shared Lustre view the client uses, and embed the loaded page data as a base64 ETF `ToClient` value in the HTML response. Route, params, and query are derived from the current browser URL rather than embedded as SSR flags.
 38. Client init hydration means consuming server-embedded data to start populated, skipping the initial `ToServer Load*` command when hydration data exists. It does not mean DOM reconciliation.
 39. Shared page views are intentionally pure so they can be rendered by SSR, reused by the client, and tested directly without browser transport or WebSocket setup. Shared views accept data and action callbacks but must not import transport, generated client effects, modem, browser setup, or route modules.
 40. SPA navigation after initial hydration still sends `page_init + ToServer` through the WebSocket connection. Live fanout (`ToClient` broadcast via `pg`) is unchanged and remains the post-boot update path.

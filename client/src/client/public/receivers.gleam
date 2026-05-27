@@ -17,7 +17,6 @@ pub type Msg {
   GameDetailPage(game_detail.Msg)
   StandingsPage(standings.Msg)
   TeamPage(team.Msg)
-  Notice(String)
 }
 
 fn receive_for_games(event: to_client.ToClient) -> List(Msg) {

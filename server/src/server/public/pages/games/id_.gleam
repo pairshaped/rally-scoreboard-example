@@ -7,8 +7,8 @@ import generated/public/request_context.{type RequestContext}
 import generated/runtime/effect.{type Effect}
 import generated/sql/server/games_sql
 import server/helpers/db
+import server/helpers/domain
 import server/public/model.{type Model}
-import server/public/pages/games.{game_status}
 import server/server_context.{type ServerContext}
 import shared/api/domain/game
 import shared/api/to_client.{type ToClient}
@@ -55,7 +55,7 @@ fn game_detail_from_row(row: games_sql.GetRow) -> game.GameDetail {
     ),
     home_score: row.home_score,
     away_score: row.away_score,
-    status: game_status(row.final, row.period),
+    status: domain.game_status(row.final, row.period),
     scoring_summary: [
       row.home_code <> " opened the scoring",
       row.away_code <> " answered late",

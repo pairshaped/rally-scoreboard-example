@@ -85,7 +85,7 @@ pub fn view_game_detail_page(
     html.section([attribute.class("panel")], [
       ui.section_head(
         "Game detail",
-        "Loaded through a public ToServer message.",
+        "Rendered by SSR, hydrated from embedded ETF page data.",
       ),
       view_game_detail(game, on_navigate_team),
     ]),

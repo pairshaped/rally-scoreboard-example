@@ -7,8 +7,8 @@ import generated/public/request_context.{type RequestContext}
 import generated/runtime/effect.{type Effect}
 import generated/sql/server/games_sql
 import gleam/list
-import gleam/option.{None, Some}
 import server/helpers/db
+import server/helpers/domain
 import server/public/model.{type Model}
 import server/server_context.{type ServerContext}
 import shared/api/domain/standing
@@ -32,33 +32,16 @@ fn standings(
   db: sqlight.Connection,
 ) -> Result(List(standing.StandingRow), db.QueryError) {
   case games_sql.standings(db:) {
-    Ok(rows) -> Ok(list.map(rows, standing_from_row))
+    Ok(rows) -> Ok(list.map(rows, domain.standing_from_row))
     Error(err) -> Error(db.from_sqlight(err))
   }
-}
-
-fn standing_from_row(row: games_sql.StandingsRow) -> standing.StandingRow {
-  let team_code = case row.team_code {
-    Some(code) -> code
-    None -> ""
-  }
-
-  standing.StandingRow(
-    team_code:,
-    team_name: row.team_name,
-    slug: row.team_slug,
-    wins: row.wins,
-    losses: row.losses,
-    points_for: row.points_for,
-    points_against: row.points_against,
-  )
 }
 
 pub fn load_standings_for_ssr(
   server_context: ServerContext,
 ) -> Result(List(standing.StandingRow), db.QueryError) {
   case games_sql.standings(db: server_context.db) {
-    Ok(rows) -> Ok(list.map(rows, standing_from_row))
+    Ok(rows) -> Ok(list.map(rows, domain.standing_from_row))
     Error(err) -> Error(db.from_sqlight(err))
   }
 }

@@ -72,41 +72,24 @@ function currentWsUrl() {
   return "/ws";
 }
 
-function base64ToUtf8(raw) {
-  const binary = atob(raw);
-  const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
-  return new TextDecoder().decode(bytes);
-}
-
-function ssrFlags() {
-  if (typeof window === "undefined") return null;
-  const raw = transport.read_flags();
-  if (!raw) return null;
-  try { return JSON.parse(base64ToUtf8(raw)); } catch (_) { return null; }
-}
-
 function routePageInit() {
   if (typeof window === "undefined") return { module: "Games", params: null, query: {} };
 
-  const flags = ssrFlags();
-  if (flags && flags.route) {
-    if (flags.route === "AdminSignInPassword" || flags.route === "AdminSignInCode") {
-      return null;
-    }
-    return { module: flags.route, params: flags.params || null, query: flags.query || {} };
-  }
-
-  const path = window.location.pathname.replace(/\/+$/, "") || "/";
   const query = readCurrentQuery();
+  const path = window.location.pathname.replace(/\/+$/, "") || "/";
+
   if (path === "/admin/sign_in" || path === "/admin/sign_in/password" || path === "/admin/sign_in/code") {
     return null;
   }
   if (path === "/admin/games") return { module: "AdminGames", params: null, query };
+  if (path === "/" || path === "/games") return { module: "Games", params: null, query };
   if (path === "/standings") return { module: "Standings", params: null, query };
   const gameMatch = path.match(/^\/games\/([^/]+)$/);
   if (gameMatch) return { module: "GamesId", params: decodeURIComponent(gameMatch[1]), query };
   const teamMatch = path.match(/^\/teams\/([^/]+)$/);
   if (teamMatch) return { module: "Team", params: decodeURIComponent(teamMatch[1]), query };
-  return { module: "Games", params: null, query };
+  // Unknown path: client router resolves to NotFound; skip page_init so
+  // the WebSocket connection does not get a wrong request context.
+  return null;
 }
 

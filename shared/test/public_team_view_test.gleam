@@ -6,6 +6,7 @@ import gleeunit/should
 import lustre/element
 import shared/api/domain/game.{Final, PublicGameSummary, Team}
 import shared/api/domain/team.{type TeamDetail, TeamDetail}
+import shared/api/to_client
 import shared/public/pages/team as team_page
 
 fn on_navigate_team(_slug: String) -> Nil {
@@ -84,4 +85,22 @@ pub fn recent_games_render_test() {
   html |> string.contains("72") |> should.be_true
   html |> string.contains("Final") |> should.be_true
   html |> string.contains("href=\"/games/1\"") |> should.be_true
+}
+
+// --- receive mapping tests ---
+
+pub fn team_receive_maps_loaded_to_msg_test() {
+  let detail = make_detail()
+  team_page.receive(to_client.TeamLoaded(team: detail))
+  |> should.equal(Some(team_page.LoadedTeam(team: detail)))
+}
+
+pub fn team_receive_maps_failed_to_msg_test() {
+  team_page.receive(to_client.GamesLoadFailed(reason: "boom"))
+  |> should.equal(Some(team_page.LoadFailed("boom")))
+}
+
+pub fn team_receive_returns_none_for_unknown_test() {
+  team_page.receive(to_client.StandingsLoaded(rows: []))
+  |> should.equal(None)
 }
