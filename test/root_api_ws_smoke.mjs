@@ -67,10 +67,16 @@ server.stderr.on("data", chunk => {
 });
 
 let serverExited = false;
+let serverDied = null;
 server.on("exit", (code) => {
   serverExited = true;
   serverLog += `\n[server exited with code ${code}]\n`;
+  serverDied = new Error(`Server died with code ${code}:\n${serverLog.trim()}`);
 });
+
+function rejectIfServerDead() {
+  if (serverDied) throw serverDied;
+}
 
 try {
   await waitFor(
@@ -152,9 +158,12 @@ try {
 
   await check("admin sign-in succeeds", async () => {
     await signIn();
-    // Verify sign-in worked by fetching an authenticated page
+    // Verify sign-in worked by fetching an authenticated page.
+    // redirect: "manual" so a 303 redirect to sign-in (auth failure)
+    // does not silently follow and return 200 from the sign-in page.
     const response = await fetch(`http://127.0.0.1:${port}/admin/games`, {
       headers: { Cookie: cookies },
+      redirect: "manual",
     });
     assert.equal(response.status, 200);
   });
@@ -436,7 +445,14 @@ async function openWs(path = "/ws", opts = {}) {
     ? new WebSocket(url, { headers: { Cookie: cookies } })
     : new WebSocket(url);
   ws.binaryType = "arraybuffer";
-  await once(ws, "open");
+  await Promise.race([
+    once(ws, "open"),
+    (async () => {
+      while (!serverDied) await sleep(200);
+      throw serverDied;
+    })(),
+  ]);
+  rejectIfServerDead();
   return ws;
 }
 
@@ -451,19 +467,25 @@ async function textAt(path) {
 }
 
 function nextMessage(ws, timeoutMs) {
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => {
-      ws.removeEventListener("message", onMessage);
-      reject(new Error("Timed out waiting for websocket frame"));
-    }, timeoutMs);
+  return Promise.race([
+    new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        ws.removeEventListener("message", onMessage);
+        reject(new Error("Timed out waiting for websocket frame"));
+      }, timeoutMs);
 
-    function onMessage(event) {
-      clearTimeout(timer);
-      resolve(event);
-    }
+      function onMessage(event) {
+        clearTimeout(timer);
+        resolve(event);
+      }
 
-    ws.addEventListener("message", onMessage, { once: true });
-  });
+      ws.addEventListener("message", onMessage, { once: true });
+    }),
+    (async () => {
+      while (!serverDied) await sleep(100);
+      throw serverDied;
+    })(),
+  ]);
 }
 
 async function waitFor(predicate, timeoutMs) {
