@@ -7,6 +7,9 @@
 // so the server can create a RequestContext for this socket.
 import { registerTransport } from "./runtime/client_effect_ffi.mjs";
 import * as transport from "./transport_ffi.mjs";
+import { decode_safe } from "../../libero/libero/rpc_ffi.mjs";
+import { Ok } from "../../gleam_stdlib/gleam.mjs";
+import { Some, None } from "../../gleam_stdlib/gleam/option.mjs";
 
 export function setup() {
   registerTransport({
@@ -35,6 +38,24 @@ export function readCurrentQuery() {
   const query = {};
   params.forEach((value, key) => { query[key] = value; });
   return query;
+}
+
+/** Decode the SSR-embedded shared state (base64 ETF) into an Option(ToClient). */
+export function readSharedState() {
+  if (typeof window === "undefined") return new None();
+  const raw = window.__RUNTIME_CLIENT_SHARED_STATE__;
+  if (!raw || raw === "" || raw === "{}") return new None();
+  delete window.__RUNTIME_CLIENT_SHARED_STATE__;
+  try {
+    const binary = atob(raw);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    const result = decode_safe(bytes);
+    if (result instanceof Ok) {
+      return new Some(result[0]);
+    }
+    return new None();
+  } catch (_) { return new None(); }
 }
 
 function currentWsUrl() {

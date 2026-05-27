@@ -1,7 +1,7 @@
-//// Shared client-only UI helpers for the Scoreboard example.
+//// Shared UI components usable by both client and server.
 ////
-//// This lives in the client package because these helpers render Lustre
-//// elements. The shared package stays target-neutral and dependency-light.
+//// These are pure Lustre elements. They do not import transport, modem,
+//// browser setup, or route modules.
 
 import lustre/attribute
 import lustre/element.{type Element}

@@ -3,7 +3,6 @@
 //// Owns the public Lustre application shell: route parsing, page model
 //// storage, ToClient fanout, navigation, and public view composition.
 
-import client/components/ui
 import client/public/receivers as public_receivers
 import generated/codec
 import generated/public/receiver_dispatch as public_receiver_dispatch
@@ -27,9 +26,9 @@ import lustre/event
 import modem
 import shared/api/domain/game as public_game
 import shared/api/domain/standing
-import shared/api/domain/team as public_team
 import shared/api/to_client as public_to_client
 import shared/api/to_server as public_to_server
+import shared/components/ui
 import shared/public/pages/game_detail as public_game_detail_page
 import shared/public/pages/games as public_games_page
 import shared/public/pages/standings as public_standings_page
@@ -74,7 +73,7 @@ fn init(_flags: Nil) -> #(Model, Effect(Msg)) {
     Ok(uri) -> query_from_uri(uri)
     Error(Nil) -> dict.new()
   }
-  #(
+  let model =
     Model(
       route:,
       games: [],
@@ -84,7 +83,26 @@ fn init(_flags: Nil) -> #(Model, Effect(Msg)) {
       notice: "",
       dark_mode: public_effect.read_dark_mode(),
       query:,
-    ),
+    )
+  let #(model, hydrated) = case setup.read_shared_state() {
+    option.Some(value) -> {
+      let event: public_to_client.ToClient = transport.coerce(value)
+      let msgs = public_receiver_dispatch.to_client(event)
+      let model =
+        list.fold(msgs, model, fn(m, receiver_msg) {
+          let #(new_m, _) = update(m, Received(receiver_msg))
+          new_m
+        })
+      #(model, !list.is_empty(msgs))
+    }
+    option.None -> #(model, False)
+  }
+  let load_effect = case hydrated {
+    True -> effect.none()
+    False -> initial_load(route)
+  }
+  #(
+    model,
     effect.batch([
       register_receivers(),
       modem.advanced(
@@ -94,9 +112,7 @@ fn init(_flags: Nil) -> #(Model, Effect(Msg)) {
         ),
         UrlChanged,
       ),
-      // Setup's onConnect sends page_init with query from SSR flags,
-      // so the initial load only needs to dispatch the ToServer command.
-      initial_load(route),
+      load_effect,
     ]),
   )
 }
@@ -298,40 +314,38 @@ fn handle_team(
 }
 
 fn view(model: Model) -> Element(Msg) {
+  let on_navigate_team = fn(slug: String) -> Msg {
+    Navigate(public_route.Team(slug:))
+  }
+  let on_navigate_game = fn(id: Int) -> Msg {
+    Navigate(public_route.GamesId(int.to_string(id)))
+  }
+
   html.div([attribute.class("scoreboard-app")], [
     topbar(route: model.route, dark_mode: model.dark_mode),
     case model.route {
       public_route.Games ->
-        html.main([], [
-          html.section([attribute.class("panel")], [
-            ui.section_head("Today", "Live scores from the public root API."),
-            view_game_grid(model.games),
-          ]),
-        ])
+        public_games_page.view_games_page(
+          model.games,
+          on_navigate_team,
+          on_navigate_game,
+        )
       public_route.GamesId(_) ->
-        html.main([], [
-          html.section([attribute.class("panel")], [
-            ui.section_head(
-              "Game detail",
-              "Loaded through a public ToServer message.",
-            ),
-            view_game_detail(model.selected_game),
-          ]),
-        ])
+        public_game_detail_page.view_game_detail_page(
+          model.selected_game,
+          on_navigate_team,
+        )
       public_route.Standings ->
-        html.main([], [
-          html.section([attribute.class("panel")], [
-            ui.section_head(
-              "League table",
-              "Standing rows and power rows share a namespace.",
-            ),
-            view_standings(model.standings),
-          ]),
-        ])
+        public_standings_page.view_standings_page(
+          model.standings,
+          on_navigate_team,
+        )
       public_route.Team(_) ->
-        html.main([], [
-          view_team_detail(model.team),
-        ])
+        public_team_page.view_team_page(
+          model.team,
+          on_navigate_team,
+          on_navigate_game,
+        )
       public_route.NotFound -> ui.not_found_view()
     },
   ])
@@ -382,200 +396,6 @@ fn nav_link(
     ],
     [html.text(label)],
   )
-}
-
-fn view_game_grid(games: List(public_game.PublicGameSummary)) -> Element(Msg) {
-  case games {
-    [] ->
-      html.p([attribute.class("muted")], [html.text("Waiting for scores...")])
-    _ ->
-      html.div([attribute.class("game-grid")], list.map(games, view_game_card))
-  }
-}
-
-fn view_game_card(game: public_game.PublicGameSummary) -> Element(Msg) {
-  html.article([attribute.class("game-card")], [
-    html.div([attribute.class("team-row")], [
-      html.a(
-        [
-          attribute.href("/teams/" <> uri.percent_encode(game.away.slug)),
-          event.on_click(Navigate(public_route.Team(slug: game.away.slug)))
-            |> event.prevent_default,
-        ],
-        [html.strong([], [html.text(game.away.name)])],
-      ),
-      html.span([attribute.class("score")], [
-        html.text(int.to_string(game.away_score)),
-      ]),
-    ]),
-    html.div([attribute.class("team-row")], [
-      html.a(
-        [
-          attribute.href("/teams/" <> uri.percent_encode(game.home.slug)),
-          event.on_click(Navigate(public_route.Team(slug: game.home.slug)))
-            |> event.prevent_default,
-        ],
-        [html.strong([], [html.text(game.home.name)])],
-      ),
-      html.span([attribute.class("score")], [
-        html.text(int.to_string(game.home_score)),
-      ]),
-    ]),
-    html.div([attribute.class("score-line")], [
-      ui.status_badge(game.status),
-      html.a(
-        [
-          public_router.href(
-            route: public_route.GamesId(int.to_string(game.id)),
-          ),
-          event.on_click(Navigate(public_route.GamesId(int.to_string(game.id))))
-            |> event.prevent_default,
-        ],
-        [html.text("Details")],
-      ),
-    ]),
-  ])
-}
-
-fn view_game_detail(game: Option(public_game.GameDetail)) -> Element(Msg) {
-  case game {
-    None -> html.p([attribute.class("muted")], [html.text("Loading game...")])
-    Some(game) ->
-      html.div([], [
-        html.div([attribute.class("game-card")], [
-          html.div([attribute.class("team-row")], [
-            html.a(
-              [
-                attribute.href("/teams/" <> uri.percent_encode(game.away.slug)),
-                event.on_click(
-                  Navigate(public_route.Team(slug: game.away.slug)),
-                )
-                  |> event.prevent_default,
-              ],
-              [html.strong([], [html.text(game.away.name)])],
-            ),
-            html.span([attribute.class("score")], [
-              html.text(int.to_string(game.away_score)),
-            ]),
-          ]),
-          html.div([attribute.class("team-row")], [
-            html.a(
-              [
-                attribute.href("/teams/" <> uri.percent_encode(game.home.slug)),
-                event.on_click(
-                  Navigate(public_route.Team(slug: game.home.slug)),
-                )
-                  |> event.prevent_default,
-              ],
-              [html.strong([], [html.text(game.home.name)])],
-            ),
-            html.span([attribute.class("score")], [
-              html.text(int.to_string(game.home_score)),
-            ]),
-          ]),
-          ui.status_badge(game.status),
-        ]),
-        html.h2([], [html.text("Scoring summary")]),
-        html.ul(
-          [],
-          list.map(game.scoring_summary, fn(item) {
-            html.li([], [html.text(item)])
-          }),
-        ),
-      ])
-  }
-}
-
-fn view_standings(rows: List(standing.StandingRow)) -> Element(Msg) {
-  case rows {
-    [] ->
-      html.p([attribute.class("muted")], [html.text("Waiting for standings...")])
-    _ ->
-      html.table([attribute.class("standings-table")], [
-        html.thead([], [
-          html.tr([], [
-            html.th([], [html.text("Team")]),
-            html.th([], [html.text("W")]),
-            html.th([], [html.text("L")]),
-            html.th([], [html.text("PF")]),
-            html.th([], [html.text("PA")]),
-          ]),
-        ]),
-        html.tbody([], list.map(rows, view_standing_row)),
-      ])
-  }
-}
-
-fn view_standing_row(row: standing.StandingRow) -> Element(Msg) {
-  html.tr([], [
-    html.td([], [
-      html.a(
-        [
-          attribute.href("/teams/" <> uri.percent_encode(row.slug)),
-          event.on_click(Navigate(public_route.Team(slug: row.slug)))
-            |> event.prevent_default,
-        ],
-        [
-          html.strong([], [html.text(row.team_code)]),
-          html.text(" " <> row.team_name),
-        ],
-      ),
-    ]),
-    html.td([], [html.text(int.to_string(row.wins))]),
-    html.td([], [html.text(int.to_string(row.losses))]),
-    html.td([], [html.text(int.to_string(row.points_for))]),
-    html.td([], [html.text(int.to_string(row.points_against))]),
-  ])
-}
-
-fn view_team_detail(team: Option(public_team_page.Model)) -> Element(Msg) {
-  case team {
-    None -> html.p([attribute.class("muted")], [html.text("Loading team...")])
-    Some(public_team_page.Model(team: detail)) -> {
-      let public_team.TeamDetail(
-        code:,
-        name:,
-        slug: _,
-        wins:,
-        losses:,
-        points_for:,
-        points_against:,
-        recent_games:,
-      ) = detail
-      html.div([], [
-        html.section([attribute.class("panel")], [
-          ui.section_head(name, "Team details loaded by slug."),
-          html.div([attribute.class("stat-card")], [
-            html.div([], [
-              html.strong([], [html.text(code)]),
-              html.text(" · " <> name),
-            ]),
-            html.div([attribute.class("score-line")], [
-              html.span([], [
-                html.text(
-                  "W-L: " <> int.to_string(wins) <> "-" <> int.to_string(losses),
-                ),
-              ]),
-              html.span([], [html.text("PF: " <> int.to_string(points_for))]),
-              html.span([], [html.text("PA: " <> int.to_string(points_against))]),
-            ]),
-          ]),
-        ]),
-        html.section([attribute.class("panel")], [
-          ui.section_head("Recent games", ""),
-          case recent_games {
-            [] ->
-              html.p([attribute.class("muted")], [html.text("No games yet.")])
-            _ ->
-              html.div(
-                [attribute.class("game-grid")],
-                list.map(recent_games, view_game_card),
-              )
-          },
-        ]),
-      ])
-    }
-  }
 }
 
 fn is_games(route: public_route.Route) -> Bool {

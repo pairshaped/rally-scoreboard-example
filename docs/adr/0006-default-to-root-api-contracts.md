@@ -354,6 +354,23 @@ The browser receives every server-originated `ToClient` through the same receive
 
 The Generator Framework does not generate separate live-update topic or payload contract types.
 
+## SSR And Hydration
+
+SSR handlers serve the first HTTP request for a route. Instead of returning an empty shell and waiting for client-side boot, SSR handlers run the same page load path used by `ToServer` commands and render the result into the HTML response.
+
+The SSR contract:
+
+- SSR handlers run the route's page load on HTTP request, producing the same `ToClient` result the client would receive over WebSocket.
+- The server converts the `ToClient` result into the shared page model and renders the shared Lustre view to an HTML string with `lustre/element.to_string`.
+- The HTML response embeds hydration flags: route, params, query, and the loaded page data as a base64-encoded ETF `ToClient` value in `__RUNTIME_CLIENT_SHARED_STATE__`.
+- Client init reads hydration flags. When loaded page data exists, the client seeds its model from that data and skips the initial `ToServer Load*` command.
+- After hydration, SPA navigation still sends `page_init + ToServer` through the WebSocket connection.
+- Live fanout (`ToClient` broadcast via `pg`) is unchanged and remains the post-boot update path.
+
+Hydration in this project means client init consumes server-loaded data and starts populated. It does not mean DOM reconciliation. The client renders the same shared page view the server used, wrapped in its app chrome (topbar, shell). When the client has hydrated data, the page-content portion of the initial client render matches the SSR page HTML.
+
+Shared page views are intentionally pure so they can be rendered by SSR, reused by the client, and tested directly without browser transport or WebSocket setup. Shared views accept data and action callbacks but must not import transport, generated client effects, modem, browser setup, or route modules.
+
 ## Generated Ownership
 
 One `[[tools.rally.clients]]` entry defines one Mount. The Mount namespace derives generated paths only for files whose inputs are Mount-specific: routes, request context, backend dispatch, SSR, static handling, WebSocket handling, and receiver dispatch.
@@ -564,3 +581,7 @@ Type aliases are transparent on the wire, as they are in Gleam. Domain identitie
 34. Client shells use Modem for same-Mount navigation and leave cross-Mount, sign-out, external, and SSR-intent links as normal anchors.
 35. Mount logging is explicit. `user_logging` and `issue_logging` default to `false` when omitted; the framework initializer writes both as `true` in each Mount block. User logging only writes for authenticated users and stores user id plus email. Issue logging writes runtime issues for the Mount with or without authentication, including user id and email when known.
 36. Generated sign-in codes use uppercase `0-9A-Z`; verification trims and normalizes the lookup scope and submitted code to uppercase before hashing.
+37. SSR handlers run the route's page load on HTTP request, render the same shared Lustre view the client uses, and embed route, params, query, and loaded page data as hydration flags in the HTML response.
+38. Client init hydration means consuming server-embedded data to start populated, skipping the initial `ToServer Load*` command when hydration data exists. It does not mean DOM reconciliation.
+39. Shared page views are intentionally pure so they can be rendered by SSR, reused by the client, and tested directly without browser transport or WebSocket setup. Shared views accept data and action callbacks but must not import transport, generated client effects, modem, browser setup, or route modules.
+40. SPA navigation after initial hydration still sends `page_init + ToServer` through the WebSocket connection. Live fanout (`ToClient` broadcast via `pg`) is unchanged and remains the post-boot update path.

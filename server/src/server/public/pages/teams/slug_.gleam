@@ -66,3 +66,30 @@ fn recent_games(
     Error(err) -> Error(db.from_sqlight(err))
   }
 }
+
+pub fn load_team_for_ssr(
+  server_context: ServerContext,
+  slug: String,
+) -> Result(TeamDetail, db.QueryError) {
+  case games_sql.team_by_slug(db: server_context.db, slug:) {
+    Ok([row, ..]) -> {
+      let code = option.unwrap(row.code, "")
+      let recent = case recent_games(server_context.db, code:) {
+        Ok(games) -> games
+        Error(_) -> []
+      }
+      Ok(TeamDetail(
+        code:,
+        name: row.name,
+        slug: row.slug,
+        wins: row.wins,
+        losses: row.losses,
+        points_for: row.points_for,
+        points_against: row.points_against,
+        recent_games: recent,
+      ))
+    }
+    Ok([]) -> Error(db.NotFound("no team found for slug"))
+    Error(err) -> Error(db.from_sqlight(err))
+  }
+}

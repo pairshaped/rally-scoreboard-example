@@ -487,7 +487,7 @@ pub fn generated_ws_handlers_delegate_to_package_runtime_test() {
 pub fn mount_clients_use_generated_routers_and_effects_test() {
   let public_client = read("../client/src/scoreboard_public_client.gleam")
   let admin_client = read("../client/src/scoreboard_admin_client.gleam")
-  let client_ui = read("../client/src/client/components/ui.gleam")
+  let client_ui = read("../shared/src/shared/components/ui.gleam")
   let client_effect = read("../client/src/generated/runtime/effect.gleam")
   let client_effect_ffi =
     read("../client/src/generated/runtime/client_effect_ffi.mjs")
@@ -597,33 +597,35 @@ pub fn admin_save_updates_do_not_refetch_the_games_list_test() {
 
 pub fn admin_final_games_do_not_show_final_action_test() {
   let admin_client = read("../client/src/scoreboard_admin_client.gleam")
+  let admin_games_page = read("../shared/src/shared/admin/pages/games.gleam")
 
-  admin_client
-  |> contains("fn final_action(game: admin_game.AdminGameSummary)")
+  admin_games_page
+  |> contains("fn final_action")
   |> should.be_true
-  admin_client
-  |> contains("admin_game.Final -> html.span([], [])")
+  admin_games_page
+  |> contains("Final -> html.span([], [])")
   |> should.be_true
-  admin_client
+  admin_games_page
   |> contains("[html.text(\"Finalize\")]")
   |> should.be_true
   admin_client
-  |> contains("event.on_click(MarkFinal(game.id))")
+  |> contains("MarkFinal(game_id)")
   |> should.be_true
 }
 
 pub fn admin_score_controls_live_next_to_team_names_test() {
   let admin_client = read("../client/src/scoreboard_admin_client.gleam")
+  let admin_games_page = read("../shared/src/shared/admin/pages/games.gleam")
   let admin_shell = read("src/server/admin/shell.html")
 
-  admin_client
+  admin_games_page
   |> contains("attribute.class(\"admin-score-row\")")
   |> should.be_true
   admin_client
-  |> contains("AdjustAway(game.id, game.home_score, game.away_score, -1)")
+  |> contains("AdjustAway(game_id, home_score, away_score, delta)")
   |> should.be_true
   admin_client
-  |> contains("AdjustHome(game.id, game.home_score, game.away_score, 1)")
+  |> contains("AdjustHome(game_id, home_score, away_score, delta)")
   |> should.be_true
   admin_client
   |> contains("clamp_score(home_score + delta)")
@@ -724,7 +726,7 @@ pub fn client_same_mount_links_use_spa_navigation_test() {
   public_client
   |> contains("let route = public_router.parse_uri(uri)")
   |> should.be_true
-  { count(public_client, "|> event.prevent_default") >= 2 }
+  { count(public_client, "|> event.prevent_default") >= 1 }
   |> should.be_true
   public_client
   |> contains("ui.nav_link_external(path: \"/admin/games\", label: \"Admin\"")

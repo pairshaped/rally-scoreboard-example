@@ -53,3 +53,12 @@ fn standing_from_row(row: games_sql.StandingsRow) -> standing.StandingRow {
     points_against: row.points_against,
   )
 }
+
+pub fn load_standings_for_ssr(
+  server_context: ServerContext,
+) -> Result(List(standing.StandingRow), db.QueryError) {
+  case games_sql.standings(db: server_context.db) {
+    Ok(rows) -> Ok(list.map(rows, standing_from_row))
+    Error(err) -> Error(db.from_sqlight(err))
+  }
+}

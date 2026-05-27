@@ -56,10 +56,21 @@ fn game_detail_from_row(row: games_sql.GetRow) -> game.GameDetail {
     home_score: row.home_score,
     away_score: row.away_score,
     status: game_status(row.final, row.period),
-    // Demo data: a real app would load scoring events from a table.
     scoring_summary: [
       row.home_code <> " opened the scoring",
       row.away_code <> " answered late",
     ],
   )
+}
+
+pub fn load_game_for_ssr(
+  server_context: ServerContext,
+  game_id: Int,
+) -> Result(game.GameDetail, db.QueryError) {
+  case games_sql.get(db: server_context.db, game_id:) {
+    Ok([row]) -> Ok(game_detail_from_row(row))
+    Ok([]) -> Error(db.not_found(message: "game not found"))
+    Ok(_) -> Error(db.unexpected_rows(message: "expected one game"))
+    Error(err) -> Error(db.from_sqlight(err))
+  }
 }

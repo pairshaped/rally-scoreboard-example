@@ -435,8 +435,3 @@ export function read_flags() {
   return flags;
 }
 
-export function read_client_shared_state() {
-  const ctx = window.__RUNTIME_CLIENT_SHARED_STATE__ || "";
-  delete window.__RUNTIME_CLIENT_SHARED_STATE__;
-  return ctx;
-}

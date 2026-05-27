@@ -4,7 +4,6 @@
 //// storage, ToClient fanout, navigation, and admin-only view composition.
 
 import client/admin/receivers as admin_receivers
-import client/components/ui
 import generated/admin/receiver_dispatch as admin_receiver_dispatch
 import generated/admin/route as admin_route
 import generated/admin/router as admin_router
@@ -14,7 +13,6 @@ import generated/runtime/effect as admin_effect
 import generated/setup
 import generated/transport
 import gleam/bool
-import gleam/int
 import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/result
@@ -31,6 +29,7 @@ import shared/admin/pages/games as admin_games_page
 import shared/api/domain/game as admin_game
 import shared/api/to_client as admin_to_client
 import shared/api/to_server as admin_to_server
+import shared/components/ui
 
 type Model {
   Model(
@@ -73,7 +72,7 @@ fn init(_flags: Nil) -> #(Model, Effect(Msg)) {
     modem.initial_uri()
     |> result.map(admin_router.parse_uri)
     |> result.unwrap(admin_route.NotFound)
-  #(
+  let model =
     Model(
       route:,
       games: [],
@@ -83,7 +82,26 @@ fn init(_flags: Nil) -> #(Model, Effect(Msg)) {
       away_code: "NYC",
       dark_mode: admin_effect.read_dark_mode(),
       signed_in: admin_effect.has_auth_cookie("scoreboard_admin"),
-    ),
+    )
+  let #(model, hydrated) = case setup.read_shared_state() {
+    option.Some(value) -> {
+      let event: admin_to_client.ToClient = transport.coerce(value)
+      let msgs = admin_receiver_dispatch.to_client(event)
+      let model =
+        list.fold(msgs, model, fn(m, receiver_msg) {
+          let #(new_m, _) = update(m, Received(receiver_msg))
+          new_m
+        })
+      #(model, !list.is_empty(msgs))
+    }
+    option.None -> #(model, False)
+  }
+  let load_effect = case hydrated {
+    True -> effect.none()
+    False -> load_route(route)
+  }
+  #(
+    model,
     effect.batch([
       register_receivers(),
       modem.advanced(
@@ -93,7 +111,7 @@ fn init(_flags: Nil) -> #(Model, Effect(Msg)) {
         ),
         UrlChanged,
       ),
-      load_route(route),
+      load_effect,
     ]),
   )
 }
@@ -227,7 +245,12 @@ fn view(model: Model) -> Element(Msg) {
               "Score desk",
               "Admin messages stay on the admin root API.",
             ),
-            view_games(model.games),
+            admin_games_page.view_games(
+              model.games,
+              AdjustAway,
+              AdjustHome,
+              MarkFinal,
+            ),
           ]),
           html.aside([attribute.class("panel admin-tools")], [
             html.h2([], [html.text("Create game")]),
@@ -443,68 +466,6 @@ fn sign_in_code_form() -> Element(Msg) {
       html.button([], [html.text("Sign In")]),
     ],
   )
-}
-
-fn view_games(games: List(admin_game.AdminGameSummary)) -> Element(Msg) {
-  case games {
-    [] -> html.p([attribute.class("muted")], [html.text("No games yet.")])
-    _ ->
-      html.div([attribute.class("game-grid")], list.map(games, view_game_card))
-  }
-}
-
-fn view_game_card(game: admin_game.AdminGameSummary) -> Element(Msg) {
-  html.article([attribute.class("game-card")], [
-    html.div([attribute.class("admin-score-row")], [
-      html.strong([], [html.text(game.away_code)]),
-      score_button(
-        "-",
-        AdjustAway(game.id, game.home_score, game.away_score, -1),
-      ),
-      score_button(
-        "+",
-        AdjustAway(game.id, game.home_score, game.away_score, 1),
-      ),
-      html.span([attribute.class("score")], [
-        html.text(int.to_string(game.away_score)),
-      ]),
-    ]),
-    html.div([attribute.class("admin-score-row")], [
-      html.strong([], [html.text(game.home_code)]),
-      score_button(
-        "-",
-        AdjustHome(game.id, game.home_score, game.away_score, -1),
-      ),
-      score_button(
-        "+",
-        AdjustHome(game.id, game.home_score, game.away_score, 1),
-      ),
-      html.span([attribute.class("score")], [
-        html.text(int.to_string(game.home_score)),
-      ]),
-    ]),
-    html.div([attribute.class("score-line admin-status-row")], [
-      ui.status_badge(game.status),
-      final_action(game),
-    ]),
-  ])
-}
-
-fn score_button(label: String, msg: Msg) -> Element(Msg) {
-  html.button([attribute.class("small score-control"), event.on_click(msg)], [
-    html.text(label),
-  ])
-}
-
-fn final_action(game: admin_game.AdminGameSummary) -> Element(Msg) {
-  case game.status {
-    admin_game.Final -> html.span([], [])
-    _ ->
-      html.button(
-        [attribute.class("small secondary"), event.on_click(MarkFinal(game.id))],
-        [html.text("Finalize")],
-      )
-  }
 }
 
 fn clamp_score(score: Int) -> Int {

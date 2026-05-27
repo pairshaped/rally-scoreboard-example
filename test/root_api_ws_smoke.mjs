@@ -368,6 +368,61 @@ try {
       ws.close();
     }
   });
+  await check("SSR renders game content in /games HTML", async () => {
+    const html = await textAt("/games");
+    assert.match(html, /<div id="app">/);
+    assert.match(html, /window\.__RUNTIME_CLIENT_SHARED_STATE__='[^']+'/);
+    assert.match(html, /Toronto Towers/);
+    assert.match(html, /Montreal Meteors/);
+    // Game 2 (VAN–NYC, Final) is never modified by the WS tests.
+    assert.match(html, /Vancouver Voyagers/);
+    assert.match(html, /New York Comets/);
+    assert.match(html, /Final/);
+  });
+
+  await check("SSR renders standings content in /standings HTML", async () => {
+    const html = await textAt("/standings");
+    assert.match(html, /<div id="app">/);
+    assert.match(html, /window\.__RUNTIME_CLIENT_SHARED_STATE__='[^']+'/);
+    assert.match(html, /Toronto Towers/);
+    assert.match(html, /Montreal Meteors/);
+    assert.match(html, /W/);
+    assert.match(html, /L/);
+    assert.match(html, /PF/);
+    assert.match(html, /PA/);
+  });
+
+  await check("SSR renders game detail in /games/1 HTML", async () => {
+    const html = await textAt("/games/1");
+    assert.match(html, /<div id="app">/);
+    assert.match(html, /window\.__RUNTIME_CLIENT_SHARED_STATE__='[^']+'/);
+    assert.match(html, /Toronto Towers/);
+    assert.match(html, /Montreal Meteors/);
+    assert.match(html, /Scoring summary/);
+  });
+
+  await check("SSR respects team query filter on /games?team=TOR", async () => {
+    const allHtml = await textAt("/games");
+    const filteredHtml = await textAt("/games?team=TOR");
+    assert.match(filteredHtml, /<div id="app">/);
+    assert.match(filteredHtml, /window\.__RUNTIME_CLIENT_SHARED_STATE__='[^']+'/);
+    assert.match(filteredHtml, /Toronto Towers/);
+    // The seeded VAN–NYC game should appear in all-games but not in the TOR filter.
+    assert.match(allHtml, /Vancouver Voyagers/);
+    assert.ok(
+      !filteredHtml.includes("Vancouver Voyagers"),
+      "Filtered /games?team=TOR should not contain Vancouver Voyagers",
+    );
+  });
+
+  await check("SSR renders team detail in /teams/toronto-towers HTML", async () => {
+    const html = await textAt("/teams/toronto-towers");
+    assert.match(html, /<div id="app">/);
+    assert.match(html, /window\.__RUNTIME_CLIENT_SHARED_STATE__='[^']+'/);
+    assert.match(html, /Toronto Towers/);
+    assert.match(html, /TOR/);
+    assert.match(html, /W-L/);
+  });
 } finally {
   await stopServer();
 }
@@ -377,7 +432,7 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
-console.log("12 websocket smoke checks passed");
+console.log("17 smoke checks passed");
 
 async function check(name, fn) {
   try {

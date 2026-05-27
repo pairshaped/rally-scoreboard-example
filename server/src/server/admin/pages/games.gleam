@@ -314,3 +314,12 @@ fn admin_status(final: Int, period: String) -> admin_game.GameStatus {
     _ -> admin_game.Live(period)
   }
 }
+
+pub fn load_admin_games_for_ssr(
+  server_context: ServerContext,
+) -> Result(List(admin_game.AdminGameSummary), db.QueryError) {
+  case games_sql.list_admin(db: server_context.db) {
+    Ok(rows) -> Ok(list.map(rows, admin_summary_from_row))
+    Error(err) -> Error(db.from_sqlight(err))
+  }
+}

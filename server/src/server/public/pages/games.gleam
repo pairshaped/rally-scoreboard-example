@@ -76,3 +76,17 @@ pub fn game_status(final: Int, period: String) -> game.GameStatus {
     _ -> game.Live(period)
   }
 }
+
+pub fn load_games_for_ssr(
+  server_context: ServerContext,
+  team_filter: option.Option(String),
+) -> Result(List(game.PublicGameSummary), db.QueryError) {
+  let team_filter = case team_filter {
+    Some(code) -> code
+    None -> ""
+  }
+  case games_sql.list_public(db: server_context.db, team_filter:) {
+    Ok(rows) -> Ok(list.map(rows, game_summary_from_row))
+    Error(err) -> Error(db.from_sqlight(err))
+  }
+}
