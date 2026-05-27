@@ -422,6 +422,28 @@ try {
     assert.match(html, /TOR/);
     assert.match(html, /W-L/);
   });
+
+  await check("SSR hydration data decodes as valid ETF", async () => {
+    const html = await textAt("/games");
+    const match = html.match(/window\.__RUNTIME_CLIENT_SHARED_STATE__='([^']+)'/);
+    assert.ok(match, "Shared state script tag missing");
+    const raw = match[1];
+    assert.ok(raw.length > 0, "Shared state should be non-empty");
+    const binary = atob(raw);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    assert.equal(bytes[0], 131, "Shared state must be valid ETF (version byte 131)");
+    assert.ok(bytes.length > 3, "Shared state ETF payload too short to contain game data");
+  });
+
+  await check("Admin SSR renders /admin/games with content and hydration data", async () => {
+    const html = await textAt("/admin/games");
+    assert.match(html, /<div id="app">/);
+    assert.match(html, /window\.__RUNTIME_CLIENT_SHARED_STATE__='[^']+'/);
+    assert.match(html, /TOR/);
+    assert.match(html, /NYC/);
+    assert.match(html, /Finalize/);
+  });
 } finally {
   await stopServer();
 }
@@ -431,7 +453,7 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
-console.log("17 smoke checks passed");
+console.log("19 smoke checks passed");
 
 async function check(name, fn) {
   try {
