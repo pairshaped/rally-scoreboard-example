@@ -386,10 +386,9 @@ try {
     assert.match(html, /window\.__RUNTIME_CLIENT_SHARED_STATE__='[^']+'/);
     assert.match(html, /Toronto Towers/);
     assert.match(html, /Montreal Meteors/);
-    assert.match(html, /W/);
-    assert.match(html, /L/);
-    assert.match(html, /PF/);
-    assert.match(html, /PA/);
+    assert.match(html, /<th[^>]*>Team<\/th>/);
+    assert.match(html, /<th[^>]*>W<\/th>\s*<th[^>]*>L<\/th>/);
+    assert.match(html, /<th[^>]*>PF<\/th>\s*<th[^>]*>PA<\/th>/);
   });
 
   await check("SSR renders game detail in /games/1 HTML", async () => {
