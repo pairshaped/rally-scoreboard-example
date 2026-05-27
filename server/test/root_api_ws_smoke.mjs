@@ -6,15 +6,35 @@
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
 import { once } from "node:events";
+import { createServer } from "node:net";
 import { setTimeout as sleep } from "node:timers/promises";
 
-const root = new URL("..", import.meta.url);
+const root = new URL("../../", import.meta.url);
 const serverDir = new URL("server/", root);
 const clientDir = new URL("client/", root);
-const port = 18_374;
+const port = await freePort();
 const failures = [];
 
 let cookies = "";
+
+async function freePort() {
+  const server = createServer();
+  server.unref();
+
+  await new Promise((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", resolve);
+  });
+
+  const address = server.address();
+  const port = typeof address === "object" && address ? address.port : 18_374;
+
+  await new Promise((resolve, reject) => {
+    server.close(error => error ? reject(error) : resolve());
+  });
+
+  return port;
+}
 
 function updateCookies(response) {
   const setCookie = response.headers.getSetCookie?.() || [];
@@ -88,11 +108,11 @@ try {
   }
 
   const protocol = await import(
-    "../client/build/dev/javascript/client/generated/protocol_wire.mjs"
+    "../../client/build/dev/javascript/client/generated/protocol_wire.mjs"
   );
   await check("public and admin summaries use explicit global API names", async () => {
     const game = await import(
-      "../client/build/dev/javascript/scoreboard_shared/shared/api/domain/game.mjs"
+      "../../client/build/dev/javascript/scoreboard_shared/shared/api/domain/game.mjs"
     );
 
     assert.notDeepEqual(
@@ -193,18 +213,18 @@ try {
   });
 
   await check("public mount codec decodes public graph only", async () => {
-    run("node", ["test/mount_ws_client.mjs", "public", String(port)], root);
+    run("node", ["test/mount_ws_client.mjs", "public", String(port)], serverDir);
   });
 
   await check("admin mount codec decodes admin graph only", async () => {
-    run("node", ["test/mount_ws_client.mjs", "admin", String(port)], root);
+    run("node", ["test/mount_ws_client.mjs", "admin", String(port)], serverDir);
   });
 
   await check("admin score updates emit admin results without legacy public pushes", async () => {
     const publicProtocol = protocol;
     const adminProtocol = protocol;
     const adminToServer = await import(
-      "../client/build/dev/javascript/scoreboard_shared/shared/api/to_server.mjs"
+      "../../client/build/dev/javascript/scoreboard_shared/shared/api/to_server.mjs"
     );
 
     const publicWs = await openWs("/ws");
@@ -243,7 +263,7 @@ try {
     const publicProtocol = protocol;
     const adminProtocol = protocol;
     const adminToServer = await import(
-      "../client/build/dev/javascript/scoreboard_shared/shared/api/to_server.mjs"
+      "../../client/build/dev/javascript/scoreboard_shared/shared/api/to_server.mjs"
     );
 
     const standingsWs = await openWs("/ws");
@@ -294,10 +314,10 @@ try {
     const publicProtocol = protocol;
     const adminProtocol = protocol;
     const adminToServer = await import(
-      "../client/build/dev/javascript/scoreboard_shared/shared/api/to_server.mjs"
+      "../../client/build/dev/javascript/scoreboard_shared/shared/api/to_server.mjs"
     );
     const publicToServer = await import(
-      "../client/build/dev/javascript/scoreboard_shared/shared/api/to_server.mjs"
+      "../../client/build/dev/javascript/scoreboard_shared/shared/api/to_server.mjs"
     );
 
     const detailWs = await openWs("/ws");
@@ -346,7 +366,7 @@ try {
   await check("non-ASCII team slug round-trips through LoadTeam", async () => {
     const publicProtocol = protocol;
     const publicToServer = await import(
-      "../client/build/dev/javascript/scoreboard_shared/shared/api/to_server.mjs"
+      "../../client/build/dev/javascript/scoreboard_shared/shared/api/to_server.mjs"
     );
 
     const ws = await openWs("/ws");

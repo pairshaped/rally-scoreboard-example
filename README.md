@@ -9,10 +9,10 @@ This project does not implement the Generator Framework and does not run app gen
 ## Shape
 
 - `shared/` owns wire-visible API types under `shared/api`.
-- `server/` owns handlers, fake data, request context, server context, and backend modules.
+- `server/` owns handlers, SQL-backed data access, request context, server context, and backend modules.
 - `client/` owns receiver mapping and browser-side app entry modules.
 
-The workspace root is the Scoreboard tooling package. App code lives in `client/`, `server/`, and `shared/`. The sibling `../rally/` package provides the tooling configuration for Mount namespaces.
+App code lives in `client/`, `server/`, and `shared/`. The root `rally.toml` keeps the current Mount namespace config under `[[tools.rally.clients]]`; that literal config name remains until the future generator project renames it.
 
 The server package is SQLite-backed. Handwritten SQL lives under `server/src/server/sql/`, migrations live under `server/db/migrations/`, and Marmot writes typed query modules under `server/src/generated/sql/`.
 
@@ -23,6 +23,7 @@ From `server/`:
 - `gleam run -m marmot migrate`
 - `gleam run -m marmot`
 - `gleam run`
+- `node test/root_api_ws_smoke.mjs`
 
 ## Public
 

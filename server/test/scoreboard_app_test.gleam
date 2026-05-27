@@ -166,8 +166,8 @@ pub fn generated_source_is_checked_into_the_example_test() {
   read("src/generated/server_generated_protocol_wire_ffi.erl")
 }
 
-pub fn root_config_opts_mounts_into_local_logging_test() {
-  let config = read("../gleam.toml")
+pub fn rally_config_opts_mounts_into_local_logging_test() {
+  let config = read("../rally.toml")
 
   config |> contains("namespace = \"public\"") |> should.be_true
   config |> contains("namespace = \"admin\"") |> should.be_true

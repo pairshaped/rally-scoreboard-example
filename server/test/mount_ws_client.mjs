@@ -59,10 +59,10 @@ if (mount === "public") {
 
 async function runPublic() {
   const protocol = await import(
-    "../client/build/dev/javascript/client/generated/protocol_wire.mjs"
+    "../../client/build/dev/javascript/client/generated/protocol_wire.mjs"
   );
   const toServer = await import(
-    "../client/build/dev/javascript/scoreboard_shared/shared/api/to_server.mjs"
+    "../../client/build/dev/javascript/scoreboard_shared/shared/api/to_server.mjs"
   );
   const ws = await openWs("/ws");
   try {
@@ -101,10 +101,10 @@ async function runPublic() {
 
 async function runAdmin() {
   const protocol = await import(
-    "../client/build/dev/javascript/client/generated/protocol_wire.mjs"
+    "../../client/build/dev/javascript/client/generated/protocol_wire.mjs"
   );
   const toServer = await import(
-    "../client/build/dev/javascript/scoreboard_shared/shared/api/to_server.mjs"
+    "../../client/build/dev/javascript/scoreboard_shared/shared/api/to_server.mjs"
   );
   const ws = await openWs("/admin/ws");
   try {

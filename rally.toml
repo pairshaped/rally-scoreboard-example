@@ -1,0 +1,10 @@
+[[tools.rally.clients]]
+namespace = "public"
+route_root = "/"
+user_logging = true
+issue_logging = true
+
+[[tools.rally.clients]]
+namespace = "admin"
+user_logging = true
+issue_logging = true
