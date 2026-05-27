@@ -73,12 +73,10 @@ pub fn generated_ssr_uses_mount_client_once_test() {
   admin_ssr |> contains("scoreboard_admin_client.mjs") |> should.be_true
   admin_ssr |> contains("scoreboard_public_client.mjs") |> should.be_false
   admin_ssr |> contains("generated/app.mjs") |> should.be_false
-  admin_ssr |> contains(":root[data-theme=\\\"dark\\\"]") |> should.be_true
-  admin_ssr |> contains("scoreboard_dark_mode") |> should.be_true
-  admin_ssr |> contains("<body data-theme=\\\"dark\\\">") |> should.be_false
-  public_ssr |> contains(":root[data-theme=\\\"dark\\\"]") |> should.be_true
-  public_ssr |> contains("scoreboard_dark_mode") |> should.be_true
-  public_ssr |> contains("<body data-theme=\\\"dark\\\">") |> should.be_false
+  public_ssr |> contains("simplifile.read") |> should.be_true
+  admin_ssr |> contains("simplifile.read") |> should.be_true
+  public_ssr |> contains("const shell_path") |> should.be_true
+  admin_ssr |> contains("const shell_path") |> should.be_true
 }
 
 pub fn static_handler_serves_the_whole_client_build_test() {

@@ -12,7 +12,7 @@ This project does not implement the Generator Framework and does not run app gen
 - `server/` owns handlers, fake data, request context, server context, and backend modules.
 - `client/` owns receiver mapping and browser-side app entry modules.
 
-The workspace root is the Scoreboard tooling package. App code lives in `client/`, `server/`, and `shared/`. The sibling `../runtime/` package is used as the local framework dependency.
+The workspace root is the Scoreboard tooling package. App code lives in `client/`, `server/`, and `shared/`. The sibling `../rally/` package provides the tooling configuration for Mount namespaces.
 
 The server package is SQLite-backed. Handwritten SQL lives under `server/src/server/sql/`, migrations live under `server/db/migrations/`, and Marmot writes typed query modules under `server/src/generated/sql/`.
 
@@ -35,11 +35,11 @@ Public pages can load games, filter by team query param, load one game, and rece
 
 ## Admin
 
+- `/admin/sign_in/password`
+- `/admin/sign_in/code`
 - `/admin/games`
-- `/admin/games/new`
-- `/admin/games/:id`
 
-Admin pages can create games, update scores, mark final results, and correct results.
+Admin pages require authentication. Admin users can create games, update scores, mark final results, and correct results from the games page.
 
 ## Generation Targets
 

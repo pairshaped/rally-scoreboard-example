@@ -14,6 +14,41 @@ const clientDir = new URL("client/", root);
 const port = 18_374;
 const failures = [];
 
+let cookies = "";
+
+function updateCookies(response) {
+  const setCookie = response.headers.getSetCookie?.() || [];
+  for (const cookie of setCookie) {
+    const [pair] = cookie.split(";");
+    const [name, ...rest] = pair.split("=");
+    const value = rest.join("=");
+    const re = new RegExp(`(?:^|; )${name}=[^;]*`);
+    if (cookies.match(re)) {
+      cookies = cookies.replace(re, `${name}=${value}`);
+    } else {
+      cookies = cookies ? `${cookies}; ${name}=${value}` : `${name}=${value}`;
+    }
+  }
+}
+
+async function signIn() {
+  const res1 = await fetch(`http://127.0.0.1:${port}/admin/sign_in/password`, {
+    redirect: "manual",
+  });
+  updateCookies(res1);
+
+  const res2 = await fetch(`http://127.0.0.1:${port}/admin/sign_in`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      Cookie: cookies,
+    },
+    body: "email=admin@example.com&password=admin",
+    redirect: "manual",
+  });
+  updateCookies(res2);
+}
+
 run("gleam", ["build"], clientDir);
 run("gleam", ["build"], serverDir);
 
@@ -76,6 +111,34 @@ try {
       ws.close();
     }
   });
+
+  await check("unauthenticated admin websocket is rejected", async () => {
+    const url = `ws://127.0.0.1:${port}/admin/ws`;
+    const ws = new WebSocket(url);
+    ws.binaryType = "arraybuffer";
+    let closed = false;
+    try {
+      const outcome = await Promise.race([
+        once(ws, "open").then(() => "opened"),
+        once(ws, "error").then(() => "error"),
+        new Promise((r) => setTimeout(() => r("timeout"), 3000)),
+      ]);
+      if (outcome === "opened") {
+        ws.close();
+        throw new Error("Expected unauthenticated admin websocket to be rejected");
+      }
+      if (outcome === "timeout") {
+        ws.close();
+        throw new Error("Timed out waiting for admin websocket rejection");
+      }
+    } finally {
+      if (!closed) {
+        try { ws.close(); } catch (_) { /* ignore */ }
+      }
+    }
+  });
+
+  await signIn();
 
   await check("served shells use separate mount loaders", async () => {
     const publicHtml = await textAt("/games");
@@ -242,7 +305,7 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
-console.log("9 websocket smoke checks passed");
+console.log("10 websocket smoke checks passed");
 
 async function check(name, fn) {
   try {
@@ -322,16 +385,23 @@ function first(list) {
   return list.head;
 }
 
-async function openWs(path = "/ws") {
-  const ws = new WebSocket(`ws://127.0.0.1:${port}${path}`);
+async function openWs(path = "/ws", opts = {}) {
+  const url = `ws://127.0.0.1:${port}${path}`;
+  const ws = cookies
+    ? new WebSocket(url, { headers: { Cookie: cookies } })
+    : new WebSocket(url);
   ws.binaryType = "arraybuffer";
   await once(ws, "open");
   return ws;
 }
 
 async function textAt(path) {
-  const response = await fetch(`http://127.0.0.1:${port}${path}`);
-  assert.equal(response.status, 200);
+  const opts = cookies ? { headers: { Cookie: cookies } } : {};
+  const response = await fetch(`http://127.0.0.1:${port}${path}`, opts);
+  if (response.status !== 200) {
+    const body = await response.text().catch(() => "");
+    throw new Error(`Expected 200 for ${path}, got ${response.status}: ${body.slice(0, 200)}`);
+  }
   return await response.text();
 }
 

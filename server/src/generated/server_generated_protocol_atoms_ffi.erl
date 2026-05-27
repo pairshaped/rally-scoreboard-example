@@ -21,7 +21,6 @@ ensure() ->
 
 do_ensure() ->
     lists:foreach(fun(B) -> binary_to_atom(B) end, [
-        <<"8fd0250257">>,
         <<"correct_result">>,
         <<"create_game">>,
         <<"decode_error">>,
@@ -34,14 +33,38 @@ do_ensure() ->
         <<"load_standings">>,
         <<"malformed_request">>,
         <<"mark_final">>,
-        <<"model">>,
         <<"nil">>,
         <<"none">>,
         <<"ok">>,
         <<"some">>,
         <<"true">>,
         <<"unknown_function">>,
-        <<"update_score">>
+        <<"update_score">>,
+        %% ToClient constructor atoms
+        <<"admin_error">>,
+        <<"admin_games_loaded">>,
+        <<"game_created">>,
+        <<"game_loaded">>,
+        <<"game_score_updated">>,
+        <<"games_load_failed">>,
+        <<"games_loaded">>,
+        <<"power_rankings_loaded">>,
+        <<"result_saved">>,
+        <<"score_update_saved">>,
+        <<"standings_loaded">>,
+        <<"standings_updated">>,
+        %% Domain constructor atoms
+        <<"admin_game_detail">>,
+        <<"admin_game_summary">>,
+        <<"final">>,
+        <<"game_detail">>,
+        <<"game_score_update">>,
+        <<"live">>,
+        <<"power_ranking_row">>,
+        <<"public_game_summary">>,
+        <<"scheduled">>,
+        <<"standing_row">>,
+        <<"team">>
     ]),
     persistent_term:put({libero, wire_module}, 'server_generated_protocol_wire_ffi'),
     persistent_term:put({?MODULE, done}, true),

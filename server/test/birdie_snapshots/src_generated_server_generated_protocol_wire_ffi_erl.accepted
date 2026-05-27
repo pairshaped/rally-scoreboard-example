@@ -4,37 +4,28 @@ title: src__generated__server_generated_protocol_wire_ffi_erl
 ---
 %% Generated. Do not edit.
 %%
-%% Per-type wire-format encode/decode transformers. Translates between
-%% BEAM-shape (bare atom constructor tags) and wire-shape (10-char
-%% hex hash atom tags computed at codegen time by libero/wire_identity).
+%% Per-type wire-format encode/decode transformers.
+%% Derived from the shared API codec graph, mirroring the client
+%% codec_ffi.mjs constructor registry one-for-one.
 %%
-%% encode_<T>/1 takes a BEAM tuple and returns the wire-shape tuple.
-%% decode_<T>/1 is the inverse. Function names are qualified by
-%% module path so types with the same name in different Gleam modules
-%% do not collide in this Erlang module's function table.
-%% Derived from the shared API codec graph.
+%% Every ToServer, ToClient, and shared API domain constructor is
+%% represented. Backend types (e.g. server/admin/model.Model) are
+%% intentionally absent: they do not cross the wire.
+%%
+%% Constructor atoms are unique across the whole shared API graph,
+%% so encode/decode functions are identity transforms. Hex-hash
+%% translation is only needed when constructor names collide across
+%% modules, which does not happen in the shared API.
 
 -module(server_generated_protocol_wire_ffi).
 -export([
-    encode_server_admin_model__model/1,
-    decode_server_admin_model__model/1,
     encode_term/1,
     decode_term/1,
     encode_float/1
 ]).
 
-%% Ensure whole-number floats stay floats on the wire. JS erases the
-%% Int/Float distinction at runtime; this normalisation on the BEAM
-%% side preserves wire-format type fidelity end-to-end.
 encode_float(F) when is_float(F) -> F;
 encode_float(N) when is_integer(N) -> N + 0.0.
-
-%% Type: server/admin/model.Model
-encode_server_admin_model__model({model, F0}) ->
-    {'8fd0250257', F0}.
-
-decode_server_admin_model__model({'8fd0250257', F0}) ->
-    {model, F0}.
 
 encode_term(Term) -> encode_term(Term, 0).
 
@@ -53,16 +44,10 @@ decode_term(Term) -> decode_term(Term, 0).
 decode_term(_Term, Depth) when Depth >= 512 ->
     error({wire_depth_exceeded, Depth});
 decode_term(Tuple, Depth) when is_tuple(Tuple), tuple_size(Tuple) > 0 ->
-    case {element(1, Tuple), tuple_size(Tuple)} of
-        {'8fd0250257', 2} -> decode_server_admin_model__model(Tuple);
-        _ -> list_to_tuple([decode_term(E, Depth + 1) || E <- tuple_to_list(Tuple)])
-    end;
+    list_to_tuple([decode_term(E, Depth + 1) || E <- tuple_to_list(Tuple)]);
 decode_term(List, Depth) when is_list(List) ->
     [decode_term(X, Depth + 1) || X <- List];
 decode_term(Map, Depth) when is_map(Map) ->
     maps:map(fun(_K, V) -> decode_term(V, Depth + 1) end, Map);
 decode_term(Other, _Depth) -> Other.
-
-
-
 

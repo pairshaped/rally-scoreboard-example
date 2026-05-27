@@ -13,9 +13,45 @@ if (!mount || !port) {
   throw new Error("Usage: node mount_ws_client.mjs <public|admin> <port>");
 }
 
+let cookies = "";
+
+function updateCookies(response) {
+  const setCookie = response.headers.getSetCookie?.() || [];
+  for (const cookie of setCookie) {
+    const [pair] = cookie.split(";");
+    const [name, ...rest] = pair.split("=");
+    const value = rest.join("=");
+    const re = new RegExp(`(?:^|; )${name}=[^;]*`);
+    if (cookies.match(re)) {
+      cookies = cookies.replace(re, `${name}=${value}`);
+    } else {
+      cookies = cookies ? `${cookies}; ${name}=${value}` : `${name}=${value}`;
+    }
+  }
+}
+
+async function signIn() {
+  const res1 = await fetch(`http://127.0.0.1:${port}/admin/sign_in/password`, {
+    redirect: "manual",
+  });
+  updateCookies(res1);
+
+  const res2 = await fetch(`http://127.0.0.1:${port}/admin/sign_in`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      Cookie: cookies,
+    },
+    body: "email=admin@example.com&password=admin",
+    redirect: "manual",
+  });
+  updateCookies(res2);
+}
+
 if (mount === "public") {
   await runPublic();
 } else if (mount === "admin") {
+  await signIn();
   await runAdmin();
 } else {
   throw new Error("Unknown Mount: " + mount);
@@ -102,7 +138,10 @@ async function runAdmin() {
 }
 
 async function openWs(path) {
-  const ws = new WebSocket(`ws://127.0.0.1:${port}${path}`);
+  const url = `ws://127.0.0.1:${port}${path}`;
+  const ws = cookies
+    ? new WebSocket(url, { headers: { Cookie: cookies } })
+    : new WebSocket(url);
   ws.binaryType = "arraybuffer";
   await once(ws, "open");
   return ws;

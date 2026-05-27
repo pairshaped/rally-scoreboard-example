@@ -34,8 +34,30 @@ function currentWsUrl() {
   return "/ws";
 }
 
+function base64ToUtf8(raw) {
+  const binary = atob(raw);
+  const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
+  return new TextDecoder().decode(bytes);
+}
+
+function ssrFlags() {
+  if (typeof window === "undefined") return null;
+  const raw = transport.read_flags();
+  if (!raw) return null;
+  try { return JSON.parse(base64ToUtf8(raw)); } catch (_) { return null; }
+}
+
 function routePageInit() {
   if (typeof window === "undefined") return { module: "Games", params: null };
+
+  const flags = ssrFlags();
+  if (flags && flags.route) {
+    if (flags.route === "AdminSignInPassword" || flags.route === "AdminSignInCode") {
+      return null;
+    }
+    const params = flags.route === "GamesId" ? (flags.params || null) : null;
+    return { module: flags.route, params };
+  }
 
   const path = window.location.pathname.replace(/\/+$/, "") || "/";
   if (path === "/admin/sign_in" || path === "/admin/sign_in/password" || path === "/admin/sign_in/code") {

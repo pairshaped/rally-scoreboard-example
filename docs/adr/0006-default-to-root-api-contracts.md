@@ -398,11 +398,9 @@ The shared package generated layout is:
 ```text
 shared/src/generated/public/route.gleam
 shared/src/generated/admin/route.gleam
-
-shared/src/generated/runtime/data.gleam
 ```
 
-`route.gleam` is Mount-specific because routes are Mount-specific. `data.gleam` is package-level because the `RemoteData` helper is not public/admin-specific.
+`route.gleam` is Mount-specific because routes are Mount-specific.
 
 The client package generated layout is:
 
@@ -446,7 +444,6 @@ server/src/generated/server_generated_protocol_wire_ffi.erl
 
 server/src/generated/runtime/authentication.gleam
 server/src/generated/runtime/db.gleam
-server/src/generated/runtime/dispatch.gleam
 server/src/generated/runtime/effect.gleam
 server/src/generated/runtime/effect_runner.gleam
 server/src/generated/runtime/effect_state.gleam

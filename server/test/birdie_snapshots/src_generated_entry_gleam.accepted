@@ -11,12 +11,12 @@ title: src__generated__entry_gleam
 //// generated/<mount_namespace>/ssr_handler.gleam,
 //// and generated/<mount_namespace>/ws_handler.gleam.
 
-import generated/admin/router as mount_0_router
-import generated/admin/ssr_handler as mount_0_ssr_handler
-import generated/admin/ws_handler as mount_0_ws_handler
-import generated/public/router as mount_1_router
-import generated/public/ssr_handler as mount_1_ssr_handler
-import generated/public/ws_handler as mount_1_ws_handler
+import generated/admin/router as mount_admin_router
+import generated/admin/ssr_handler as mount_admin_ssr_handler
+import generated/admin/ws_handler as mount_admin_ws_handler
+import generated/public/router as mount_public_router
+import generated/public/ssr_handler as mount_public_ssr_handler
+import generated/public/ws_handler as mount_public_ws_handler
 import generated/runtime/authentication as authentication_runtime
 import generated/runtime/env
 import generated/runtime/session
@@ -39,8 +39,8 @@ import server/admin/authentication
 import server/server_context.{type ServerContext}
 
 type Mount {
-  Mount0
-  Mount1
+  MountAdmin
+  MountPublic
   NoMount
 }
 
@@ -50,15 +50,18 @@ pub fn handle_request(
 ) -> Response(ResponseData) {
   let Request(path: path, ..) = req
   case select_mount(path) {
-    Mount0 -> mount_0_handle_request(req, server_context)
-    Mount1 -> mount_1_handle_request(req, server_context)
+    MountAdmin -> mount_admin_handle_request(req, server_context)
+    MountPublic -> mount_public_handle_request(req, server_context)
     NoMount -> not_found()
   }
 }
 
 fn select_mount(path: String) -> Mount {
-  use <- bool.guard(when: matches_route_root(path, "/admin"), return: Mount0)
-  use <- bool.guard(when: matches_route_root(path, "/"), return: Mount1)
+  use <- bool.guard(
+    when: matches_route_root(path, "/admin"),
+    return: MountAdmin,
+  )
+  use <- bool.guard(when: matches_route_root(path, "/"), return: MountPublic)
   NoMount
 }
 
@@ -69,20 +72,21 @@ fn matches_route_root(path: String, route_root: String) -> Bool {
   }
 }
 
-fn mount_0_handle_request(
+fn mount_admin_handle_request(
   req: Request(Connection),
   server_context: ServerContext,
 ) -> Response(ResponseData) {
   let Request(path: path, method: method, ..) = req
   case path, method {
     "/admin/sign_in", Get -> redirect_to("/admin/sign_in/password")
-    "/admin/sign_in/password", Get -> mount_0_handle_ssr(req, server_context)
-    "/admin/sign_in/code", Get -> mount_0_handle_ssr(req, server_context)
-    "/admin/sign_in", Post -> mount_0_handle_sign_in(req)
-    "/admin/sign_out", Get -> mount_0_sign_out(req)
+    "/admin/sign_in/password", Get ->
+      mount_admin_handle_ssr(req, server_context)
+    "/admin/sign_in/code", Get -> mount_admin_handle_ssr(req, server_context)
+    "/admin/sign_in", Post -> mount_admin_handle_sign_in(req)
+    "/admin/sign_out", Get -> mount_admin_sign_out(req)
     "/admin/ws", _ ->
       case admin_authenticated(req) {
-        True -> mount_0_handle_ws(req, server_context)
+        True -> mount_admin_handle_ws(req, server_context)
         False -> unauthorized()
       }
     _, _ ->
@@ -92,7 +96,7 @@ fn mount_0_handle_request(
           case method {
             Get ->
               case admin_authenticated(req) {
-                True -> mount_0_handle_ssr(req, server_context)
+                True -> mount_admin_handle_ssr(req, server_context)
                 False -> redirect_to("/admin/sign_in/password")
               }
             _ -> not_found()
@@ -101,7 +105,7 @@ fn mount_0_handle_request(
   }
 }
 
-fn mount_0_handle_ws(
+fn mount_admin_handle_ws(
   req: Request(Connection),
   server_context: ServerContext,
 ) -> Response(ResponseData) {
@@ -109,27 +113,27 @@ fn mount_0_handle_ws(
   let hostname = request_header(req, "host")
   mist.websocket(
     req,
-    mount_0_ws_handler.handler,
+    mount_admin_ws_handler.handler,
     fn(conn) {
-      mount_0_ws_handler.on_init(
+      mount_admin_ws_handler.on_init(
         conn: conn,
         server_context: server_context,
         session_id: session_id,
         hostname: hostname,
       )
     },
-    mount_0_ws_handler.on_close,
+    mount_admin_ws_handler.on_close,
   )
 }
 
-fn mount_0_handle_ssr(
+fn mount_admin_handle_ssr(
   req: Request(Connection),
   server_context: ServerContext,
 ) -> Response(ResponseData) {
   let session_id = get_session_id(req)
   let hostname = request_header(req, "host")
   let req_uri = request.to_uri(req)
-  let route = mount_0_router.parse_route(req_uri)
+  let route = mount_admin_router.parse_route(req_uri)
   let query = case req_uri.query {
     option.Some(q) ->
       uri.parse_query(q)
@@ -137,7 +141,7 @@ fn mount_0_handle_ssr(
       |> dict.from_list
     option.None -> dict.new()
   }
-  mount_0_ssr_handler.handle_request(
+  mount_admin_ssr_handler.handle_request(
     route: route,
     server_context: server_context,
     session_id: session_id,
@@ -147,26 +151,26 @@ fn mount_0_handle_ssr(
   |> set_session_cookie_if_missing(req: req, session_id:)
 }
 
-fn mount_1_handle_request(
+fn mount_public_handle_request(
   req: Request(Connection),
   server_context: ServerContext,
 ) -> Response(ResponseData) {
   let Request(path: path, method: method, ..) = req
   case path == "/ws" {
-    True -> mount_1_handle_ws(req, server_context)
+    True -> mount_public_handle_ws(req, server_context)
     False ->
       case static_handler.try_serve(path) {
         option.Some(resp) -> resp
         option.None ->
           case method {
-            Get -> mount_1_handle_ssr(req, server_context)
+            Get -> mount_public_handle_ssr(req, server_context)
             _ -> not_found()
           }
       }
   }
 }
 
-fn mount_1_handle_ws(
+fn mount_public_handle_ws(
   req: Request(Connection),
   server_context: ServerContext,
 ) -> Response(ResponseData) {
@@ -174,27 +178,27 @@ fn mount_1_handle_ws(
   let hostname = request_header(req, "host")
   mist.websocket(
     req,
-    mount_1_ws_handler.handler,
+    mount_public_ws_handler.handler,
     fn(conn) {
-      mount_1_ws_handler.on_init(
+      mount_public_ws_handler.on_init(
         conn: conn,
         server_context: server_context,
         session_id: session_id,
         hostname: hostname,
       )
     },
-    mount_1_ws_handler.on_close,
+    mount_public_ws_handler.on_close,
   )
 }
 
-fn mount_1_handle_ssr(
+fn mount_public_handle_ssr(
   req: Request(Connection),
   server_context: ServerContext,
 ) -> Response(ResponseData) {
   let session_id = get_session_id(req)
   let hostname = request_header(req, "host")
   let req_uri = request.to_uri(req)
-  let route = mount_1_router.parse_route(req_uri)
+  let route = mount_public_router.parse_route(req_uri)
   let query = case req_uri.query {
     option.Some(q) ->
       uri.parse_query(q)
@@ -202,7 +206,7 @@ fn mount_1_handle_ssr(
       |> dict.from_list
     option.None -> dict.new()
   }
-  mount_1_ssr_handler.handle_request(
+  mount_public_ssr_handler.handle_request(
     route: route,
     server_context: server_context,
     session_id: session_id,
@@ -223,7 +227,9 @@ fn admin_authenticated(req: Request(Connection)) -> Bool {
   )
 }
 
-fn mount_0_handle_sign_in(req: Request(Connection)) -> Response(ResponseData) {
+fn mount_admin_handle_sign_in(
+  req: Request(Connection),
+) -> Response(ResponseData) {
   let session_id = get_session_id(req)
   case read_sign_in_form(req) {
     Ok(form) ->
@@ -242,7 +248,7 @@ fn mount_0_handle_sign_in(req: Request(Connection)) -> Response(ResponseData) {
   }
 }
 
-fn mount_0_sign_out(req: Request(Connection)) -> Response(ResponseData) {
+fn mount_admin_sign_out(req: Request(Connection)) -> Response(ResponseData) {
   let session_id = get_session_id(req)
   redirect_to("/admin/sign_in/password")
   |> set_cookie_header(authentication.clear_cookie())

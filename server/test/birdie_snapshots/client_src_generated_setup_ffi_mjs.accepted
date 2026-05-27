@@ -38,8 +38,29 @@ function currentWsUrl() {
   return "/ws";
 }
 
+function ssrFlags() {
+  if (typeof window === "undefined") return null;
+  const raw = transport.read_flags();
+  if (!raw) return null;
+  try {
+    const json = typeof atob !== "undefined"
+      ? atob(raw)
+      : Buffer.from(raw, "base64").toString("utf8");
+    return JSON.parse(json);
+  } catch (_) { return null; }
+}
+
 function routePageInit() {
   if (typeof window === "undefined") return { module: "Games", params: null };
+
+  const flags = ssrFlags();
+  if (flags && flags.route) {
+    if (flags.route === "AdminSignInPassword" || flags.route === "AdminSignInCode") {
+      return null;
+    }
+    const params = flags.route === "GamesId" ? (flags.params || null) : null;
+    return { module: flags.route, params };
+  }
 
   const path = window.location.pathname.replace(/\/+$/, "") || "/";
   if (path === "/admin/sign_in" || path === "/admin/sign_in/password" || path === "/admin/sign_in/code") {
