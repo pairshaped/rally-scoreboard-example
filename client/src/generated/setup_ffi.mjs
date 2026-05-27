@@ -55,8 +55,7 @@ function routePageInit() {
     if (flags.route === "AdminSignInPassword" || flags.route === "AdminSignInCode") {
       return null;
     }
-    const params = flags.route === "GamesId" ? (flags.params || null) : null;
-    return { module: flags.route, params };
+    return { module: flags.route, params: flags.params || null };
   }
 
   const path = window.location.pathname.replace(/\/+$/, "") || "/";
