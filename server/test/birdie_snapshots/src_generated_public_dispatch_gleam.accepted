@@ -4,19 +4,19 @@ title: src__generated__public__dispatch_gleam
 ---
 //// Generated. Do not edit.
 ////
-//// Root API ToServer dispatch.
+//// Root API ToServer dispatch for the public Mount.
 ////
 //// Derived from shared/api/to_server.gleam and the page/server modules
 //// that define matching `*_to_server` handlers. The WebSocket runtime
 //// decodes one typed ToServer value, then calls this function so the
 //// backend can update its model and emit zero or more ToClient messages.
 ////
-//// Constructors handled by the other Mount (admin) are explicit no-ops
-//// here. The shared API graph means every Mount sees every constructor.
-//// Apps that need cross-Mount rejection, logging, or forwarding should
-//// add it in backend.update before delegating to generated dispatch.
+//// Constructors owned by the other Mount (admin) are rejected through
+//// the generated rejection helper, which logs the rejection as an issue
+//// so operators can detect misrouted commands.
 
 import generated/public/request_context.{type RequestContext}
+import generated/runtime/reject
 import lustre/effect.{type Effect}
 import server/public/model.{type Model}
 import server/public/pages/games as server_public_pages_games
@@ -60,20 +60,56 @@ pub fn to_server(
         server_context:,
         backend_model:,
       )
-    to_server.LoadAdminGames -> #(backend_model, effect.none())
-    to_server.CreateGame(home_code: _, away_code: _) -> #(
-      backend_model,
-      effect.none(),
-    )
-    to_server.UpdateScore(game_id: _, home_score: _, away_score: _, period: _) -> #(
-      backend_model,
-      effect.none(),
-    )
-    to_server.MarkFinal(game_id: _) -> #(backend_model, effect.none())
-    to_server.CorrectResult(game_id: _, home_score: _, away_score: _) -> #(
-      backend_model,
-      effect.none(),
-    )
+    to_server.LoadAdminGames ->
+      reject.reject_invalid_command(
+        mount: "public",
+        command: "LoadAdminGames",
+        session_id: request_context.session_id,
+        user_id: request_context.user_id,
+        hostname: request_context.hostname,
+        server_context:,
+        backend_model:,
+      )
+    to_server.CreateGame(home_code: _, away_code: _) ->
+      reject.reject_invalid_command(
+        mount: "public",
+        command: "CreateGame",
+        session_id: request_context.session_id,
+        user_id: request_context.user_id,
+        hostname: request_context.hostname,
+        server_context:,
+        backend_model:,
+      )
+    to_server.UpdateScore(game_id: _, home_score: _, away_score: _, period: _) ->
+      reject.reject_invalid_command(
+        mount: "public",
+        command: "UpdateScore",
+        session_id: request_context.session_id,
+        user_id: request_context.user_id,
+        hostname: request_context.hostname,
+        server_context:,
+        backend_model:,
+      )
+    to_server.MarkFinal(game_id: _) ->
+      reject.reject_invalid_command(
+        mount: "public",
+        command: "MarkFinal",
+        session_id: request_context.session_id,
+        user_id: request_context.user_id,
+        hostname: request_context.hostname,
+        server_context:,
+        backend_model:,
+      )
+    to_server.CorrectResult(game_id: _, home_score: _, away_score: _) ->
+      reject.reject_invalid_command(
+        mount: "public",
+        command: "CorrectResult",
+        session_id: request_context.session_id,
+        user_id: request_context.user_id,
+        hostname: request_context.hostname,
+        server_context:,
+        backend_model:,
+      )
   }
 }
 

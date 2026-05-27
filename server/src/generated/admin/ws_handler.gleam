@@ -59,6 +59,7 @@ pub fn handler(
     build_route:,
     make_request_context:,
     handle_to_server:,
+    handle_custom: fn(_msg) { option.None },
   )
 }
 

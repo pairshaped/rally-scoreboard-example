@@ -65,10 +65,15 @@ pub fn main() -> Nil {
 }
 
 fn init(_flags: Nil) -> #(Model, Effect(Msg)) {
+  let uri_result = modem.initial_uri()
   let route =
-    modem.initial_uri()
+    uri_result
     |> result.map(public_router.parse_uri)
     |> result.unwrap(public_route.NotFound)
+  let query = case uri_result {
+    Ok(uri) -> query_from_uri(uri)
+    Error(Nil) -> dict.new()
+  }
   #(
     Model(
       route:,
@@ -78,7 +83,7 @@ fn init(_flags: Nil) -> #(Model, Effect(Msg)) {
       team: None,
       notice: "",
       dark_mode: public_effect.read_dark_mode(),
-      query: dict.new(),
+      query:,
     ),
     effect.batch([
       register_receivers(),
@@ -89,9 +94,29 @@ fn init(_flags: Nil) -> #(Model, Effect(Msg)) {
         ),
         UrlChanged,
       ),
-      load_route(route, dict.new()),
+      // Setup's onConnect sends page_init with query from SSR flags,
+      // so the initial load only needs to dispatch the ToServer command.
+      initial_load(route),
     ]),
   )
+}
+
+fn initial_load(route: public_route.Route) -> Effect(Msg) {
+  case route {
+    public_route.Games ->
+      public_effect.send_to_server(public_to_server.LoadGames)
+    public_route.GamesId(id) ->
+      case int.parse(id) {
+        Ok(game_id) ->
+          public_effect.send_to_server(public_to_server.LoadGame(game_id:))
+        Error(Nil) -> effect.none()
+      }
+    public_route.Standings ->
+      public_effect.send_to_server(public_to_server.LoadStandings)
+    public_route.Team(slug:) ->
+      public_effect.send_to_server(public_to_server.LoadTeam(slug:))
+    public_route.NotFound -> effect.none()
+  }
 }
 
 fn register_receivers() -> Effect(Msg) {
@@ -108,21 +133,51 @@ fn load_route(
   route: public_route.Route,
   query: Dict(String, String),
 ) -> Effect(Msg) {
-  let _query = query
+  let #(module, params) = route_page_init(route)
   case route {
     public_route.Games ->
-      public_effect.send_to_server(public_to_server.LoadGames)
+      public_effect.send_page_init_and_command(
+        module:,
+        params:,
+        query:,
+        command: public_to_server.LoadGames,
+      )
     public_route.GamesId(id) ->
       case int.parse(id) {
         Ok(game_id) ->
-          public_effect.send_to_server(public_to_server.LoadGame(game_id:))
+          public_effect.send_page_init_and_command(
+            module:,
+            params:,
+            query:,
+            command: public_to_server.LoadGame(game_id:),
+          )
         Error(Nil) -> effect.none()
       }
     public_route.Standings ->
-      public_effect.send_to_server(public_to_server.LoadStandings)
+      public_effect.send_page_init_and_command(
+        module:,
+        params:,
+        query:,
+        command: public_to_server.LoadStandings,
+      )
     public_route.Team(slug:) ->
-      public_effect.send_to_server(public_to_server.LoadTeam(slug:))
+      public_effect.send_page_init_and_command(
+        module:,
+        params:,
+        query:,
+        command: public_to_server.LoadTeam(slug:),
+      )
     public_route.NotFound -> effect.none()
+  }
+}
+
+fn route_page_init(route: public_route.Route) -> #(String, String) {
+  case route {
+    public_route.Games -> #("Games", "null")
+    public_route.GamesId(id) -> #("GamesId", id)
+    public_route.Standings -> #("Standings", "null")
+    public_route.Team(slug) -> #("Team", slug)
+    public_route.NotFound -> #("NotFound", "null")
   }
 }
 

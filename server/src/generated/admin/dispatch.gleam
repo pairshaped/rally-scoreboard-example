@@ -1,18 +1,18 @@
 //// Generated. Do not edit.
 ////
-//// Root API ToServer dispatch.
+//// Root API ToServer dispatch for the admin Mount.
 ////
 //// Derived from shared/api/to_server.gleam and the page/server modules
 //// that define matching `*_to_server` handlers. The WebSocket runtime
 //// decodes one typed ToServer value, then calls this function so the
 //// backend can update its model and emit zero or more ToClient messages.
 ////
-//// Constructors handled by the other Mount (public) are explicit no-ops
-//// here. The shared API graph means every Mount sees every constructor.
-//// Apps that need cross-Mount rejection, logging, or forwarding should
-//// add it in backend.update before delegating to generated dispatch.
+//// Constructors owned by the other Mount (public) are rejected through
+//// the generated rejection helper, which logs the rejection as an issue
+//// so operators can detect misrouted commands.
 
 import generated/admin/request_context.{type RequestContext}
+import generated/runtime/reject
 import lustre/effect.{type Effect}
 import server/admin/model.{type Model}
 import server/admin/pages/games as server_admin_pages_games
@@ -27,10 +27,46 @@ pub fn to_server(
   backend_model backend_model: Model,
 ) -> #(Model, Effect(ToClient)) {
   case msg {
-    to_server.LoadGames -> #(backend_model, effect.none())
-    to_server.LoadGame(game_id: _) -> #(backend_model, effect.none())
-    to_server.LoadStandings -> #(backend_model, effect.none())
-    to_server.LoadTeam(slug: _) -> #(backend_model, effect.none())
+    to_server.LoadGames ->
+      reject.reject_invalid_command(
+        mount: "admin",
+        command: "LoadGames",
+        session_id: request_context.session_id,
+        user_id: request_context.user_id,
+        hostname: request_context.hostname,
+        server_context:,
+        backend_model:,
+      )
+    to_server.LoadGame(game_id: _) ->
+      reject.reject_invalid_command(
+        mount: "admin",
+        command: "LoadGame",
+        session_id: request_context.session_id,
+        user_id: request_context.user_id,
+        hostname: request_context.hostname,
+        server_context:,
+        backend_model:,
+      )
+    to_server.LoadStandings ->
+      reject.reject_invalid_command(
+        mount: "admin",
+        command: "LoadStandings",
+        session_id: request_context.session_id,
+        user_id: request_context.user_id,
+        hostname: request_context.hostname,
+        server_context:,
+        backend_model:,
+      )
+    to_server.LoadTeam(slug: _) ->
+      reject.reject_invalid_command(
+        mount: "admin",
+        command: "LoadTeam",
+        session_id: request_context.session_id,
+        user_id: request_context.user_id,
+        hostname: request_context.hostname,
+        server_context:,
+        backend_model:,
+      )
     to_server.LoadAdminGames ->
       server_admin_pages_games.load_admin_games(
         request_context:,

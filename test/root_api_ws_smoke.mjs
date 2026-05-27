@@ -227,14 +227,19 @@ try {
       assert.equal(push.value.game.id, 1);
       assert.equal(push.value.game.home_score, 11);
       assert.equal(push.value.game.away_score, 7);
-      await expectNoPush(publicProtocol, publicWs, 500);
+
+      const liveUpdate = await waitForPush(publicProtocol, publicWs);
+      assert.equal(liveUpdate.value.constructor.name, "GameScoreUpdated");
+      assert.equal(liveUpdate.value.update.game_id, 1);
+      assert.equal(liveUpdate.value.update.home_score, 11);
+      assert.equal(liveUpdate.value.update.away_score, 7);
     } finally {
       publicWs.close();
       adminWs.close();
     }
   });
 
-  await check("admin final and unfinal updates emit admin results only", async () => {
+  await check("admin final broadcasts GameScoreUpdated to public sockets", async () => {
     const publicProtocol = protocol;
     const adminProtocol = protocol;
     const adminToServer = await import(
@@ -269,14 +274,23 @@ try {
       const unfinalized = await waitForPush(adminProtocol, adminWs);
       assert.equal(unfinalized.value.constructor.name, "ScoreUpdateSaved");
       assert.equal(unfinalized.value.game.id, 1);
-      await expectNoPush(publicProtocol, standingsWs, 500);
+
+      // MarkFinal also broadcasts StandingsUpdated through the same
+      // live_updates.broadcast path. Both push types share the identical
+      // pg fanout, so GameScoreUpdated arrival proves the transport.
+      const markFinalPush = await waitForPush(publicProtocol, standingsWs);
+      assert.equal(
+        markFinalPush.value.constructor.name,
+        "GameScoreUpdated",
+      );
+      assert.equal(markFinalPush.value.update.game_id, 1);
     } finally {
       standingsWs.close();
       adminWs.close();
     }
   });
 
-  await check("game detail loads through public ToServer and ignores admin pushes", async () => {
+  await check("game detail receives live GameScoreUpdated from admin score changes", async () => {
     const publicProtocol = protocol;
     const adminProtocol = protocol;
     const adminToServer = await import(
@@ -300,7 +314,9 @@ try {
         1,
         adminToServer.ToServer$UpdateScore(1, 13, 7, "4th"),
       )));
-      await expectNoPush(publicProtocol, detailWs, 500);
+      const live1 = await waitForPush(publicProtocol, detailWs);
+      assert.equal(live1.value.constructor.name, "GameScoreUpdated");
+      assert.equal(live1.value.update.game_id, 1);
 
       adminWs.send(toPayload(adminProtocol.encode_request(
         "to_server",
@@ -309,7 +325,9 @@ try {
       )));
       const adminPush = await waitForPush(adminProtocol, adminWs);
       assert.equal(adminPush.value.constructor.name, "ScoreUpdateSaved");
-      await expectNoPush(publicProtocol, detailWs, 500);
+      const live2 = await waitForPush(publicProtocol, detailWs);
+      assert.equal(live2.value.constructor.name, "GameScoreUpdated");
+      assert.equal(live2.value.update.game_id, 2);
 
       detailWs.send(toPayload(publicProtocol.encode_request(
         "to_server",
@@ -420,18 +438,6 @@ async function waitForPush(protocol, ws) {
     if (frame.kind === "push" && frame.module === "to_client") return frame;
   }
   throw new Error("Timed out waiting for to_client push");
-}
-
-async function expectNoPush(protocol, ws, timeoutMs) {
-  try {
-    const frame = decodeFrame(protocol, (await nextMessage(ws, timeoutMs)).data);
-    if (frame.kind === "push" && frame.module === "to_client") {
-      throw new Error("Unexpected to_client push");
-    }
-  } catch (error) {
-    if (String(error.message || error).includes("Timed out waiting")) return;
-    throw error;
-  }
 }
 
 function first(list) {

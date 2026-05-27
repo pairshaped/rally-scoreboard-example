@@ -9,11 +9,12 @@
 import generated/protocol_wire
 import generated/public/request_context.{type RequestContext, RequestContext}
 import generated/public/route
+import generated/runtime/live_updates
 import generated/ws_runtime
 import gleam/dict
 import gleam/dynamic
 import gleam/erlang/process
-import gleam/option
+import gleam/option.{Some}
 import lustre/effect.{type Effect}
 import mist.{type WebsocketConnection, type WebsocketMessage}
 import server/public/backend
@@ -28,6 +29,7 @@ pub fn on_init(
   session_id session_id: String,
   hostname hostname: String,
 ) -> #(Nil, option.Option(process.Selector(dynamic.Dynamic))) {
+  live_updates.join()
   ws_runtime.on_init(
     conn:,
     server_context:,
@@ -38,6 +40,7 @@ pub fn on_init(
 }
 
 pub fn on_close(state: Nil) -> Nil {
+  live_updates.leave()
   ws_runtime.on_close(state)
 }
 
@@ -53,6 +56,10 @@ pub fn handler(
     build_route:,
     make_request_context:,
     handle_to_server:,
+    handle_custom: fn(msg) {
+      let update: ToClient = protocol_wire.coerce(msg)
+      Some(protocol_wire.encode_to_client(update))
+    },
   )
 }
 

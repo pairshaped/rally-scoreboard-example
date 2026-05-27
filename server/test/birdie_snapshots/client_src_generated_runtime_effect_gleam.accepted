@@ -46,6 +46,35 @@ pub fn has_auth_cookie(cookie_name cookie_name: String) -> Bool {
   do_has_auth_cookie(cookie_name)
 }
 
+@external(javascript, "./client_effect_ffi.mjs", "sendPageInit")
+fn do_send_page_init(_module: String, _params: a, _query: b) -> Nil {
+  Nil
+}
+
+pub fn send_page_init(
+  module module: String,
+  params params: a,
+  query query: b,
+) -> Effect(c) {
+  effect.from(fn(_dispatch) {
+    let Nil = do_send_page_init(module, params, query)
+    Nil
+  })
+}
+
+pub fn send_page_init_and_command(
+  module module: String,
+  params params: a,
+  query query: b,
+  command command: c,
+) -> Effect(d) {
+  effect.from(fn(_dispatch) {
+    let Nil = do_send_page_init(module, params, query)
+    let Nil = do_send_to_server(command)
+    Nil
+  })
+}
+
 @external(javascript, "./client_effect_ffi.mjs", "setDarkMode")
 fn do_set_dark_mode(_enabled: Bool) -> Nil {
   Nil

@@ -348,7 +348,6 @@ export function ensureSocket(url) {
     if (ws) {
       const sock = ws;
       ws = null;
-      clearPending();
       for (const listener of onDisconnectListeners) {
         try { listener("connection error"); } catch (_) { /* swallow */ }
       }

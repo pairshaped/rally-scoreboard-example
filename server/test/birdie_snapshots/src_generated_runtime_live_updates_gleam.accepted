@@ -1,0 +1,31 @@
+---
+version: 2.0.0
+title: src__generated__runtime__live_updates_gleam
+---
+//// Generated. Do not edit.
+////
+//// Live-update fanout backed by Erlang's pg module.
+//// Public WebSocket connections join the pg scope on init and leave on
+//// close. Admin handlers broadcast to the scope after updating scores.
+//// Derived from the Generator Framework's live-update runtime contract.
+
+@external(erlang, "server_generated_runtime_live_updates_ffi", "start_scope")
+pub fn start() -> Nil {
+  Nil
+}
+
+@external(erlang, "server_generated_runtime_live_updates_ffi", "join")
+pub fn join() -> Nil {
+  Nil
+}
+
+@external(erlang, "server_generated_runtime_live_updates_ffi", "leave")
+pub fn leave() -> Nil {
+  Nil
+}
+
+@external(erlang, "server_generated_runtime_live_updates_ffi", "broadcast")
+pub fn broadcast(_msg: a) -> Nil {
+  Nil
+}
+

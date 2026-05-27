@@ -20,6 +20,10 @@ export function sendToServer(msg) {
   if (_transport?.sendToServer) _transport.sendToServer(msg);
 }
 
+export function sendPageInit(module, params, query) {
+  if (_transport?.sendPageInit) _transport.sendPageInit(module, params, query);
+}
+
 export function hasAuthCookie(name) {
   if (typeof document === "undefined") return false;
   return document.cookie.split(";").some((c) => c.trim().startsWith(name + "="));

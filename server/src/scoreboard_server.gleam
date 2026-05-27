@@ -6,6 +6,7 @@
 import envoy
 import generated/entry
 import generated/runtime/db
+import generated/runtime/live_updates
 import generated/runtime/system
 import generated/runtime/system_db
 import gleam/erlang/process
@@ -25,6 +26,7 @@ pub fn main() -> Nil {
   system.start_with_jobs(path: "db/system.db", handler: fn(_name, _payload) {
     Ok(Nil)
   })
+  live_updates.start()
   let server_context = server_context.new(db:, system_db: system_conn)
   let port = case server_port() {
     Ok(p) -> p

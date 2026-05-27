@@ -1,0 +1,34 @@
+---
+version: 2.0.0
+title: src__generated__runtime__server_generated_runtime_live_updates_ffi_erl
+---
+%% Generated. Do not edit.
+%%
+%% Live-update fanout backed by Erlang's pg module.
+%% Public WebSocket connections join the pg scope on init and leave on close.
+%% Admin handlers broadcast to the scope after updating scores.
+%% Derived from the Generator Framework's live-update runtime contract.
+
+-module(server_generated_runtime_live_updates_ffi).
+-export([start_scope/0, join/0, leave/0, broadcast/1]).
+
+-define(SCOPE, scoreboard_live).
+-define(GROUP, public_live_updates).
+
+start_scope() ->
+    _ = pg:start_link(?SCOPE),
+    ok.
+
+join() ->
+    pg:join(?SCOPE, ?GROUP, self()),
+    ok.
+
+leave() ->
+    pg:leave(?SCOPE, ?GROUP, self()),
+    ok.
+
+broadcast(Msg) ->
+    Members = pg:get_local_members(?SCOPE, ?GROUP),
+    _ = [Pid ! Msg || Pid <- Members],
+    ok.
+

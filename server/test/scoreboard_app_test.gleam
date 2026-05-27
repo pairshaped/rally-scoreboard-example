@@ -509,7 +509,9 @@ pub fn mount_clients_use_generated_routers_and_effects_test() {
   public_client
   |> contains("public_receiver_dispatch.to_client(event)")
   |> should.be_true
-  public_client |> contains("public_effect.send_to_server(") |> should.be_true
+  public_client
+  |> contains("public_effect.send_page_init_and_command(")
+  |> should.be_true
   public_client |> contains("public_effect.read_dark_mode()") |> should.be_true
   public_client
   |> contains("public_effect.set_dark_mode(enabled)")

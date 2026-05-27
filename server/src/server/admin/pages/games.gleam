@@ -2,21 +2,22 @@
 ////
 //// These functions are named after ToServer constructors. Generated admin
 //// dispatch calls them to mutate the database and emit ToClient messages.
-////
-//// Live-update fanout (GameScoreUpdated, StandingsUpdated) is API-shaped
-//// but not yet wired: the ToClient types and client receiver dispatch are
-//// in place, but server-side cross-connection broadcast requires a pubsub
-//// mechanism that the generated runtime does not yet provide.
+//// After writing to the database, admin handlers also broadcast
+//// GameScoreUpdated and StandingsUpdated through the live-update pubsub
+//// so all connected public clients see changes without a page reload.
 
 import generated/admin/request_context.{type RequestContext}
 import generated/runtime/effect.{type Effect}
+import generated/runtime/live_updates
 import generated/sql/server/games_sql
 import gleam/bool
 import gleam/list
+import gleam/option
 import server/admin/model.{type Model}
 import server/helpers/db
 import server/server_context.{type ServerContext}
 import shared/api/domain/game as admin_game
+import shared/api/domain/standing
 import shared/api/to_client.{type ToClient}
 import sqlight
 
@@ -66,7 +67,18 @@ pub fn update_score(
       period:,
     )
   {
-    Ok(game) -> effect.send_to_client(to_client.ScoreUpdateSaved(game:))
+    Ok(game) -> {
+      live_updates.broadcast(
+        to_client.GameScoreUpdated(update: admin_game.GameScoreUpdate(
+          game_id:,
+          home_score:,
+          away_score:,
+          period:,
+          status: game.status,
+        )),
+      )
+      effect.send_to_client(to_client.ScoreUpdateSaved(game:))
+    }
     Error(reason) ->
       effect.send_to_client(to_client.AdminError(reason: db.to_string(reason)))
   }
@@ -85,7 +97,19 @@ pub fn mark_final(
       case
         final_admin_result(db: context.db, game_id:, home_score:, away_score:)
       {
-        Ok(game) -> effect.send_to_client(to_client.ResultSaved(game:))
+        Ok(game) -> {
+          live_updates.broadcast(
+            to_client.GameScoreUpdated(update: admin_game.GameScoreUpdate(
+              game_id:,
+              home_score:,
+              away_score:,
+              period: game.period,
+              status: game.status,
+            )),
+          )
+          broadcast_live_standings(context.db)
+          effect.send_to_client(to_client.ResultSaved(game:))
+        }
         Error(reason) ->
           effect.send_to_client(
             to_client.AdminError(reason: db.to_string(reason)),
@@ -109,12 +133,53 @@ pub fn correct_result(
   let event = case
     final_admin_result(db: context.db, game_id:, home_score:, away_score:)
   {
-    Ok(game) -> effect.send_to_client(to_client.ResultSaved(game:))
+    Ok(game) -> {
+      live_updates.broadcast(
+        to_client.GameScoreUpdated(update: admin_game.GameScoreUpdate(
+          game_id:,
+          home_score:,
+          away_score:,
+          period: game.period,
+          status: game.status,
+        )),
+      )
+      broadcast_live_standings(context.db)
+      effect.send_to_client(to_client.ResultSaved(game:))
+    }
     Error(reason) ->
       effect.send_to_client(to_client.AdminError(reason: db.to_string(reason)))
   }
 
   #(backend_model, event)
+}
+
+fn broadcast_live_standings(db: sqlight.Connection) -> Nil {
+  case live_standings(db) {
+    Ok(rows) -> live_updates.broadcast(to_client.StandingsUpdated(rows:))
+    Error(_) -> Nil
+  }
+}
+
+fn live_standings(
+  db: sqlight.Connection,
+) -> Result(List(standing.StandingRow), db.QueryError) {
+  case games_sql.standings(db:) {
+    Ok(rows) ->
+      Ok(
+        list.map(rows, fn(row) {
+          standing.StandingRow(
+            team_code: option.unwrap(row.team_code, ""),
+            team_name: row.team_name,
+            slug: row.team_slug,
+            wins: row.wins,
+            losses: row.losses,
+            points_for: row.points_for,
+            points_against: row.points_against,
+          )
+        }),
+      )
+    Error(err) -> Error(db.from_sqlight(err))
+  }
 }
 
 fn admin_games(

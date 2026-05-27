@@ -14,6 +14,10 @@ export function setup() {
       const wsUrl = currentWsUrl();
       if (wsUrl) transport.send(wsUrl, "to_server", msg);
     },
+    sendPageInit: (pageModule, pageParams, pageQuery) => {
+      const wsUrl = currentWsUrl();
+      if (wsUrl) transport.send_page_init(wsUrl, pageModule, pageParams, pageQuery);
+    },
   });
   transport.registerOnConnect(() => {
     const wsUrl = currentWsUrl();

@@ -21,7 +21,7 @@ import gleam/erlang/process
 import gleam/int
 import gleam/io
 import gleam/list
-import gleam/option.{type Option, Some}
+import gleam/option.{type Option, None, Some}
 import gleam/string
 import lustre/effect.{type Effect}
 import mist.{type WebsocketConnection, type WebsocketMessage}
@@ -79,6 +79,7 @@ pub fn handler(
     model,
     ServerContext,
   ) -> #(model, Effect(ToClient)),
+  handle_custom handle_custom: fn(a) -> Option(BitArray),
 ) -> mist.Next(Nil, a) {
   debug_log("[runtime:ws] handler called")
   case msg {
@@ -91,10 +92,14 @@ pub fn handler(
         make_request_context:,
         handle_to_server:,
       )
-    mist.Custom(msg) -> {
-      let _ignored = msg
-      mist.continue(state)
-    }
+    mist.Custom(msg) ->
+      case handle_custom(msg) {
+        Some(frame) -> {
+          let _send_result = mist.send_binary_frame(conn, frame)
+          mist.continue(state)
+        }
+        None -> mist.continue(state)
+      }
     mist.Closed -> mist.stop()
     mist.Shutdown -> mist.stop()
     _ -> mist.continue(state)

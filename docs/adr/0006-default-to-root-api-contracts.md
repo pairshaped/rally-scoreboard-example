@@ -237,7 +237,11 @@ The generated dispatch module is emitted at `generated/{mount_namespace}/dispatc
 
 The backend update may intercept, reject, wrap, or delegate a `ToServer` message. The default path delegates to generated dispatch. This keeps a single server policy/state boundary while preserving generated page routing.
 
-Each `ToServer` constructor has exactly one server handler. The Generator Framework generates the dispatch table from the Mount `ToServer` type and discovered server handlers. Generated dispatch owns the exhaustive `ToServer` case under `backend.update`.
+`ToServer` is point-to-point command input for the current Mount connection. The Generator Framework never fans out a `ToServer` value and never forwards a `ToServer` value from one Mount to another Mount. A client command is valid only when the current Mount owns the discovered handler for that constructor.
+
+The shared API graph may still contain `ToServer` constructors handled by other Mounts. Generated dispatch must make those branches explicit, because dispatch is exhaustive over the global `ToServer` type, but the default behavior must not silently no-op. Other-Mount commands are invalid for the current Mount and should go through a generated rejection path that can log an issue, emit a Mount-appropriate `ToClient` error when one exists, and return the backend model unchanged.
+
+Each `ToServer` constructor has exactly one server handler in the app. The Generator Framework generates each Mount dispatch table from the global `ToServer` type and the handlers discovered for that Mount. Generated dispatch owns the exhaustive `ToServer` case under `backend.update`: owned constructors call handlers, and unowned constructors reject the invalid command.
 
 The default handler convention maps a constructor to a snake-case function:
 
@@ -520,6 +524,8 @@ Type aliases are transparent on the wire, as they are in Gleam. Domain identitie
 
 `ToServer` frames are fire-and-forget commands. The client does not register a response callback for them and the server does not send a transport acknowledgement. Server operation outcomes travel as `ToClient` pushes. Root API transport does not expose an RPC lane.
 
+`ToClient` values are global server emissions. They may be delivered to any active client receiver in any Mount that handles the constructor. This is intentionally different from `ToServer`: commands are current-Mount input, while server emissions are receiver-driven app events and results. For example, an admin score command may emit `GameScoreUpdated`, and public pages may receive that `ToClient` value through their active receivers.
+
 ## Rules
 
 1. Wire-visible types live under `shared/api`.
@@ -532,7 +538,7 @@ Type aliases are transparent on the wire, as they are in Gleam. Domain identitie
 8. Module paths and directories under `shared/api` are code organization only; they do not contribute wire identity.
 9. Client packages may import subsets of `shared/api` for JavaScript packaging.
 10. Duplicate plain ETF constructor names inside the shared API graph are generation errors. The uniqueness check includes `ToServer`, `ToClient`, and domain constructors, and does not consider module path, type name, transport direction, arity, namespace prefix, hash, or generated identity.
-11. Every `ToServer` constructor has exactly one server handler.
+11. Every `ToServer` constructor has exactly one server handler in the app.
 12. `ToServer` constructors carry command data only.
 13. Route, query, session, and user facts come from `RequestContext`.
 14. Server handlers may use `ServerContext` for app resources and I/O.
@@ -541,18 +547,20 @@ Type aliases are transparent on the wire, as they are in Gleam. Domain identitie
 17. Each Mount has a user-owned `backend.gleam` with `Msg`, `init`, and `update`; the `Model` type lives in sibling `model.gleam` so generated dispatch can import it without a cyclic dependency on `backend.gleam`.
 18. `backend.Msg` includes a client-message branch carrying `ToServer` and `RequestContext`.
 19. `backend.update` may intercept `ToServer` messages or delegate to generated dispatch. The generated dispatch module is emitted at `generated/{mount_namespace}/dispatch.gleam` and imported as `generated_dispatch`.
-20. Generated dispatch exhaustively matches `ToServer` and calls server page handlers with constructor fields. The dispatch entry point is `generated_dispatch.to_server(msg, request_context, server_context, backend_model) -> #(Model, Effect(ToClient))`.
-21. Generated receiver dispatch exhaustively matches `ToClient` and routes constructor fields to active receivers. All server-originated `ToClient` values use the same receiver path.
-22. `ClientSharedState` is per Mount by default.
-23. `backend.Model` is per live SPA root connection.
-24. App-wide string notices use the built-in layout/client-shell lane.
-25. Rich app-wide payloads use `ToClient` values.
-26. `ToServer` uses the command lane without transport acknowledgements; app-visible outcomes use `ToClient`.
-27. User-owned app code is Mount-first: `server/src/server/{mount_namespace}`, `client/src/client/{mount_namespace}`, and `shared/src/shared/{mount_namespace}`. The exception is `shared/src/shared/api`, which is one global wire graph and has no public/admin subdivision.
-28. Each package has exactly one generated root: `client/src/generated`, `server/src/generated`, or `shared/src/generated`.
-29. Generated files are Mount-namespaced only when they depend on Mount-specific inputs. Mount-specific generated files live under `generated/public` or `generated/admin`.
-30. Generated runtime helpers, codecs, package protocol wire modules, SQL modules, setup modules, and transport modules are package-level generated files. They live under `generated`, `generated/runtime`, or `generated/sql`, not under `generated/{mount_namespace}/runtime`.
-31. Generated Erlang FFI files live under the owning package's generated root beside the Gleam module that imports them. The Generator Framework does not write generated `.erl` files into package `src/` roots.
-32. Client shells use Modem for same-Mount navigation and leave cross-Mount, sign-out, external, and SSR-intent links as normal anchors.
-33. Mount logging is explicit. `user_logging` and `issue_logging` default to `false` when omitted; the framework initializer writes both as `true` in each Mount block. User logging only writes for authenticated users and stores user id plus email. Issue logging writes runtime issues for the Mount with or without authentication, including user id and email when known.
-34. Generated sign-in codes use uppercase `0-9A-Z`; verification trims and normalizes the lookup scope and submitted code to uppercase before hashing.
+20. Generated dispatch exhaustively matches the global `ToServer` type for each Mount. Constructors owned by the current Mount call server page handlers with constructor fields. Constructors owned by other Mounts are invalid for the current Mount and use a generated rejection path instead of silently returning `effect.none()`. The dispatch entry point is `generated_dispatch.to_server(msg, request_context, server_context, backend_model) -> #(Model, Effect(ToClient))`.
+21. The Generator Framework never fans out or forwards `ToServer` values across Mounts. A `ToServer` command is handled only by the Mount connection that received it.
+22. Generated receiver dispatch exhaustively matches `ToClient` and routes constructor fields to active receivers. All server-originated `ToClient` values use the same receiver path.
+23. `ToClient` delivery is global and receiver-driven. Any active receiver in any Mount may opt into any `ToClient` constructor.
+24. `ClientSharedState` is per Mount by default.
+25. `backend.Model` is per live SPA root connection.
+26. App-wide string notices use the built-in layout/client-shell lane.
+27. Rich app-wide payloads use `ToClient` values.
+28. `ToServer` uses the command lane without transport acknowledgements; app-visible outcomes use `ToClient`.
+29. User-owned app code is Mount-first: `server/src/server/{mount_namespace}`, `client/src/client/{mount_namespace}`, and `shared/src/shared/{mount_namespace}`. The exception is `shared/src/shared/api`, which is one global wire graph and has no public/admin subdivision.
+30. Each package has exactly one generated root: `client/src/generated`, `server/src/generated`, or `shared/src/generated`.
+31. Generated files are Mount-namespaced only when they depend on Mount-specific inputs. Mount-specific generated files live under `generated/public` or `generated/admin`.
+32. Generated runtime helpers, codecs, package protocol wire modules, SQL modules, setup modules, and transport modules are package-level generated files. They live under `generated`, `generated/runtime`, or `generated/sql`, not under `generated/{mount_namespace}/runtime`.
+33. Generated Erlang FFI files live under the owning package's generated root beside the Gleam module that imports them. The Generator Framework does not write generated `.erl` files into package `src/` roots.
+34. Client shells use Modem for same-Mount navigation and leave cross-Mount, sign-out, external, and SSR-intent links as normal anchors.
+35. Mount logging is explicit. `user_logging` and `issue_logging` default to `false` when omitted; the framework initializer writes both as `true` in each Mount block. User logging only writes for authenticated users and stores user id plus email. Issue logging writes runtime issues for the Mount with or without authentication, including user id and email when known.
+36. Generated sign-in codes use uppercase `0-9A-Z`; verification trims and normalizes the lookup scope and submitted code to uppercase before hashing.
