@@ -415,7 +415,7 @@ pub fn admin_sign_in_pages_are_client_routes_test() {
   |> contains("admin_link(route: route, signed_in: signed_in)")
   |> should.be_true
   client
-  |> contains("nav_link_external(path: \"/admin/games\", label: \"Admin\"")
+  |> contains("ui.nav_link_external(path: \"/admin/games\", label: \"Admin\"")
   |> should.be_true
   client |> contains("True -> sign_out_link()") |> should.be_true
   client |> contains("False -> sign_in_link(route)") |> should.be_true
@@ -487,6 +487,7 @@ pub fn generated_ws_handlers_delegate_to_package_runtime_test() {
 pub fn mount_clients_use_generated_routers_and_effects_test() {
   let public_client = read("../client/src/scoreboard_public_client.gleam")
   let admin_client = read("../client/src/scoreboard_admin_client.gleam")
+  let client_ui = read("../client/src/client/components/ui.gleam")
   let client_effect = read("../client/src/generated/runtime/effect.gleam")
   let client_effect_ffi =
     read("../client/src/generated/runtime/client_effect_ffi.mjs")
@@ -516,10 +517,13 @@ pub fn mount_clients_use_generated_routers_and_effects_test() {
   public_client
   |> contains("public_effect.set_dark_mode(enabled)")
   |> should.be_true
-  public_client |> contains("event.on_check(SetDarkMode)") |> should.be_true
-  public_client |> contains("attribute.role(\"switch\")") |> should.be_true
-  public_client |> contains("sun_icon()") |> should.be_true
-  public_client |> contains("moon_icon()") |> should.be_true
+  public_client
+  |> contains("ui.theme_switch(dark_mode, SetDarkMode)")
+  |> should.be_true
+  client_ui |> contains("event.on_check(on_change)") |> should.be_true
+  client_ui |> contains("attribute.role(\"switch\")") |> should.be_true
+  client_ui |> contains("sun_icon()") |> should.be_true
+  client_ui |> contains("moon_icon()") |> should.be_true
   client_effect |> contains("pub fn set_dark_mode") |> should.be_true
   client_effect |> contains("pub fn read_dark_mode") |> should.be_true
   client_effect_ffi |> contains("export function setDarkMode") |> should.be_true
@@ -550,10 +554,9 @@ pub fn mount_clients_use_generated_routers_and_effects_test() {
   admin_client
   |> contains("admin_effect.set_dark_mode(enabled)")
   |> should.be_true
-  admin_client |> contains("event.on_check(SetDarkMode)") |> should.be_true
-  admin_client |> contains("attribute.role(\"switch\")") |> should.be_true
-  admin_client |> contains("sun_icon()") |> should.be_true
-  admin_client |> contains("moon_icon()") |> should.be_true
+  admin_client
+  |> contains("ui.theme_switch(dark_mode, SetDarkMode)")
+  |> should.be_true
 }
 
 pub fn mount_clients_do_not_import_the_opposite_api_test() {
@@ -724,7 +727,7 @@ pub fn client_same_mount_links_use_spa_navigation_test() {
   { count(public_client, "|> event.prevent_default") >= 2 }
   |> should.be_true
   public_client
-  |> contains("nav_link_external(path: \"/admin/games\", label: \"Admin\"")
+  |> contains("ui.nav_link_external(path: \"/admin/games\", label: \"Admin\"")
   |> should.be_true
 
   admin_client
@@ -739,10 +742,10 @@ pub fn client_same_mount_links_use_spa_navigation_test() {
   { count(admin_client, "|> event.prevent_default") >= 1 }
   |> should.be_true
   admin_client
-  |> contains("nav_link_external(path: \"/games\", label: \"Games\"")
+  |> contains("ui.nav_link_external(path: \"/games\", label: \"Games\"")
   |> should.be_true
   admin_client
-  |> contains("nav_link_external(path: \"/standings\", label: \"Standings\"")
+  |> contains("path: \"/standings\"")
   |> should.be_true
   admin_client
   |> contains("authentication.sign_out(path: \"/admin/sign_out\")")

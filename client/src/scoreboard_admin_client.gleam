@@ -4,6 +4,7 @@
 //// storage, ToClient fanout, navigation, and admin-only view composition.
 
 import client/admin/receivers as admin_receivers
+import client/components/ui
 import generated/admin/receiver_dispatch as admin_receiver_dispatch
 import generated/admin/route as admin_route
 import generated/admin/router as admin_router
@@ -24,7 +25,6 @@ import lustre/attribute
 import lustre/effect.{type Effect}
 import lustre/element.{type Element}
 import lustre/element/html
-import lustre/element/svg
 import lustre/event
 import modem
 import shared/admin/pages/games as admin_games_page
@@ -223,7 +223,7 @@ fn view(model: Model) -> Element(Msg) {
       admin_route.AdminGames ->
         html.main([attribute.class("layout")], [
           html.section([attribute.class("panel")], [
-            section_head(
+            ui.section_head(
               "Score desk",
               "Admin messages stay on the admin root API.",
             ),
@@ -247,7 +247,7 @@ fn view(model: Model) -> Element(Msg) {
             html.p([attribute.class("muted")], [html.text(model.notice)]),
           ]),
         ])
-      admin_route.NotFound -> not_found_view()
+      admin_route.NotFound -> ui.not_found_view()
     },
   ])
 }
@@ -266,83 +266,17 @@ fn topbar(
       ]),
     ]),
     html.nav([attribute.class("nav")], [
-      nav_link_external(path: "/games", label: "Games", active: False),
-      nav_link_external(path: "/standings", label: "Standings", active: False),
+      ui.nav_link_external(path: "/games", label: "Games", active: False),
+      ui.nav_link_external(
+        path: "/standings",
+        label: "Standings",
+        active: False,
+      ),
       admin_link(route: route, signed_in: signed_in),
       authentication_link(route: route, signed_in: signed_in),
-      theme_switch(dark_mode),
+      ui.theme_switch(dark_mode, SetDarkMode),
     ]),
   ])
-}
-
-fn theme_switch(dark_mode: Bool) -> Element(Msg) {
-  html.label([attribute.class("theme-switch")], [
-    sun_icon(),
-    html.input([
-      attribute.type_("checkbox"),
-      attribute.role("switch"),
-      attribute.checked(dark_mode),
-      event.on_check(SetDarkMode),
-    ]),
-    moon_icon(),
-  ])
-}
-
-fn sun_icon() -> Element(Msg) {
-  svg.svg(icon_attrs("Light mode"), [
-    svg.circle([
-      attribute.attribute("cx", "12"),
-      attribute.attribute("cy", "12"),
-      attribute.attribute("r", "5"),
-    ]),
-    svg.line(line_attrs(x1: "12", y1: "1", x2: "12", y2: "3")),
-    svg.line(line_attrs(x1: "12", y1: "21", x2: "12", y2: "23")),
-    svg.line(line_attrs(x1: "4.22", y1: "4.22", x2: "5.64", y2: "5.64")),
-    svg.line(line_attrs(x1: "18.36", y1: "18.36", x2: "19.78", y2: "19.78")),
-    svg.line(line_attrs(x1: "1", y1: "12", x2: "3", y2: "12")),
-    svg.line(line_attrs(x1: "21", y1: "12", x2: "23", y2: "12")),
-    svg.line(line_attrs(x1: "4.22", y1: "19.78", x2: "5.64", y2: "18.36")),
-    svg.line(line_attrs(x1: "18.36", y1: "5.64", x2: "19.78", y2: "4.22")),
-  ])
-}
-
-fn moon_icon() -> Element(Msg) {
-  svg.svg(icon_attrs("Dark mode"), [
-    svg.path([
-      attribute.attribute(
-        "d",
-        "M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z",
-      ),
-    ]),
-  ])
-}
-
-fn icon_attrs(label: String) -> List(attribute.Attribute(Msg)) {
-  [
-    attribute.width(16),
-    attribute.height(16),
-    attribute.attribute("viewBox", "0 0 24 24"),
-    attribute.attribute("fill", "none"),
-    attribute.attribute("stroke", "currentColor"),
-    attribute.attribute("stroke-width", "2"),
-    attribute.class("theme-icon"),
-    attribute.role("img"),
-    attribute.aria("label", label),
-  ]
-}
-
-fn line_attrs(
-  x1 x1: String,
-  y1 y1: String,
-  x2 x2: String,
-  y2 y2: String,
-) -> List(attribute.Attribute(Msg)) {
-  [
-    attribute.attribute("x1", x1),
-    attribute.attribute("y1", y1),
-    attribute.attribute("x2", x2),
-    attribute.attribute("y2", y2),
-  ]
 }
 
 fn admin_link(
@@ -357,7 +291,7 @@ fn admin_link(
         active: route == admin_route.AdminGames,
       )
     False ->
-      nav_link_external(path: "/admin/games", label: "Admin", active: False)
+      ui.nav_link_external(path: "/admin/games", label: "Admin", active: False)
   }
 }
 
@@ -403,23 +337,6 @@ fn nav_link(
         False -> ""
       }),
       event.on_click(Navigate(route)) |> event.prevent_default,
-    ],
-    [html.text(label)],
-  )
-}
-
-fn nav_link_external(
-  path path: String,
-  label label: String,
-  active active: Bool,
-) -> Element(Msg) {
-  html.a(
-    [
-      attribute.href(path),
-      attribute.class(case active {
-        True -> "active"
-        False -> ""
-      }),
     ],
     [html.text(label)],
   )
@@ -528,15 +445,6 @@ fn sign_in_code_form() -> Element(Msg) {
   )
 }
 
-fn section_head(title: String, subtitle: String) -> Element(Msg) {
-  html.div([attribute.class("section-head")], [
-    html.div([], [
-      html.h1([], [html.text(title)]),
-      html.p([attribute.class("muted")], [html.text(subtitle)]),
-    ]),
-  ])
-}
-
 fn view_games(games: List(admin_game.AdminGameSummary)) -> Element(Msg) {
   case games {
     [] -> html.p([attribute.class("muted")], [html.text("No games yet.")])
@@ -576,7 +484,7 @@ fn view_game_card(game: admin_game.AdminGameSummary) -> Element(Msg) {
       ]),
     ]),
     html.div([attribute.class("score-line admin-status-row")], [
-      status_badge(game.status),
+      ui.status_badge(game.status),
       final_action(game),
     ]),
   ])
@@ -602,26 +510,6 @@ fn final_action(game: admin_game.AdminGameSummary) -> Element(Msg) {
 fn clamp_score(score: Int) -> Int {
   use <- bool.guard(when: score < 0, return: 0)
   score
-}
-
-fn status_badge(status: admin_game.GameStatus) -> Element(Msg) {
-  case status {
-    admin_game.Scheduled ->
-      html.span([attribute.class("badge")], [html.text("Scheduled")])
-    admin_game.Live(period) ->
-      html.span([attribute.class("badge live")], [html.text(period)])
-    admin_game.Final ->
-      html.span([attribute.class("badge final")], [html.text("Final")])
-  }
-}
-
-fn not_found_view() -> Element(Msg) {
-  html.main([attribute.class("panel")], [
-    html.h1([], [html.text("Not found")]),
-    html.p([attribute.class("muted")], [
-      html.text("This page does not exist."),
-    ]),
-  ])
 }
 
 fn upsert_game(
