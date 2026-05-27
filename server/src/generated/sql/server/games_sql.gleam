@@ -101,8 +101,10 @@ pub type GetRow {
     id: Int,
     home_code: String,
     home_name: String,
+    home_slug: String,
     away_code: String,
     away_name: String,
+    away_slug: String,
     home_score: Int,
     away_score: Int,
     period: String,
@@ -116,25 +118,29 @@ pub fn get(
   game_id game_id: Int,
 ) -> Result(List(GetRow), sqlight.Error) {
   sqlight.query(
-    "SELECT g.id, g.home_code, home.name AS home_name, g.away_code, away.name AS away_name, g.home_score, g.away_score, g.period, g.final FROM games AS g INNER JOIN teams AS home ON g.home_code = home.code INNER JOIN teams AS away ON g.away_code = away.code WHERE g.id = :game_id",
+    "SELECT g.id, g.home_code, home.name AS home_name, home.slug AS home_slug, g.away_code, away.name AS away_name, away.slug AS away_slug, g.home_score, g.away_score, g.period, g.final FROM games AS g INNER JOIN teams AS home ON g.home_code = home.code INNER JOIN teams AS away ON g.away_code = away.code WHERE g.id = :game_id",
     on: db,
     with: [sqlight.int(game_id)],
     expecting: {
       use id <- decode.field(0, decode.int)
       use home_code <- decode.field(1, decode.string)
       use home_name <- decode.field(2, decode.string)
-      use away_code <- decode.field(3, decode.string)
-      use away_name <- decode.field(4, decode.string)
-      use home_score <- decode.field(5, decode.int)
-      use away_score <- decode.field(6, decode.int)
-      use period <- decode.field(7, decode.string)
-      use final <- decode.field(8, decode.int)
+      use home_slug <- decode.field(3, decode.string)
+      use away_code <- decode.field(4, decode.string)
+      use away_name <- decode.field(5, decode.string)
+      use away_slug <- decode.field(6, decode.string)
+      use home_score <- decode.field(7, decode.int)
+      use away_score <- decode.field(8, decode.int)
+      use period <- decode.field(9, decode.string)
+      use final <- decode.field(10, decode.int)
       decode.success(GetRow(
         id:,
         home_code:,
         home_name:,
+        home_slug:,
         away_code:,
         away_name:,
+        away_slug:,
         home_score:,
         away_score:,
         period:,
@@ -192,8 +198,10 @@ pub type ListPublicRow {
     id: Int,
     home_code: String,
     home_name: String,
+    home_slug: String,
     away_code: String,
     away_name: String,
+    away_slug: String,
     home_score: Int,
     away_score: Int,
     period: String,
@@ -207,25 +215,29 @@ pub fn list_public(
   team_filter team_filter: String,
 ) -> Result(List(ListPublicRow), sqlight.Error) {
   sqlight.query(
-    "SELECT g.id, g.home_code, home.name AS home_name, g.away_code, away.name AS away_name, g.home_score, g.away_score, g.period, g.final FROM games AS g INNER JOIN teams AS home ON g.home_code = home.code INNER JOIN teams AS away ON g.away_code = away.code WHERE :team_filter = '' OR g.home_code = :team_filter OR g.away_code = :team_filter ORDER BY g.id",
+    "SELECT g.id, g.home_code, home.name AS home_name, home.slug AS home_slug, g.away_code, away.name AS away_name, away.slug AS away_slug, g.home_score, g.away_score, g.period, g.final FROM games AS g INNER JOIN teams AS home ON g.home_code = home.code INNER JOIN teams AS away ON g.away_code = away.code WHERE :team_filter = '' OR g.home_code = :team_filter OR g.away_code = :team_filter ORDER BY g.id",
     on: db,
     with: [sqlight.text(team_filter)],
     expecting: {
       use id <- decode.field(0, decode.int)
       use home_code <- decode.field(1, decode.string)
       use home_name <- decode.field(2, decode.string)
-      use away_code <- decode.field(3, decode.string)
-      use away_name <- decode.field(4, decode.string)
-      use home_score <- decode.field(5, decode.int)
-      use away_score <- decode.field(6, decode.int)
-      use period <- decode.field(7, decode.string)
-      use final <- decode.field(8, decode.int)
+      use home_slug <- decode.field(3, decode.string)
+      use away_code <- decode.field(4, decode.string)
+      use away_name <- decode.field(5, decode.string)
+      use away_slug <- decode.field(6, decode.string)
+      use home_score <- decode.field(7, decode.int)
+      use away_score <- decode.field(8, decode.int)
+      use period <- decode.field(9, decode.string)
+      use final <- decode.field(10, decode.int)
       decode.success(ListPublicRow(
         id:,
         home_code:,
         home_name:,
+        home_slug:,
         away_code:,
         away_name:,
+        away_slug:,
         home_score:,
         away_score:,
         period:,
@@ -240,6 +252,7 @@ pub type StandingsRow {
   StandingsRow(
     team_code: Option(String),
     team_name: String,
+    team_slug: String,
     wins: Int,
     losses: Int,
     points_for: Int,
@@ -252,19 +265,64 @@ pub fn standings(
   db db: sqlight.Connection,
 ) -> Result(List(StandingsRow), sqlight.Error) {
   sqlight.query(
-    "WITH team_games AS ( SELECT home_code AS team_code, home_score AS points_for, away_score AS points_against, CASE WHEN home_score > away_score THEN 1 ELSE 0 END AS win, CASE WHEN home_score < away_score THEN 1 ELSE 0 END AS loss FROM games WHERE final = 1 UNION ALL SELECT away_code AS team_code, away_score AS points_for, home_score AS points_against, CASE WHEN away_score > home_score THEN 1 ELSE 0 END AS win, CASE WHEN away_score < home_score THEN 1 ELSE 0 END AS loss FROM games WHERE final = 1 ) SELECT t.code AS team_code, t.name AS team_name, COALESCE(SUM(team_games.win), 0) AS wins, COALESCE(SUM(team_games.loss), 0) AS losses, COALESCE(SUM(team_games.points_for), 0) AS points_for, COALESCE(SUM(team_games.points_against), 0) AS points_against FROM teams AS t LEFT JOIN team_games ON t.code = team_games.team_code GROUP BY t.code, t.name ORDER BY wins DESC, points_for DESC, t.code",
+    "WITH team_games AS ( SELECT home_code AS team_code, home_score AS points_for, away_score AS points_against, CASE WHEN home_score > away_score THEN 1 ELSE 0 END AS win, CASE WHEN home_score < away_score THEN 1 ELSE 0 END AS loss FROM games WHERE final = 1 UNION ALL SELECT away_code AS team_code, away_score AS points_for, home_score AS points_against, CASE WHEN away_score > home_score THEN 1 ELSE 0 END AS win, CASE WHEN away_score < home_score THEN 1 ELSE 0 END AS loss FROM games WHERE final = 1 ) SELECT t.code AS team_code, t.name AS team_name, t.slug AS team_slug, COALESCE(SUM(team_games.win), 0) AS wins, COALESCE(SUM(team_games.loss), 0) AS losses, COALESCE(SUM(team_games.points_for), 0) AS points_for, COALESCE(SUM(team_games.points_against), 0) AS points_against FROM teams AS t LEFT JOIN team_games ON t.code = team_games.team_code GROUP BY t.code, t.name, t.slug ORDER BY wins DESC, points_for DESC, t.code",
     on: db,
     with: [],
     expecting: {
       use team_code <- decode.field(0, decode.optional(decode.string))
       use team_name <- decode.field(1, decode.string)
-      use wins <- decode.field(2, decode.int)
-      use losses <- decode.field(3, decode.int)
-      use points_for <- decode.field(4, decode.int)
-      use points_against <- decode.field(5, decode.int)
+      use team_slug <- decode.field(2, decode.string)
+      use wins <- decode.field(3, decode.int)
+      use losses <- decode.field(4, decode.int)
+      use points_for <- decode.field(5, decode.int)
+      use points_against <- decode.field(6, decode.int)
       decode.success(StandingsRow(
         team_code:,
         team_name:,
+        team_slug:,
+        wins:,
+        losses:,
+        points_for:,
+        points_against:,
+      ))
+    },
+  )
+}
+
+/// Generated from src/server/sql/games/team_by_slug.sql
+pub type TeamBySlugRow {
+  TeamBySlugRow(
+    code: Option(String),
+    name: String,
+    slug: String,
+    wins: Int,
+    losses: Int,
+    points_for: Int,
+    points_against: Int,
+  )
+}
+
+/// Generated from src/server/sql/games/team_by_slug.sql
+pub fn team_by_slug(
+  db db: sqlight.Connection,
+  slug slug: String,
+) -> Result(List(TeamBySlugRow), sqlight.Error) {
+  sqlight.query(
+    "WITH team_games AS ( SELECT home_code AS team_code, home_score AS points_for, away_score AS points_against, CASE WHEN home_score > away_score THEN 1 ELSE 0 END AS win, CASE WHEN home_score < away_score THEN 1 ELSE 0 END AS loss FROM games WHERE final = 1 UNION ALL SELECT away_code AS team_code, away_score AS points_for, home_score AS points_against, CASE WHEN away_score > home_score THEN 1 ELSE 0 END AS win, CASE WHEN away_score < home_score THEN 1 ELSE 0 END AS loss FROM games WHERE final = 1 ) SELECT t.code, t.name, t.slug, COALESCE(SUM(team_games.win), 0) AS wins, COALESCE(SUM(team_games.loss), 0) AS losses, COALESCE(SUM(team_games.points_for), 0) AS points_for, COALESCE(SUM(team_games.points_against), 0) AS points_against FROM teams AS t LEFT JOIN team_games ON t.code = team_games.team_code WHERE t.slug = :slug GROUP BY t.code, t.name, t.slug",
+    on: db,
+    with: [sqlight.text(slug)],
+    expecting: {
+      use code <- decode.field(0, decode.optional(decode.string))
+      use name <- decode.field(1, decode.string)
+      use slug <- decode.field(2, decode.string)
+      use wins <- decode.field(3, decode.int)
+      use losses <- decode.field(4, decode.int)
+      use points_for <- decode.field(5, decode.int)
+      use points_against <- decode.field(6, decode.int)
+      decode.success(TeamBySlugRow(
+        code:,
+        name:,
+        slug:,
         wins:,
         losses:,
         points_for:,

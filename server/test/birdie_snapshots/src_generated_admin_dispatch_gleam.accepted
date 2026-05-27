@@ -31,6 +31,7 @@ pub fn to_server(
     to_server.LoadGames -> #(backend_model, effect.none())
     to_server.LoadGame(game_id: _) -> #(backend_model, effect.none())
     to_server.LoadStandings -> #(backend_model, effect.none())
+    to_server.LoadTeam(slug: _) -> #(backend_model, effect.none())
     to_server.LoadAdminGames ->
       server_admin_pages_games.load_admin_games(
         request_context:,

@@ -26,11 +26,13 @@ import lustre/event
 import modem
 import shared/api/domain/game as public_game
 import shared/api/domain/standing
+import shared/api/domain/team as public_team
 import shared/api/to_client as public_to_client
 import shared/api/to_server as public_to_server
 import shared/public/pages/game_detail as public_game_detail_page
 import shared/public/pages/games as public_games_page
 import shared/public/pages/standings as public_standings_page
+import shared/public/pages/team as public_team_page
 
 type Model {
   Model(
@@ -38,6 +40,7 @@ type Model {
     games: List(public_game.PublicGameSummary),
     selected_game: Option(public_game.GameDetail),
     standings: List(standing.StandingRow),
+    team: Option(public_team_page.Model),
     notice: String,
     dark_mode: Bool,
   )
@@ -70,6 +73,7 @@ fn init(_flags: Nil) -> #(Model, Effect(Msg)) {
       games: [],
       selected_game: None,
       standings: [],
+      team: None,
       notice: "",
       dark_mode: public_effect.read_dark_mode(),
     ),
@@ -109,6 +113,8 @@ fn load_route(route: public_route.Route) -> Effect(Msg) {
       }
     public_route.Standings ->
       public_effect.send_to_server(public_to_server.LoadStandings)
+    public_route.Team(slug:) ->
+      public_effect.send_to_server(public_to_server.LoadTeam(slug:))
     public_route.NotFound -> effect.none()
   }
 }
@@ -129,6 +135,8 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
       handle_game_detail(model, page_msg)
     Received(public_receivers.StandingsPage(page_msg)) ->
       handle_standings(model, page_msg)
+    Received(public_receivers.TeamPage(page_msg)) ->
+      handle_team(model, page_msg)
     Received(public_receivers.Notice(notice)) -> #(
       Model(..model, notice:),
       effect.none(),
@@ -200,6 +208,22 @@ fn handle_standings(
   }
 }
 
+fn handle_team(
+  model: Model,
+  msg: public_team_page.Msg,
+) -> #(Model, Effect(Msg)) {
+  case msg {
+    public_team_page.LoadedTeam(team) -> #(
+      Model(..model, team: Some(public_team_page.Model(team:)), notice: ""),
+      effect.none(),
+    )
+    public_team_page.LoadFailed(reason) -> #(
+      Model(..model, notice: reason),
+      effect.none(),
+    )
+  }
+}
+
 fn view(model: Model) -> Element(Msg) {
   html.div([attribute.class("scoreboard-app")], [
     topbar(route: model.route, dark_mode: model.dark_mode),
@@ -230,6 +254,10 @@ fn view(model: Model) -> Element(Msg) {
             ),
             view_standings(model.standings),
           ]),
+        ])
+      public_route.Team(_) ->
+        html.main([], [
+          view_team_detail(model.team),
         ])
       public_route.NotFound -> not_found_view()
     },
@@ -391,13 +419,27 @@ fn view_game_grid(games: List(public_game.PublicGameSummary)) -> Element(Msg) {
 fn view_game_card(game: public_game.PublicGameSummary) -> Element(Msg) {
   html.article([attribute.class("game-card")], [
     html.div([attribute.class("team-row")], [
-      html.strong([], [html.text(game.away.name)]),
+      html.a(
+        [
+          attribute.href("/teams/" <> uri.percent_encode(game.away.slug)),
+          event.on_click(Navigate(public_route.Team(slug: game.away.slug)))
+            |> event.prevent_default,
+        ],
+        [html.strong([], [html.text(game.away.name)])],
+      ),
       html.span([attribute.class("score")], [
         html.text(int.to_string(game.away_score)),
       ]),
     ]),
     html.div([attribute.class("team-row")], [
-      html.strong([], [html.text(game.home.name)]),
+      html.a(
+        [
+          attribute.href("/teams/" <> uri.percent_encode(game.home.slug)),
+          event.on_click(Navigate(public_route.Team(slug: game.home.slug)))
+            |> event.prevent_default,
+        ],
+        [html.strong([], [html.text(game.home.name)])],
+      ),
       html.span([attribute.class("score")], [
         html.text(int.to_string(game.home_score)),
       ]),
@@ -425,13 +467,31 @@ fn view_game_detail(game: Option(public_game.GameDetail)) -> Element(Msg) {
       html.div([], [
         html.div([attribute.class("game-card")], [
           html.div([attribute.class("team-row")], [
-            html.strong([], [html.text(game.away.name)]),
+            html.a(
+              [
+                attribute.href("/teams/" <> uri.percent_encode(game.away.slug)),
+                event.on_click(
+                  Navigate(public_route.Team(slug: game.away.slug)),
+                )
+                  |> event.prevent_default,
+              ],
+              [html.strong([], [html.text(game.away.name)])],
+            ),
             html.span([attribute.class("score")], [
               html.text(int.to_string(game.away_score)),
             ]),
           ]),
           html.div([attribute.class("team-row")], [
-            html.strong([], [html.text(game.home.name)]),
+            html.a(
+              [
+                attribute.href("/teams/" <> uri.percent_encode(game.home.slug)),
+                event.on_click(
+                  Navigate(public_route.Team(slug: game.home.slug)),
+                )
+                  |> event.prevent_default,
+              ],
+              [html.strong([], [html.text(game.home.name)])],
+            ),
             html.span([attribute.class("score")], [
               html.text(int.to_string(game.home_score)),
             ]),
@@ -472,14 +532,73 @@ fn view_standings(rows: List(standing.StandingRow)) -> Element(Msg) {
 fn view_standing_row(row: standing.StandingRow) -> Element(Msg) {
   html.tr([], [
     html.td([], [
-      html.strong([], [html.text(row.team_code)]),
-      html.text(" " <> row.team_name),
+      html.a(
+        [
+          attribute.href("/teams/" <> uri.percent_encode(row.slug)),
+          event.on_click(Navigate(public_route.Team(slug: row.slug)))
+            |> event.prevent_default,
+        ],
+        [
+          html.strong([], [html.text(row.team_code)]),
+          html.text(" " <> row.team_name),
+        ],
+      ),
     ]),
     html.td([], [html.text(int.to_string(row.wins))]),
     html.td([], [html.text(int.to_string(row.losses))]),
     html.td([], [html.text(int.to_string(row.points_for))]),
     html.td([], [html.text(int.to_string(row.points_against))]),
   ])
+}
+
+fn view_team_detail(team: Option(public_team_page.Model)) -> Element(Msg) {
+  case team {
+    None -> html.p([attribute.class("muted")], [html.text("Loading team...")])
+    Some(public_team_page.Model(team: detail)) -> {
+      let public_team.TeamDetail(
+        code:,
+        name:,
+        slug: _,
+        wins:,
+        losses:,
+        points_for:,
+        points_against:,
+        recent_games:,
+      ) = detail
+      html.div([], [
+        html.section([attribute.class("panel")], [
+          section_head(name, "Team details loaded by slug."),
+          html.div([attribute.class("stat-card")], [
+            html.div([], [
+              html.strong([], [html.text(code)]),
+              html.text(" · " <> name),
+            ]),
+            html.div([attribute.class("score-line")], [
+              html.span([], [
+                html.text(
+                  "W-L: " <> int.to_string(wins) <> "-" <> int.to_string(losses),
+                ),
+              ]),
+              html.span([], [html.text("PF: " <> int.to_string(points_for))]),
+              html.span([], [html.text("PA: " <> int.to_string(points_against))]),
+            ]),
+          ]),
+        ]),
+        html.section([attribute.class("panel")], [
+          section_head("Recent games", ""),
+          case recent_games {
+            [] ->
+              html.p([attribute.class("muted")], [html.text("No games yet.")])
+            _ ->
+              html.div(
+                [attribute.class("game-grid")],
+                list.map(recent_games, view_game_card),
+              )
+          },
+        ]),
+      ])
+    }
+  }
 }
 
 fn status_badge(status: public_game.GameStatus) -> Element(Msg) {
@@ -552,6 +671,7 @@ fn power_rankings_to_standings(
     standing.StandingRow(
       team_code: row.team_code,
       team_name: row.team_name,
+      slug: row.slug,
       wins: row.wins,
       losses: row.losses,
       points_for: row.points_for,

@@ -7,6 +7,7 @@ pub type StandingRow {
   StandingRow(
     team_code: String,
     team_name: String,
+    slug: String,
     wins: Int,
     losses: Int,
     points_for: Int,
@@ -18,6 +19,7 @@ pub type PowerRankingRow {
   PowerRankingRow(
     team_code: String,
     team_name: String,
+    slug: String,
     wins: Int,
     losses: Int,
     points_for: Int,

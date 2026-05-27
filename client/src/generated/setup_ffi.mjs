@@ -67,5 +67,7 @@ function routePageInit() {
   if (path === "/standings") return { module: "Standings", params: null };
   const gameMatch = path.match(/^\/games\/([^/]+)$/);
   if (gameMatch) return { module: "GamesId", params: decodeURIComponent(gameMatch[1]) };
+  const teamMatch = path.match(/^\/teams\/([^/]+)$/);
+  if (teamMatch) return { module: "Team", params: decodeURIComponent(teamMatch[1]) };
   return { module: "Games", params: null };
 }

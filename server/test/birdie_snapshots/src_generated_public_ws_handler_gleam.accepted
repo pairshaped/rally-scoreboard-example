@@ -95,6 +95,10 @@ fn build_route(page: String, value: dynamic.Dynamic) -> route.Route {
     }
     "Games" -> route.Games
     "Standings" -> route.Standings
+    "Team" -> {
+      let param_0 = protocol_wire.coerce(value)
+      route.Team(slug: param_0)
+    }
     _ -> route.NotFound
   }
 }

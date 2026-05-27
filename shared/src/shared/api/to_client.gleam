@@ -8,6 +8,7 @@ import shared/api/domain/game.{
   type GameScoreUpdate, type PublicGameSummary,
 }
 import shared/api/domain/standing.{type PowerRankingRow, type StandingRow}
+import shared/api/domain/team.{type TeamDetail}
 
 pub type ToClient {
   GamesLoaded(games: List(PublicGameSummary))
@@ -17,6 +18,7 @@ pub type ToClient {
   GameScoreUpdated(update: GameScoreUpdate)
   StandingsUpdated(rows: List(StandingRow))
   GamesLoadFailed(reason: String)
+  TeamLoaded(team: TeamDetail)
   AdminGamesLoaded(games: List(AdminGameSummary))
   GameCreated(game: AdminGameDetail)
   ScoreUpdateSaved(game: AdminGameDetail)

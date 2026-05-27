@@ -9,11 +9,13 @@ import shared/api/to_client
 import shared/public/pages/game_detail
 import shared/public/pages/games
 import shared/public/pages/standings
+import shared/public/pages/team
 
 pub type Msg {
   GamesPage(games.Msg)
   GameDetailPage(game_detail.Msg)
   StandingsPage(standings.Msg)
+  TeamPage(team.Msg)
   Notice(String)
 }
 
@@ -38,10 +40,18 @@ fn receive_for_standings(event: to_client.ToClient) -> List(Msg) {
   }
 }
 
+fn receive_for_team(event: to_client.ToClient) -> List(Msg) {
+  case team.receive(event) {
+    Some(msg) -> [TeamPage(msg)]
+    None -> []
+  }
+}
+
 pub fn receive_active(event: to_client.ToClient) -> List(Msg) {
   receive_for_games(event)
   |> append(receive_for_game_detail(event))
   |> append(receive_for_standings(event))
+  |> append(receive_for_team(event))
 }
 
 fn append(left: List(a), right: List(a)) -> List(a) {

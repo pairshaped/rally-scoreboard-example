@@ -46,6 +46,7 @@ fn standing_from_row(row: games_sql.StandingsRow) -> standing.StandingRow {
   standing.StandingRow(
     team_code:,
     team_name: row.team_name,
+    slug: row.team_slug,
     wins: row.wins,
     losses: row.losses,
     points_for: row.points_for,

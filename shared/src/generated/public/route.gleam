@@ -10,5 +10,6 @@ pub type Route {
   Games
   GamesId(id: String)
   Standings
+  Team(slug: String)
   NotFound
 }

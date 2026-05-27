@@ -42,8 +42,16 @@ fn public_game(
 fn game_detail_from_row(row: games_sql.GetRow) -> game.GameDetail {
   game.GameDetail(
     id: row.id,
-    home: game.Team(code: row.home_code, name: row.home_name),
-    away: game.Team(code: row.away_code, name: row.away_name),
+    home: game.Team(
+      code: row.home_code,
+      name: row.home_name,
+      slug: row.home_slug,
+    ),
+    away: game.Team(
+      code: row.away_code,
+      name: row.away_name,
+      slug: row.away_slug,
+    ),
     home_score: row.home_score,
     away_score: row.away_score,
     status: game_status(row.final, row.period),

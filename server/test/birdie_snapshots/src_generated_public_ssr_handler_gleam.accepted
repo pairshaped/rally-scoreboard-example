@@ -94,6 +94,7 @@ fn route_info(route: router.Route) -> #(String, String) {
     router.Games -> #("Games", "null")
     router.GamesId(id) -> #("GamesId", "\"" <> json_escape(id) <> "\"")
     router.Standings -> #("Standings", "null")
+    router.Team(slug) -> #("Team", "\"" <> json_escape(slug) <> "\"")
     router.NotFound(_) -> #("NotFound", "null")
   }
 }

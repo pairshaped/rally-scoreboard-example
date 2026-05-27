@@ -296,6 +296,32 @@ try {
       adminWs.close();
     }
   });
+
+  await check("non-ASCII team slug round-trips through LoadTeam", async () => {
+    const publicProtocol = protocol;
+    const publicToServer = await import(
+      "../client/build/dev/javascript/scoreboard_shared/shared/api/to_server.mjs"
+    );
+
+    const ws = await openWs("/ws");
+    try {
+      ws.send(toPayload(publicProtocol.encode_request("Games", 0, null)));
+      await expectResponse(publicProtocol, ws, 0);
+
+      ws.send(toPayload(publicProtocol.encode_request(
+        "to_server",
+        1,
+        publicToServer.ToServer$LoadTeam("montréal-meteors"),
+      )));
+      const push = await waitForPush(publicProtocol, ws);
+      assert.equal(push.value.constructor.name, "TeamLoaded");
+      assert.equal(push.value.team.slug, "montréal-meteors");
+      assert.equal(push.value.team.code, "MTL");
+      assert.equal(push.value.team.name, "Montreal Meteors");
+    } finally {
+      ws.close();
+    }
+  });
 } finally {
   await stopServer();
 }
@@ -305,7 +331,7 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
-console.log("10 websocket smoke checks passed");
+console.log("11 websocket smoke checks passed");
 
 async function check(name, fn) {
   try {

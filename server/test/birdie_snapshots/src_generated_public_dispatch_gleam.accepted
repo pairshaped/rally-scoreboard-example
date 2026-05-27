@@ -19,6 +19,7 @@ import server/public/model.{type Model}
 import server/public/pages/games as server_public_pages_games
 import server/public/pages/games/id_ as server_public_pages_games_id_
 import server/public/pages/standings as server_public_pages_standings
+import server/public/pages/teams/slug_ as server_public_pages_teams_slug_
 import server/server_context.{type ServerContext}
 import shared/api/to_client.{type ToClient}
 import shared/api/to_server.{type ToServer}
@@ -45,6 +46,13 @@ pub fn to_server(
       )
     to_server.LoadStandings ->
       server_public_pages_standings.load_standings(
+        request_context:,
+        server_context:,
+        backend_model:,
+      )
+    to_server.LoadTeam(slug:) ->
+      server_public_pages_teams_slug_.load_team(
+        slug:,
         request_context:,
         server_context:,
         backend_model:,

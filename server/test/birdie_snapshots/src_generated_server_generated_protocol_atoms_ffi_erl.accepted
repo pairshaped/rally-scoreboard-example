@@ -35,6 +35,7 @@ do_ensure() ->
         <<"load_game">>,
         <<"load_games">>,
         <<"load_standings">>,
+        <<"load_team">>,
         <<"malformed_request">>,
         <<"mark_final">>,
         <<"nil">>,
@@ -57,6 +58,7 @@ do_ensure() ->
         <<"score_update_saved">>,
         <<"standings_loaded">>,
         <<"standings_updated">>,
+        <<"team_loaded">>,
         %% Domain constructor atoms
         <<"admin_game_detail">>,
         <<"admin_game_summary">>,
@@ -68,7 +70,8 @@ do_ensure() ->
         <<"public_game_summary">>,
         <<"scheduled">>,
         <<"standing_row">>,
-        <<"team">>
+        <<"team">>,
+        <<"team_detail">>
     ]),
     persistent_term:put({libero, wire_module}, 'server_generated_protocol_wire_ffi'),
     persistent_term:put({?MODULE, done}, true),

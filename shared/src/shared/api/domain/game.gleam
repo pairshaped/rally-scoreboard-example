@@ -10,7 +10,7 @@ pub type GameStatus {
 }
 
 pub type Team {
-  Team(code: String, name: String)
+  Team(code: String, name: String, slug: String)
 }
 
 pub type PublicGameSummary {

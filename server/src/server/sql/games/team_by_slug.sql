@@ -1,6 +1,8 @@
--- Compute standings from final games.
+-- Look up a team by its URL slug, including its win/loss record from final games.
 --
--- Counts wins, losses, and point totals for every team from completed results.
+-- Returns team identity (code, name, slug) plus aggregated record data.
+-- The slug is the URL-friendly identifier; it may contain non-ASCII characters
+-- that arrived percent-decoded from the route param.
 
 WITH team_games AS (
     SELECT
@@ -22,14 +24,14 @@ WITH team_games AS (
     WHERE final = 1
 )
 SELECT
-    t.code AS team_code,
-    t.name AS team_name,
-    t.slug AS team_slug,
+    t.code,
+    t.name,
+    t.slug,
     COALESCE(SUM(team_games.win), 0) AS wins,
     COALESCE(SUM(team_games.loss), 0) AS losses,
     COALESCE(SUM(team_games.points_for), 0) AS points_for,
     COALESCE(SUM(team_games.points_against), 0) AS points_against
 FROM teams AS t
 LEFT JOIN team_games ON t.code = team_games.team_code
+WHERE t.slug = :slug
 GROUP BY t.code, t.name, t.slug
-ORDER BY wins DESC, points_for DESC, t.code
