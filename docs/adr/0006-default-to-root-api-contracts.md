@@ -371,6 +371,8 @@ Hydration in this project means client init consumes server-loaded data and star
 
 Shared page views are intentionally pure so they can be rendered by SSR, reused by the client, and tested directly without browser transport or WebSocket setup. Shared views accept data and action callbacks but must not import transport, generated client effects, modem, browser setup, or route modules.
 
+The Scoreboard example's generated files describe the intended generated output shape for this contract. Implementing generator support for that output is a separate project.
+
 ## Generated Ownership
 
 One `[[tools.rally.clients]]` entry defines one Mount. The Mount namespace derives generated paths only for files whose inputs are Mount-specific: routes, request context, backend dispatch, SSR, static handling, WebSocket handling, and receiver dispatch.
