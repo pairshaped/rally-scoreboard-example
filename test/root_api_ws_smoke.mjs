@@ -66,8 +66,20 @@ server.stderr.on("data", chunk => {
   serverLog += chunk.toString();
 });
 
+let serverExited = false;
+server.on("exit", (code) => {
+  serverExited = true;
+  serverLog += `\n[server exited with code ${code}]\n`;
+});
+
 try {
-  await waitFor(() => serverLog.includes(`http://localhost:${port}`), 10_000);
+  await waitFor(
+    () => serverLog.includes(`http://localhost:${port}`) || serverExited,
+    15_000,
+  );
+  if (serverExited) {
+    throw new Error(`Server exited before becoming ready:\n${serverLog.trim()}`);
+  }
 
   const protocol = await import(
     "../client/build/dev/javascript/client/generated/protocol_wire.mjs"
@@ -138,7 +150,14 @@ try {
     }
   });
 
-  await signIn();
+  await check("admin sign-in succeeds", async () => {
+    await signIn();
+    // Verify sign-in worked by fetching an authenticated page
+    const response = await fetch(`http://127.0.0.1:${port}/admin/games`, {
+      headers: { Cookie: cookies },
+    });
+    assert.equal(response.status, 200);
+  });
 
   await check("served shells use separate mount loaders", async () => {
     const publicHtml = await textAt("/games");
@@ -331,7 +350,7 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
-console.log("11 websocket smoke checks passed");
+console.log("12 websocket smoke checks passed");
 
 async function check(name, fn) {
   try {
