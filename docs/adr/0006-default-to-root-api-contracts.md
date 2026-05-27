@@ -456,9 +456,7 @@ server/src/generated/runtime/system_db.gleam
 server/src/generated/runtime/trace.gleam
 
 server/src/generated/runtime/server_generated_runtime_authentication_ffi.erl
-server/src/generated/runtime/server_generated_runtime_db_ffi.erl
 server/src/generated/runtime/server_generated_runtime_effect_state_ffi.erl
-server/src/generated/runtime/server_generated_runtime_system_db_ffi.erl
 server/src/generated/runtime/server_generated_runtime_trace_ffi.erl
 
 server/src/generated/sql/**/*.gleam
