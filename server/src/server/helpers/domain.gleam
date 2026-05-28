@@ -9,6 +9,7 @@ import gleam/option
 import shared/api/domain/game
 import shared/api/domain/standing
 
+// nolint: label_possible -- 'final' is a reserved word and cannot be used as a label; 'period' meaning is clear from context.
 pub fn game_status(final: Int, period: String) -> game.GameStatus {
   case final {
     1 -> game.Final

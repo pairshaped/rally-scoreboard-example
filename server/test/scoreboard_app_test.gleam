@@ -238,7 +238,7 @@ pub fn system_db_connection_is_passed_explicitly_test() {
   let system_db = read("src/generated/runtime/system_db.gleam")
 
   server
-  |> contains("server_context.new(db:, system_db: system_conn)")
+  |> contains("server_context.new(db: app_db, system_db: system_conn)")
   |> should.be_true
   context
   |> contains(
@@ -514,15 +514,6 @@ pub fn generated_files_stay_under_top_level_generated_dirs_test() {
   file_exists("../shared/src/generated/public/runtime/data.gleam")
   |> should.be_false
   file_exists("../shared/src/generated/admin/runtime/data.gleam")
-  |> should.be_false
-  file_exists("src/generated/public/page_dispatch.gleam") |> should.be_false
-  file_exists("src/generated/admin/page_dispatch.gleam") |> should.be_false
-  file_exists("src/generated/public/rpc_dispatch.gleam") |> should.be_false
-  file_exists("src/generated/admin/rpc_dispatch.gleam") |> should.be_false
-  file_exists("src/generated/runtime/dispatch.gleam") |> should.be_false
-  file_exists("src/generated/public/receiver_dispatch.gleam")
-  |> should.be_false
-  file_exists("src/generated/admin/receiver_dispatch.gleam")
   |> should.be_false
 }
 
@@ -875,11 +866,8 @@ pub fn generated_runtime_has_no_legacy_rpc_or_generic_push_api_test() {
   protocol_wire |> contains("rpc_content_type") |> should.be_false
   protocol_wire |> contains("malformed_rpc_result") |> should.be_false
   runtime |> contains("decode_ws_rpc_envelope") |> should.be_false
-  runtime |> contains("page_dispatch") |> should.be_false
   public_ws |> contains("decode_ws_rpc_envelope") |> should.be_false
   admin_ws |> contains("decode_ws_rpc_envelope") |> should.be_false
-  public_ws |> contains("page_dispatch") |> should.be_false
-  admin_ws |> contains("page_dispatch") |> should.be_false
 }
 
 pub fn client_same_mount_links_use_spa_navigation_test() {
@@ -1805,14 +1793,6 @@ pub fn admin_server_dispatch_uses_handler_conventions_test() {
   dispatch |> contains("reject.reject_invalid_command(") |> should.be_true
 }
 
-pub fn to_client_dispatch_never_calls_receive_function_test() {
-  let public_dispatch = read("../client/src/generated/public/to_client.gleam")
-  let admin_dispatch = read("../client/src/generated/admin/to_client.gleam")
-
-  public_dispatch |> contains(".receive(") |> should.be_false
-  admin_dispatch |> contains(".receive(") |> should.be_false
-}
-
 pub fn to_client_dispatch_explicitly_handles_each_constructor_test() {
   let dispatch = read("../client/src/generated/public/to_client.gleam")
 
@@ -1885,13 +1865,23 @@ pub fn generated_update_page_delegates_to_page_update_test() {
   let admin_tc = read("../client/src/generated/admin/to_client.gleam")
 
   // Public update_page delegates each page message to the page's update.
-  public_tc |> contains("games.update(models.games_page, page_msg)") |> should.be_true
-  public_tc |> contains("game_detail.update(models.game_detail_page, page_msg)") |> should.be_true
-  public_tc |> contains("standings.update(models.standings_page, page_msg)") |> should.be_true
-  public_tc |> contains("team.update(models.team_page, page_msg)") |> should.be_true
+  public_tc
+  |> contains("games.update(models.games_page, page_msg)")
+  |> should.be_true
+  public_tc
+  |> contains("game_detail.update(models.game_detail_page, page_msg)")
+  |> should.be_true
+  public_tc
+  |> contains("standings.update(models.standings_page, page_msg)")
+  |> should.be_true
+  public_tc
+  |> contains("team.update(models.team_page, page_msg)")
+  |> should.be_true
 
   // Admin update_page delegates to the page's update.
-  admin_tc |> contains("games.update(models.games_page, page_msg)") |> should.be_true
+  admin_tc
+  |> contains("games.update(models.games_page, page_msg)")
+  |> should.be_true
 }
 
 pub fn mount_clients_delegate_page_messages_through_update_page_test() {

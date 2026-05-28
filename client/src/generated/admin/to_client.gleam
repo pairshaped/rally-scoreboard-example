@@ -62,6 +62,7 @@ pub fn apply_to_client(
   }
 }
 
+// nolint: redundant_case -- single-branch case will grow when more admin pages are added; the case is here for exhaustiveness checking.
 pub fn update_page(
   models models: Models,
   msg msg: Msg,

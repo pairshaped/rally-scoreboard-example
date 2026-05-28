@@ -35,7 +35,7 @@ pub fn view(
   ])
 }
 
-pub fn view_standings(
+fn view_standings(
   rows: List(StandingRow),
   on_navigate_team: fn(String) -> msg,
 ) -> Element(msg) {

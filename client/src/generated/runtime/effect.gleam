@@ -38,6 +38,7 @@ fn do_has_auth_cookie(_cookie_name: String) -> Bool {
   False
 }
 
+// nolint: unused_exports -- part of the generated runtime API contract; available for auth-gated UI decisions but not yet wired in Scoreboard.
 pub fn has_auth_cookie(cookie_name cookie_name: String) -> Bool {
   do_has_auth_cookie(cookie_name)
 }

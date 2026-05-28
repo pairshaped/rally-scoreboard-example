@@ -36,7 +36,7 @@ pub fn view(
   ])
 }
 
-pub fn view_game_grid(
+fn view_game_grid(
   games: List(PublicGameSummary),
   on_navigate_team: fn(String) -> msg,
   on_navigate_game: fn(Int) -> msg,

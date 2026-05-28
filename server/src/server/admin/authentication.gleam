@@ -190,6 +190,7 @@ fn extract_user_id(token: String, session_id: String) -> Option(Int) {
   }
 }
 
+// nolint: deep_nesting -- crypto verification is naturally nested; extracting helpers would obscure the constant-time comparison control flow.
 fn parse_signed_token(token: String) -> Result(#(String, Int), Nil) {
   case string.split_once(token, ".") {
     Ok(#(claimed_session, rest)) ->

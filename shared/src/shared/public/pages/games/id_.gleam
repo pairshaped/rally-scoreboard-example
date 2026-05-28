@@ -36,7 +36,7 @@ pub fn view(
   ])
 }
 
-pub fn view_game_detail(
+fn view_game_detail(
   game: Option(GameDetail),
   on_navigate_team: fn(String) -> msg,
 ) -> Element(msg) {

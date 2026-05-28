@@ -28,6 +28,7 @@ pub fn normalize_email(email: String) -> String {
   |> string.lowercase
 }
 
+// nolint: unused_exports -- part of the public authentication context contract, tested from the server package.
 pub fn normalize_display_name(name: String) -> Option(String) {
   case string.trim(name) {
     "" -> None

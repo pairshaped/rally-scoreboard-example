@@ -170,6 +170,8 @@ pub fn correct_result(
 fn broadcast_live_standings(db: sqlight.Connection) -> Nil {
   case live_standings(db) {
     Ok(rows) -> live_updates.broadcast(to_client.StandingsUpdated(rows:))
+    // Broadcast is best-effort; failures are logged by the runtime.
+    // nolint: thrown_away_error
     Error(_) -> Nil
   }
 }

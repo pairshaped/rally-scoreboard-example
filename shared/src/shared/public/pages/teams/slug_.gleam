@@ -40,6 +40,7 @@ pub fn view(
   html.main([], [view_team_detail(team, on_navigate_team, on_navigate_game)])
 }
 
+// nolint: label_possible -- 'model' and 'update' are self-evident from the function name, which already says "apply score update".
 pub fn apply_score_update(model: Model, update: GameScoreUpdate) -> Model {
   Model(team: apply_team_score_update(model.team, update))
 }
@@ -112,6 +113,7 @@ fn record_contribution(
   }
 }
 
+// nolint: prefer_guard_clause -- the case expression is clearer for a bool-to-int conversion than a guard with negation.
 fn bool_to_int(value: Bool) -> Int {
   case value {
     True -> 1
@@ -119,7 +121,7 @@ fn bool_to_int(value: Bool) -> Int {
   }
 }
 
-pub fn view_team_detail(
+fn view_team_detail(
   team: Option(Model),
   on_navigate_team: fn(String) -> msg,
   on_navigate_game: fn(Int) -> msg,

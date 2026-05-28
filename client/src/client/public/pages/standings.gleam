@@ -21,6 +21,7 @@ pub fn init() -> Model {
   Model(rows: [], notice: "")
 }
 
+// nolint: label_possible, redundant_case -- model/msg is the standard TEA signature. Single-branch case is future-proof for browser events.
 pub fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
   case msg {
     NoOp -> #(model, effect.none())

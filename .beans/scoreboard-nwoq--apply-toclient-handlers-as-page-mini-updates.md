@@ -1,11 +1,11 @@
 ---
 # scoreboard-nwoq
 title: Apply ToClient handlers as page mini-updates
-status: todo
+status: completed
 type: epic
 priority: high
 created_at: 2026-05-28T19:18:35Z
-updated_at: 2026-05-28T19:36:18Z
+updated_at: 2026-05-28T20:26:23Z
 parent: scoreboard-v94b
 ---
 

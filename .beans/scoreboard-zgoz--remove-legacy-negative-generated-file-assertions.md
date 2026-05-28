@@ -1,11 +1,11 @@
 ---
 # scoreboard-zgoz
 title: Remove legacy negative generated-file assertions
-status: todo
+status: completed
 type: task
 priority: low
 created_at: 2026-05-28T15:36:51Z
-updated_at: 2026-05-28T15:36:51Z
+updated_at: 2026-05-28T20:27:13Z
 parent: scoreboard-v94b
 ---
 

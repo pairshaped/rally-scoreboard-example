@@ -20,25 +20,58 @@ type ServerConfigError {
   InvalidPort(String)
 }
 
+type ServerStartError {
+  AppDatabaseOpenFailed
+  SystemDatabaseOpenFailed
+  ServerStartFailed
+}
+
 pub fn main() -> Nil {
-  let assert Ok(db) = db.open("db/scoreboard.db")
-  let assert Ok(system_conn) = system_db.open("db/system.db")
+  case server_port() {
+    Ok(port) ->
+      case start_server(port:) {
+        Ok(Nil) -> Nil
+        Error(reason) -> io.println_error(server_start_error_message(reason))
+      }
+    Error(InvalidPort(raw)) ->
+      io.println_error(
+        "Invalid PORT value: " <> raw <> ". Expected an integer.",
+      )
+  }
+}
+
+fn start_server(port port: Int) -> Result(Nil, ServerStartError) {
+  use app_db <- result.try(
+    db.open("db/scoreboard.db")
+    |> result.replace_error(AppDatabaseOpenFailed),
+  )
+  use system_conn <- result.try(
+    system_db.open("db/system.db")
+    |> result.replace_error(SystemDatabaseOpenFailed),
+  )
   system.start_with_jobs(path: "db/system.db", handler: fn(_name, _payload) {
     Ok(Nil)
   })
   live_updates.start()
-  let server_context = server_context.new(db:, system_db: system_conn)
-  let port = case server_port() {
-    Ok(p) -> p
-    Error(InvalidPort(_)) -> panic as "Invalid PORT value"
-  }
+  let server_context = server_context.new(db: app_db, system_db: system_conn)
 
   io.println("Listening on http://localhost:" <> int.to_string(port))
-  let assert Ok(_) =
+  use _server <- result.try(
     mist.new(fn(req) { entry.handle_request(req: req, server_context:) })
     |> mist.port(port)
     |> mist.start
+    |> result.replace_error(ServerStartFailed),
+  )
   process.sleep_forever()
+  Ok(Nil)
+}
+
+fn server_start_error_message(reason: ServerStartError) -> String {
+  case reason {
+    AppDatabaseOpenFailed -> "Failed to open db/scoreboard.db"
+    SystemDatabaseOpenFailed -> "Failed to open db/system.db"
+    ServerStartFailed -> "Failed to start server."
+  }
 }
 
 fn server_port() -> Result(Int, ServerConfigError) {

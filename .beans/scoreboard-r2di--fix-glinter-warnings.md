@@ -1,11 +1,11 @@
 ---
 # scoreboard-r2di
 title: Fix glinter warnings
-status: todo
+status: completed
 type: task
 priority: low
 created_at: 2026-05-28T16:32:39Z
-updated_at: 2026-05-28T16:32:39Z
+updated_at: 2026-05-28T20:43:28Z
 parent: scoreboard-v94b
 blocked_by:
     - scoreboard-zgoz

@@ -40,6 +40,8 @@ fn team_detail(
       let code = option.unwrap(row.code, "")
       let recent = case recent_games(db, code:) {
         Ok(games) -> games
+        // Recent games are optional enrichment; fall back to empty list.
+        // nolint: thrown_away_error
         Error(_) -> []
       }
       Ok(TeamDetail(

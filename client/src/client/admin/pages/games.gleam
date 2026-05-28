@@ -38,6 +38,7 @@ pub fn init() -> Model {
   Model(games: [], notice: "", home_code: "TOR", away_code: "NYC")
 }
 
+// nolint: label_possible -- model/msg is the standard TEA signature.
 pub fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
   case msg {
     UpdateHomeCode(value) -> #(
@@ -134,7 +135,7 @@ pub fn game_score_updated(
   update update: GameScoreUpdate,
 ) -> #(Model, Effect(Msg)) {
   #(
-    Model(..model, games: apply_score_update(model.games, update)),
+    Model(..model, games: apply_score_update(games: model.games, update:)),
     effect.none(),
   )
 }

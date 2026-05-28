@@ -27,6 +27,7 @@ pub fn theme_switch(
   ])
 }
 
+// nolint: label_possible -- parameter meanings are self-evident from the function name; adding labels at 6+ call sites adds noise without gain.
 pub fn section_head(title: String, subtitle: String) -> Element(msg) {
   html.div([attribute.class("section-head")], [
     html.div([], [
@@ -39,6 +40,7 @@ pub fn section_head(title: String, subtitle: String) -> Element(msg) {
   ])
 }
 
+// nolint: label_possible -- parameter meanings are self-evident from the function name; adding labels at 7+ call sites adds noise without gain.
 pub fn page_explainer(summary: String, points: List(String)) -> Element(msg) {
   html.section([attribute.class("page-explainer")], [
     html.details([], [
