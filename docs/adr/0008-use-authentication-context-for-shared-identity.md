@@ -104,19 +104,19 @@ The table should include:
 id          Int primary identifier
 email       normalized unique email
 display_name nullable text
-is_admin    Bool
+role        text role: admin or fan, default fan
 ```
 
 Seed users:
 
 ```text
-admin@example.com   is_admin = True
-fan@example.com     is_admin = False
+admin@example.com   role = admin
+fan@example.com     role = fan
 ```
 
 Both rows are users. The admin user can use public signed-in features. The fan user can use public signed-in features but cannot access admin routes or admin commands. Anonymous visitors have no authentication context.
 
-The `is_admin` flag is Scoreboard app policy. It is not the framework authorization model.
+The `role` field is Scoreboard app policy. It is not the framework authorization model. Scoreboard derives authorization facts such as `can_access_admin` from that role instead of passing the raw role through every call site.
 
 ## Mount Integration
 
@@ -141,7 +141,7 @@ Handlers own authorization policy. They decide whether the authenticated user ma
 
 Generated code helps by passing authentication context consistently and by giving guarded Mounts a standard redirect or rejection path.
 
-For Scoreboard, admin access can be a boolean on the app-owned `users` table. That is an example app policy, not a framework-wide authorization model.
+For Scoreboard, admin access derives from the app-owned `users.role` value. That is an example app policy, not a framework-wide authorization model.
 
 ## Navigation And Layout
 

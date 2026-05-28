@@ -50,7 +50,7 @@ Client contexts should be derived from:
 
 - current route
 - shared `authentication_context`
-- app-owned authorization facts, such as `is_admin`
+- app-owned authorization facts derived from roles, such as `can_access_admin`
 - app data needed by the shell, such as league name
 
 Do not derive signed-in state from the current route. A route may require authentication, but the route is not proof that the browser has a session.
@@ -225,7 +225,7 @@ The user table should be app-owned, but the authentication runtime should normal
 id          Int primary identifier
 email       normalized unique email
 display_name nullable text
-is_admin    Bool
+role        text role: admin or fan, default fan
 ```
 
 Email normalization rules:
