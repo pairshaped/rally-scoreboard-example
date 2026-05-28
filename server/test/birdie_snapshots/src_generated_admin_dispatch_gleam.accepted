@@ -11,12 +11,17 @@ title: src__generated__admin__dispatch_gleam
 //// ToServer value, then calls this function so the backend can update its
 //// model and emit zero or more ToClient messages.
 ////
+//// Page-load constructors (LoadAdminGames) call the page module's unified
+//// `load` function. Command constructors owned by this Mount call a handler
+//// whose name is the snake_case of the constructor name (CreateGame ->
+//// create_game, UpdateScore -> update_score, MarkFinal -> mark_final,
+//// CorrectResult -> correct_result). Handlers receive constructor fields
+//// as labeled args, plus request_context, server_context, and
+//// backend_model.
+////
 //// Constructors owned by the other Mount (public) are rejected through
 //// the generated rejection helper, which logs the rejection as an issue
 //// so operators can detect misrouted commands.
-////
-//// Page-load constructors call the page module's unified `load` function
-//// and wrap the returned ToClient into an effect.
 
 import generated/admin/request_context.{type RequestContext, RequestContext}
 import generated/admin/route

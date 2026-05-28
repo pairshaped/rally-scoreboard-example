@@ -36,8 +36,8 @@ pub fn decode_to_server(data: BitArray) -> Result(ToServer, DecodeError) {
   }
 }
 
-/// Encode a typed server emission for all active ToClient receivers.
-/// The client runtime fans this out through receiver_dispatch.to_client.
+/// Encode a typed server emission for all active ToClient handlers.
+/// The client runtime fans this out through to_client dispatch.
 pub fn encode_to_client(msg: ToClient) -> BitArray {
   libero_wire.encode_push("to_client", msg)
 }

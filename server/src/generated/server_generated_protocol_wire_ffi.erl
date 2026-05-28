@@ -2,11 +2,11 @@
 %%
 %% Per-type wire-format encode/decode transformers.
 %% Derived from the shared API codec graph, shared authentication_context,
-%% and per-Mount client context types, mirroring the client codec_ffi.mjs
+%% and per-Mount ClientSharedState types, mirroring the client codec_ffi.mjs
 %% constructor registry one-for-one.
 %%
 %% Every ToServer, ToClient, shared API domain, authentication context,
-%% and per-Mount client context constructor is represented. Backend types
+%% and per-Mount ClientSharedState constructor is represented. Backend types
 %% (e.g. server/admin/model.Model) are intentionally absent: they do not
 %% cross the wire.
 %%

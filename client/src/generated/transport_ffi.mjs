@@ -298,7 +298,7 @@ export function ensureSocket(url) {
     if (frame.kind === "push") {
       // Root API server emissions arrive as push frames tagged by module.
       // Generated setup registers the "to_client" handler, which decodes
-      // the typed ToClient value and fans it out through receiver_dispatch.
+      // the typed ToClient value and fans it out through to_client dispatch.
       logFrame("<<", `push ${frame.module}`, frame.value);
       const handler = pushHandlers.get(frame.module);
       if (handler) handler(frame.value);

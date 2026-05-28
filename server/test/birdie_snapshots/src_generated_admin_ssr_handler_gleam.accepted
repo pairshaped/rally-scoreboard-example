@@ -22,7 +22,7 @@ import gleam/option.{type Option}
 import libero/wire as libero_wire
 import lustre/element
 import mist.{type ResponseData}
-import server/admin/client_context_loader
+import server/admin/client_shared_state_loader
 import server/admin/pages/games as admin_games_handler
 import server/server_context.{type ServerContext}
 import shared/admin/pages/games as admin_games_page
@@ -44,12 +44,12 @@ pub fn handle_request(
 ) -> response.Response(ResponseData) {
   ensure_atoms()
   let context =
-    client_context_loader.load(
+    client_shared_state_loader.load(
       route:,
       authentication_context:,
       dark_mode: False,
     )
-  let client_context_base64 = libero_wire.encode_flags(context)
+  let client_shared_state_base64 = libero_wire.encode_flags(context)
   let request_context =
     RequestContext(
       route:,
@@ -64,7 +64,7 @@ pub fn handle_request(
     shell_path:,
     page_html:,
     shared_state_base64:,
-    client_context_base64:,
+    client_shared_state_base64:,
     fallback_shell: admin_fallback_shell(),
   )
 }

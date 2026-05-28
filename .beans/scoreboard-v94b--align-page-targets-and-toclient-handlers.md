@@ -10,7 +10,7 @@ updated_at: 2026-05-28T14:37:22Z
 
 ## What to build
 
-Bring Scoreboard into the three-target page model documented in the ADRs. Shared, client, and server page modules should mirror route paths where each target has code. Shared pages stay target-neutral. Client pages own browser behavior and constructor-named ToClient handlers. Server pages own load, data access, authorization, and ToServer handlers.
+Bring Scoreboard into the three-target page model documented in the ADRs. Shared, client, and server page modules should mirror route paths where each target has code. Shared pages stay target-neutral. Client pages own browser behavior and constructor-named ToClient handlers. Server pages own init, data access, authorization, and ToServer handlers.
 
 ## Acceptance criteria
 
@@ -19,6 +19,7 @@ Bring Scoreboard into the three-target page model documented in the ADRs. Shared
 - [ ] Client page modules own constructor-named ToClient handlers.
 - [ ] Generated client dispatch uses to_client.gleam instead of receiver_dispatch.gleam.
 - [ ] Generator comments and tests enforce ToServer and ToClient naming conventions.
+- [ ] Shared `init_requests`, client `init`, server `init`, and explicit snake_case ToServer handlers are the page boot convention.
 
 ## Notes
 

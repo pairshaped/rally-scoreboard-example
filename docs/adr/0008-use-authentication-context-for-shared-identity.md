@@ -39,8 +39,14 @@ Use these terms consistently:
 - `authentication`: proving who the browser session represents
 - `authentication_context`: the framework-facing identity loaded from a session
 - `authorization`: deciding what the user may do
-- `client_context`: Mount-specific shell state derived from route, authentication context, and app data
+- `ClientSharedState`: Mount-specific shell/shared browser state derived from route, authentication context, authorization facts, and app data
+- SSR `ToClient` page data: boot-time page data produced by generated SSR execution of the current route's boot requests. It seeds the page model and is separate from `ClientSharedState`
 - `request_context`: per-request or per-socket server context passed to handlers
+- `server_context`: server-side resources such as DB handles and runtime services
+- page `Model`: local client UI state for a page or root client app
+- `backend.Model`: app-owned live server state for one Mount connection
+- `ToServer`: browser-to-server command vocabulary
+- `ToClient`: server-to-browser result and event vocabulary
 - `access guard`: route or Mount check that decides whether a request may load
 
 Avoid `auth` in generated names because it can mean authentication or authorization.
@@ -167,7 +173,7 @@ Sign-in page:
 - uses a public authentication layout variant
 - does not render the normal admin shell
 - does not render admin score-desk navigation
-- does not receive admin client context
+- does not receive admin `ClientSharedState`
 
 This keeps authentication UI from pretending to be an unauthenticated admin page. It also prevents the bug where admin identity or permissions are embedded in a sign-in page before the user is signed in.
 
@@ -194,7 +200,7 @@ Admin routes are guarded:
 
 An unauthenticated request to `/admin/games` redirects to `/sign_in?return_to=/admin/games`. After sign-in, the app redirects to the safe `return_to` target. Signing out from admin clears the shared session and redirects to a public route such as `/games` or `/sign_in`.
 
-The sign-in page uses a public authentication layout variant. It does not render the admin Mount shell or admin score-desk navigation. This prevents unauthenticated admin pages from receiving admin client context.
+The sign-in page uses a public authentication layout variant. It does not render the admin Mount shell or admin score-desk navigation. This prevents unauthenticated admin pages from receiving admin `ClientSharedState`.
 
 `return_to` must be validated before redirecting. It is a same-origin path owned by the app.
 

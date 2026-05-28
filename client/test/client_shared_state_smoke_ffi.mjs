@@ -1,9 +1,9 @@
-// Test FFI for client context decode smoke test.
+// Test FFI for ClientSharedState decode smoke test.
 // Sets up the window global that setup_ffi.mjs reads from during SSR boot
 // so the decode path can be tested in Node.js.
 
 export function setWindowContext(base64) {
-  globalThis.window = { __RUNTIME_CLIENT_CONTEXT__: base64 };
+  globalThis.window = { __RUNTIME_CLIENT_SHARED_STATE__: base64 };
 }
 
 export function clearWindowContext() {

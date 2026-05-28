@@ -1,11 +1,11 @@
 ---
 # scoreboard-74zk
 title: Rename per-Mount client context to ClientSharedState
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-05-28T14:36:18Z
-updated_at: 2026-05-28T14:36:18Z
+updated_at: 2026-05-28T16:32:04Z
 parent: scoreboard-v94b
 blocked_by:
     - scoreboard-2uax
@@ -17,19 +17,23 @@ Rename the per-Mount boot state from client context vocabulary to ClientSharedSt
 
 ## Acceptance criteria
 
-- [ ] Shared per-Mount types are named ClientSharedState, with module names matching the ADR vocabulary.
-- [ ] Server loaders use client_shared_state_loader naming.
-- [ ] Client-side browser code uses ClientSharedState naming for init, update, and hydration state.
-- [ ] Generated setup and SSR comments use ClientSharedState vocabulary.
-- [ ] AuthenticationContext remains separate from ClientSharedState.
-- [ ] Existing hydration behavior still works for public and admin mounts.
-- [ ] Generated snapshots are updated.
-- [ ] Full test suite passes.
+- [x] Shared per-Mount types are named ClientSharedState, with module names matching the ADR vocabulary.
+- [x] Server loaders use client_shared_state_loader naming.
+- [x] Client-side browser code uses ClientSharedState naming for init, update, and hydration state.
+- [x] Generated setup and SSR comments use ClientSharedState vocabulary.
+- [x] AuthenticationContext remains separate from ClientSharedState.
+- [x] Existing hydration behavior still works for public and admin mounts.
+- [x] Generated snapshots are updated.
+- [x] Full test suite passes.
 
-## Blocked by
+## Summary of Changes
 
-- scoreboard-2uax
+Renamed all per-Mount client context vocabulary to ClientSharedState across app and generated code:
 
-## Notes for Claude
+5 files renamed: `shared/{public,admin}/client_context.gleam` -> `client_shared_state.gleam`, `server/{public,admin}/client_context_loader.gleam` -> `client_shared_state_loader.gleam`, `client/test/client_context_smoke_ffi.mjs` -> `client_shared_state_smoke_ffi.mjs`.
 
-Do not collapse AuthenticationContext into ClientSharedState. AuthenticationContext is shared identity. ClientSharedState is Mount-specific shell/page state derived from route, authentication facts, authorization facts, and app data.
+Type renames: `PublicClientContext` -> `PublicClientSharedState`, `AdminClientContext` -> `AdminClientSharedState`. Function/variable renames: `read_client_context()` -> `read_client_shared_state()`, `readClientContext()` -> `readClientSharedState()`, `client_context_base64` -> `client_shared_state_base64`, `client_context_loader` -> `client_shared_state_loader`. Window variable: `__RUNTIME_CLIENT_CONTEXT__` -> `__RUNTIME_CLIENT_SHARED_STATE__`. Codec atoms and protocol atoms FFI updated.
+
+Updated 8 generated source files, 2 client roots, 2 test files, and 8 Birdie snapshots. AuthenticationContext remains separate from ClientSharedState.
+
+Full test suite: 34 shared, 4 client, 89 server (all passing).

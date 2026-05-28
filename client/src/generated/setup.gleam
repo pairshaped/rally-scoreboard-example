@@ -12,12 +12,12 @@ pub fn setup() -> Nil {
   Nil
 }
 
-@external(javascript, "./setup_ffi.mjs", "readSharedState")
-pub fn read_shared_state() -> Option(a) {
+@external(javascript, "./setup_ffi.mjs", "readSsrToClient")
+pub fn read_ssr_to_client() -> Option(a) {
   option.None
 }
 
-@external(javascript, "./setup_ffi.mjs", "readClientContext")
-pub fn read_client_context() -> Option(a) {
+@external(javascript, "./setup_ffi.mjs", "readClientSharedState")
+pub fn read_client_shared_state() -> Option(a) {
   option.None
 }

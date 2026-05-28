@@ -20,7 +20,7 @@ pub fn render_shell_response(
   shell_path shell_path: String,
   page_html page_html: String,
   shared_state_base64 shared_state_base64: String,
-  client_context_base64 client_context_base64: String,
+  client_shared_state_base64 client_shared_state_base64: String,
   fallback_shell fallback_shell: String,
 ) -> response.Response(ResponseData) {
   let html = case simplifile.read(shell_path) {
@@ -29,7 +29,7 @@ pub fn render_shell_response(
         content,
         page_html,
         shared_state_base64,
-        client_context_base64,
+        client_shared_state_base64,
       )
       <> browser_env_script()
     Error(_) ->
@@ -37,7 +37,7 @@ pub fn render_shell_response(
         fallback_shell,
         page_html,
         shared_state_base64,
-        client_context_base64,
+        client_shared_state_base64,
       )
   }
   response.new(200)
@@ -49,20 +49,20 @@ fn assemble_shell(
   shell: String,
   page_html: String,
   shared_state_base64: String,
-  client_context_base64: String,
+  client_shared_state_base64: String,
 ) -> String {
   let shared_state_script = case shared_state_base64 {
     "" -> ""
     _ ->
-      "<script>window.__RUNTIME_CLIENT_SHARED_STATE__='"
+      "<script>window.__RUNTIME_SSR_TO_CLIENT__='"
       <> shared_state_base64
       <> "'</script>\n"
   }
-  let context_script = case client_context_base64 {
+  let context_script = case client_shared_state_base64 {
     "" -> ""
     _ ->
-      "<script>window.__RUNTIME_CLIENT_CONTEXT__='"
-      <> client_context_base64
+      "<script>window.__RUNTIME_CLIENT_SHARED_STATE__='"
+      <> client_shared_state_base64
       <> "'</script>\n"
   }
   shell

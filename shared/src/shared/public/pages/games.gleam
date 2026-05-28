@@ -5,29 +5,12 @@
 
 import gleam/int
 import gleam/list
-import gleam/option.{type Option, None, Some}
 import lustre/attribute
 import lustre/element.{type Element}
 import lustre/element/html
 import lustre/event
-import shared/api/domain/game.{type GameScoreUpdate, type PublicGameSummary}
-import shared/api/to_client
+import shared/api/domain/game.{type PublicGameSummary}
 import shared/components/ui
-
-pub type Msg {
-  LoadedGames(List(PublicGameSummary))
-  UpdatedScore(GameScoreUpdate)
-  LoadFailed(String)
-}
-
-pub fn receive(event: to_client.ToClient) -> Option(Msg) {
-  case event {
-    to_client.GamesLoaded(games:) -> Some(LoadedGames(games))
-    to_client.GameScoreUpdated(update:) -> Some(UpdatedScore(update))
-    to_client.GamesLoadFailed(reason:) -> Some(LoadFailed(reason))
-    _ -> None
-  }
-}
 
 pub fn view_game_grid(
   games: List(PublicGameSummary),

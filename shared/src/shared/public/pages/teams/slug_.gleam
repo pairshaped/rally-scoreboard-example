@@ -14,27 +14,11 @@ import shared/api/domain/game.{
   type GameScoreUpdate, type PublicGameSummary, Final, PublicGameSummary,
 }
 import shared/api/domain/team.{type TeamDetail, TeamDetail}
-import shared/api/to_client
 import shared/components/ui
 import shared/public/pages/games as public_games
 
 pub type Model {
   Model(team: TeamDetail)
-}
-
-pub type Msg {
-  LoadedTeam(team: TeamDetail)
-  UpdatedScore(GameScoreUpdate)
-  LoadFailed(String)
-}
-
-pub fn receive(event: to_client.ToClient) -> Option(Msg) {
-  case event {
-    to_client.TeamLoaded(team:) -> Some(LoadedTeam(team:))
-    to_client.GameScoreUpdated(update:) -> Some(UpdatedScore(update))
-    to_client.GamesLoadFailed(reason:) -> Some(LoadFailed(reason))
-    _ -> None
-  }
 }
 
 pub fn apply_score_update(model: Model, update: GameScoreUpdate) -> Model {

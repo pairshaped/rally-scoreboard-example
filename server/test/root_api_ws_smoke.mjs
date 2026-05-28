@@ -573,7 +573,7 @@ try {
   await check("SSR renders game content in /games HTML", async () => {
     const html = await textAt("/games");
     assert.match(html, /<div id="app">/);
-    assert.match(html, /window\.__RUNTIME_CLIENT_SHARED_STATE__='[^']+'/);
+    assert.match(html, /window\.__RUNTIME_SSR_TO_CLIENT__='[^']+'/);
     assert.match(html, /Toronto Towers/);
     assert.match(html, /Montreal Meteors/);
     // Game 2 (VAN–NYC, Final) is never modified by the WS tests.
@@ -585,7 +585,7 @@ try {
   await check("SSR renders standings content in /standings HTML", async () => {
     const html = await textAt("/standings");
     assert.match(html, /<div id="app">/);
-    assert.match(html, /window\.__RUNTIME_CLIENT_SHARED_STATE__='[^']+'/);
+    assert.match(html, /window\.__RUNTIME_SSR_TO_CLIENT__='[^']+'/);
     assert.match(html, /Toronto Towers/);
     assert.match(html, /Montreal Meteors/);
     assert.match(html, /<th[^>]*>Team<\/th>/);
@@ -596,7 +596,7 @@ try {
   await check("SSR renders game detail in /games/1 HTML", async () => {
     const html = await textAt("/games/1");
     assert.match(html, /<div id="app">/);
-    assert.match(html, /window\.__RUNTIME_CLIENT_SHARED_STATE__='[^']+'/);
+    assert.match(html, /window\.__RUNTIME_SSR_TO_CLIENT__='[^']+'/);
     assert.match(html, /Toronto Towers/);
     assert.match(html, /Montreal Meteors/);
     assert.match(html, /Scoring summary/);
@@ -606,7 +606,7 @@ try {
     const allHtml = await textAt("/games");
     const filteredHtml = await textAt("/games?team=TOR");
     assert.match(filteredHtml, /<div id="app">/);
-    assert.match(filteredHtml, /window\.__RUNTIME_CLIENT_SHARED_STATE__='[^']+'/);
+    assert.match(filteredHtml, /window\.__RUNTIME_SSR_TO_CLIENT__='[^']+'/);
     assert.match(filteredHtml, /Toronto Towers/);
     // Seeded game 3 is BOS-LAK, so it should appear in all-games but not
     // in the TOR filter. Team names are not enough because every team plays TOR
@@ -621,7 +621,7 @@ try {
   await check("SSR renders team detail in /teams/toronto-towers HTML", async () => {
     const html = await textAt("/teams/toronto-towers");
     assert.match(html, /<div id="app">/);
-    assert.match(html, /window\.__RUNTIME_CLIENT_SHARED_STATE__='[^']+'/);
+    assert.match(html, /window\.__RUNTIME_SSR_TO_CLIENT__='[^']+'/);
     assert.match(html, /Toronto Towers/);
     assert.match(html, /TOR/);
     assert.match(html, /W-L/);
@@ -629,21 +629,32 @@ try {
 
   await check("SSR hydration data decodes as valid ETF", async () => {
     const html = await textAt("/games");
-    const match = html.match(/window\.__RUNTIME_CLIENT_SHARED_STATE__='([^']+)'/);
-    assert.ok(match, "Shared state script tag missing");
+    const match = html.match(/window\.__RUNTIME_SSR_TO_CLIENT__='([^']+)'/);
+    assert.ok(match, "SSR ToClient script tag missing");
     const raw = match[1];
-    assert.ok(raw.length > 0, "Shared state should be non-empty");
+    assert.ok(raw.length > 0, "SSR ToClient state should be non-empty");
     const binary = atob(raw);
     const bytes = new Uint8Array(binary.length);
     for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-    assert.equal(bytes[0], 131, "Shared state must be valid ETF (version byte 131)");
-    assert.ok(bytes.length > 3, "Shared state ETF payload too short to contain game data");
+    assert.equal(bytes[0], 131, "SSR ToClient state must be valid ETF (version byte 131)");
+    assert.ok(bytes.length > 3, "SSR ToClient ETF payload too short to contain game data");
+  });
+
+  await check("SSR embeds ClientSharedState separately from page hydration data", async () => {
+    const html = await textAt("/games");
+    assert.match(html, /window\.__RUNTIME_CLIENT_SHARED_STATE__='[^']+'/);
+    const match = html.match(/window\.__RUNTIME_CLIENT_SHARED_STATE__='([^']+)'/);
+    assert.ok(match, "ClientSharedState script tag missing");
+    const raw = match[1];
+    assert.ok(raw.length > 0, "ClientSharedState should be non-empty");
+    // Both variables coexist independently on the same page.
+    assert.match(html, /window\.__RUNTIME_SSR_TO_CLIENT__='[^']+'/);
   });
 
   await check("Admin SSR renders /admin/games with content and hydration data", async () => {
     const html = await textAt("/admin/games");
     assert.match(html, /<div id="app">/);
-    assert.match(html, /window\.__RUNTIME_CLIENT_SHARED_STATE__='[^']+'/);
+    assert.match(html, /window\.__RUNTIME_SSR_TO_CLIENT__='[^']+'/);
     assert.match(html, /TOR/);
     assert.match(html, /NYC/);
     assert.match(html, /Finalize/);

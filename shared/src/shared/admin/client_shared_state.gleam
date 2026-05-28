@@ -1,4 +1,4 @@
-//// Per-Mount client context for the admin Mount.
+//// Per-Mount ClientSharedState for the admin Mount.
 ////
 //// Shell-level state that admin pages can read without keeping it as local
 //// page state. The server SSR handler encodes this into the boot payload;
@@ -10,8 +10,8 @@
 import gleam/option.{type Option}
 import shared/authentication_context.{type AuthenticationContext}
 
-pub type AdminClientContext {
-  AdminClientContext(
+pub type AdminClientSharedState {
+  AdminClientSharedState(
     authentication_context: Option(AuthenticationContext),
     league_name: String,
     dark_mode: Bool,

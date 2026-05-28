@@ -28,14 +28,16 @@ import libero/error.{type DecodeError}
 import libero/wire as libero_wire
 import mist
 import server/admin/authentication
-import server/admin/client_context_loader as admin_client_context_loader
+import server/admin/client_shared_state_loader as admin_client_shared_state_loader
 import server/admin/model.{Model}
 import server/admin/pages/games as admin_games_handler
 import server/authentication_context_loader
 import server/helpers/domain
-import server/public/client_context_loader as public_client_context_loader
+import server/public/client_shared_state_loader as public_client_shared_state_loader
 import server/server_context.{ServerContext}
-import shared/admin/client_context.{type AdminClientContext, AdminClientContext}
+import shared/admin/client_shared_state.{
+  type AdminClientSharedState, AdminClientSharedState,
+}
 import shared/api/domain/game
 import shared/api/to_client
 import shared/authentication_context
@@ -581,7 +583,7 @@ pub fn mount_clients_use_generated_routers_and_effects_test() {
   |> contains("transport.register_push_handler(\"to_client\"")
   |> should.be_true
   public_client
-  |> contains("public_receiver_dispatch.to_client(event)")
+  |> contains("public_to_client_dispatch.to_client(event)")
   |> should.be_true
   public_client
   |> contains("public_effect.send_page_init_and_command(")
@@ -620,7 +622,7 @@ pub fn mount_clients_use_generated_routers_and_effects_test() {
   |> contains("transport.register_push_handler(\"to_client\"")
   |> should.be_true
   admin_client
-  |> contains("admin_receiver_dispatch.to_client(event)")
+  |> contains("admin_to_client_dispatch.to_client(event)")
   |> should.be_true
   admin_client
   |> contains("admin_effect.send_page_init_and_command(")
@@ -1051,51 +1053,58 @@ pub fn generated_trace_helpers_are_exercised_test() {
   { trace.new_trace_id() |> string.length > 0 } |> should.be_true
 }
 
-pub fn admin_ssr_handler_loads_and_encodes_client_context_test() {
+pub fn admin_ssr_handler_loads_and_encodes_client_shared_state_test() {
   let admin_ssr = read("src/generated/admin/ssr_handler.gleam")
-  let admin_loader = read("src/server/admin/client_context_loader.gleam")
+  let admin_loader = read("src/server/admin/client_shared_state_loader.gleam")
 
   admin_ssr
-  |> contains("import server/admin/client_context_loader")
+  |> contains("import server/admin/client_shared_state_loader")
   |> should.be_true
-  admin_ssr |> contains("client_context_loader.load(") |> should.be_true
+  admin_ssr |> contains("client_shared_state_loader.load(") |> should.be_true
   admin_ssr
   |> contains("libero_wire.encode_flags(context)")
   |> should.be_true
-  admin_ssr |> contains("client_context_base64:") |> should.be_true
+  admin_ssr |> contains("client_shared_state_base64:") |> should.be_true
   admin_loader |> contains("authentication_context") |> should.be_true
   admin_loader
   |> contains("league_name: \"Rally Rec League\"")
   |> should.be_true
 }
 
-pub fn public_ssr_handler_loads_and_encodes_client_context_test() {
+pub fn public_ssr_handler_loads_and_encodes_client_shared_state_test() {
   let public_ssr = read("src/generated/public/ssr_handler.gleam")
-  let public_loader = read("src/server/public/client_context_loader.gleam")
+  let public_loader = read("src/server/public/client_shared_state_loader.gleam")
 
   public_ssr
-  |> contains("import server/public/client_context_loader")
+  |> contains("import server/public/client_shared_state_loader")
   |> should.be_true
-  public_ssr |> contains("client_context_loader.load(") |> should.be_true
+  public_ssr |> contains("client_shared_state_loader.load(") |> should.be_true
   public_ssr
   |> contains("libero_wire.encode_flags(context)")
   |> should.be_true
-  public_ssr |> contains("client_context_base64:") |> should.be_true
+  public_ssr |> contains("client_shared_state_base64:") |> should.be_true
   public_loader
   |> contains("league_name: \"Rally Rec League\"")
   |> should.be_true
 }
 
-pub fn ssr_runtime_injects_client_context_into_shell_test() {
+pub fn ssr_runtime_injects_client_shared_state_into_shell_test() {
   let runtime = read("src/generated/runtime/ssr.gleam")
 
-  runtime |> contains("window.__RUNTIME_CLIENT_CONTEXT__") |> should.be_true
-  runtime |> contains("client_context_base64") |> should.be_true
+  // ClientSharedState uses its own window variable.
+  runtime
+  |> contains("window.__RUNTIME_CLIENT_SHARED_STATE__")
+  |> should.be_true
+  runtime |> contains("client_shared_state_base64") |> should.be_true
+  // ToClient page data uses a separate window variable so both payloads
+  // can coexist without collision.
+  runtime |> contains("window.__RUNTIME_SSR_TO_CLIENT__") |> should.be_true
+  runtime |> contains("shared_state_base64") |> should.be_true
 }
 
-pub fn admin_and_public_client_contexts_are_different_types_test() {
-  let admin_ctx = read("../shared/src/shared/admin/client_context.gleam")
-  let public_ctx = read("../shared/src/shared/public/client_context.gleam")
+pub fn admin_and_public_client_shared_states_are_different_types_test() {
+  let admin_ctx = read("../shared/src/shared/admin/client_shared_state.gleam")
+  let public_ctx = read("../shared/src/shared/public/client_shared_state.gleam")
 
   admin_ctx |> contains("AuthenticationContext") |> should.be_true
   admin_ctx |> contains("dark_mode: Bool") |> should.be_true
@@ -1112,7 +1121,7 @@ pub fn ssr_shell_embeds_context_base64_in_response_body_test() {
       shell_path: "src/server/admin/shell.html",
       page_html: "<p>test</p>",
       shared_state_base64: "",
-      client_context_base64: "dGVzdC1jb250ZXh0",
+      client_shared_state_base64: "dGVzdC1jb250ZXh0",
       fallback_shell: "<html><head></head><body><div id=\"app\"></div></body></html>",
     )
   case resp.body {
@@ -1120,7 +1129,36 @@ pub fn ssr_shell_embeds_context_base64_in_response_body_test() {
       let bits = bytes_tree.to_bit_array(tree)
       let assert Ok(html) = bit_array.to_string(bits)
       html
-      |> contains("window.__RUNTIME_CLIENT_CONTEXT__='dGVzdC1jb250ZXh0'")
+      |> contains("window.__RUNTIME_CLIENT_SHARED_STATE__='dGVzdC1jb250ZXh0'")
+      |> should.be_true
+    }
+    _ -> should.be_true(False)
+  }
+}
+
+pub fn ssr_shell_embeds_both_payloads_without_collision_test() {
+  let resp =
+    ssr.render_shell_response(
+      shell_path: "src/server/admin/shell.html",
+      page_html: "<p>test</p>",
+      shared_state_base64: "dG9fY2xpZW50X3BhZ2VfZGF0YQ==",
+      client_shared_state_base64: "Y2xpZW50X3NoYXJlZF9zdGF0ZQ==",
+      fallback_shell: "<html><head></head><body><div id=\"app\"></div></body></html>",
+    )
+  case resp.body {
+    mist.Bytes(tree) -> {
+      let bits = bytes_tree.to_bit_array(tree)
+      let assert Ok(html) = bit_array.to_string(bits)
+      // Both payloads appear in distinct window variables.
+      html
+      |> contains(
+        "window.__RUNTIME_SSR_TO_CLIENT__='dG9fY2xpZW50X3BhZ2VfZGF0YQ=='",
+      )
+      |> should.be_true
+      html
+      |> contains(
+        "window.__RUNTIME_CLIENT_SHARED_STATE__='Y2xpZW50X3NoYXJlZF9zdGF0ZQ=='",
+      )
       |> should.be_true
     }
     _ -> should.be_true(False)
@@ -1135,7 +1173,7 @@ pub fn ssr_context_roundtrips_through_encode_embed_decode_test() {
       display_name: option.None,
     )
   let context =
-    AdminClientContext(
+    AdminClientSharedState(
       authentication_context: option.Some(auth_ctx),
       league_name: "Rally Rec League",
       dark_mode: False,
@@ -1144,8 +1182,8 @@ pub fn ssr_context_roundtrips_through_encode_embed_decode_test() {
     )
 
   let encoded = libero_wire.encode_flags(context)
-  let result: Result(AdminClientContext, DecodeError) =
-    libero_wire.decode_flags_typed(encoded, "admin_client_context")
+  let result: Result(AdminClientSharedState, DecodeError) =
+    libero_wire.decode_flags_typed(encoded, "admin_client_shared_state")
   let assert Ok(decoded) = result
 
   case decoded.authentication_context {
@@ -1160,47 +1198,54 @@ pub fn ssr_context_roundtrips_through_encode_embed_decode_test() {
   decoded.active_section |> should.equal("games")
 }
 
-pub fn client_setup_exposes_read_client_context_test() {
+pub fn client_setup_exposes_read_client_shared_state_test() {
   let setup_gleam = read("../client/src/generated/setup.gleam")
   let setup_js = read("../client/src/generated/setup_ffi.mjs")
 
-  setup_gleam |> contains("read_client_context") |> should.be_true
-  setup_js |> contains("readClientContext") |> should.be_true
-  setup_js |> contains("__RUNTIME_CLIENT_CONTEXT__") |> should.be_true
+  // ClientSharedState reader.
+  setup_gleam |> contains("read_client_shared_state") |> should.be_true
+  setup_js |> contains("readClientSharedState") |> should.be_true
+  setup_js |> contains("__RUNTIME_CLIENT_SHARED_STATE__") |> should.be_true
+  // ToClient page-data reader uses a separate window variable.
+  setup_gleam |> contains("read_ssr_to_client") |> should.be_true
+  setup_js |> contains("readSsrToClient") |> should.be_true
+  setup_js |> contains("__RUNTIME_SSR_TO_CLIENT__") |> should.be_true
   setup_js |> contains("ssrWindow") |> should.be_true
 }
 
-pub fn client_context_constructors_are_registered_for_etf_test() {
+pub fn client_shared_state_constructors_are_registered_for_etf_test() {
   let codec = read("../client/src/generated/codec_ffi.mjs")
   let atoms = read("src/generated/server_generated_protocol_atoms_ffi.erl")
 
   codec |> contains("authentication_context") |> should.be_true
-  codec |> contains("admin_client_context") |> should.be_true
-  codec |> contains("public_client_context") |> should.be_true
+  codec |> contains("admin_client_shared_state") |> should.be_true
+  codec |> contains("public_client_shared_state") |> should.be_true
   codec
   |> contains("authenticationContext.AuthenticationContext, 3")
   |> should.be_true
   codec
-  |> contains("adminClientContext.AdminClientContext, 5")
+  |> contains("adminClientSharedState.AdminClientSharedState, 5")
   |> should.be_true
   codec
-  |> contains("publicClientContext.PublicClientContext, 4")
+  |> contains("publicClientSharedState.PublicClientSharedState, 4")
   |> should.be_true
   atoms |> contains("<<\"authentication_context\">>") |> should.be_true
-  atoms |> contains("<<\"admin_client_context\">>") |> should.be_true
-  atoms |> contains("<<\"public_client_context\">>") |> should.be_true
+  atoms |> contains("<<\"admin_client_shared_state\">>") |> should.be_true
+  atoms |> contains("<<\"public_client_shared_state\">>") |> should.be_true
 }
 
 pub fn admin_client_stores_and_renders_context_test() {
   let admin_client = read("../client/src/scoreboard_admin_client.gleam")
 
   admin_client
-  |> contains("import shared/admin/client_context.{type AdminClientContext}")
+  |> contains(
+    "import shared/admin/client_shared_state.{type AdminClientSharedState}",
+  )
   |> should.be_true
   admin_client
-  |> contains("context: Option(AdminClientContext)")
+  |> contains("context: Option(AdminClientSharedState)")
   |> should.be_true
-  admin_client |> contains("setup.read_client_context()") |> should.be_true
+  admin_client |> contains("setup.read_client_shared_state()") |> should.be_true
   admin_client
   |> contains("authentication_context.display_label(ac)")
   |> should.be_true
@@ -1211,12 +1256,16 @@ pub fn public_client_stores_context_test() {
   let public_client = read("../client/src/scoreboard_public_client.gleam")
 
   public_client
-  |> contains("import shared/public/client_context.{type PublicClientContext}")
+  |> contains(
+    "import shared/public/client_shared_state.{type PublicClientSharedState}",
+  )
   |> should.be_true
   public_client
-  |> contains("context: Option(PublicClientContext)")
+  |> contains("context: Option(PublicClientSharedState)")
   |> should.be_true
-  public_client |> contains("setup.read_client_context()") |> should.be_true
+  public_client
+  |> contains("setup.read_client_shared_state()")
+  |> should.be_true
   public_client |> contains("ctx.league_name") |> should.be_true
 }
 
@@ -1340,7 +1389,7 @@ pub fn public_context_loader_sets_can_access_admin_when_user_is_admin_test() {
       display_name: option.None,
     )
   let ctx =
-    public_client_context_loader.load(
+    public_client_shared_state_loader.load(
       db: conn,
       route: public_route.Games,
       authentication_context: option.Some(auth_ctx),
@@ -1357,7 +1406,7 @@ pub fn public_context_loader_sets_can_access_admin_false_for_non_admin_test() {
       display_name: option.Some("Fan"),
     )
   let ctx =
-    public_client_context_loader.load(
+    public_client_shared_state_loader.load(
       db: conn,
       route: public_route.Games,
       authentication_context: option.Some(auth_ctx),
@@ -1402,7 +1451,7 @@ pub fn admin_context_loader_passes_authentication_context_through_test() {
     )
 
   let ctx =
-    admin_client_context_loader.load(
+    admin_client_shared_state_loader.load(
       route: admin_route.AdminGames,
       authentication_context: option.Some(auth_ctx),
       dark_mode: False,
@@ -1427,7 +1476,7 @@ pub fn admin_context_loader_preserves_authentication_context_test() {
       display_name: option.None,
     )
   let ctx =
-    admin_client_context_loader.load(
+    admin_client_shared_state_loader.load(
       route: admin_route.AdminGames,
       authentication_context: option.Some(auth_ctx),
       dark_mode: False,
@@ -1442,7 +1491,7 @@ pub fn admin_context_loader_preserves_authentication_context_test() {
 pub fn public_context_loader_returns_expected_shape_test() {
   let conn = test_users_db()
   let ctx =
-    public_client_context_loader.load(
+    public_client_shared_state_loader.load(
       db: conn,
       route: public_route.Games,
       authentication_context: option.None,
@@ -1451,7 +1500,7 @@ pub fn public_context_loader_returns_expected_shape_test() {
   ctx.active_section |> should.equal("games")
 
   let standings_ctx =
-    public_client_context_loader.load(
+    public_client_shared_state_loader.load(
       db: conn,
       route: public_route.Standings,
       authentication_context: option.None,
@@ -1524,6 +1573,124 @@ fn load_result_label(
       "redirect:" <> url
     }
   }
+}
+
+pub fn public_to_client_dispatch_uses_snake_case_handler_names_test() {
+  let dispatch = read("../client/src/generated/public/to_client.gleam")
+
+  dispatch |> contains("games.games_loaded(") |> should.be_true
+  dispatch |> contains("games.game_score_updated(") |> should.be_true
+  dispatch |> contains("games.games_load_failed(") |> should.be_true
+  dispatch |> contains("team.team_loaded(") |> should.be_true
+  dispatch |> contains("standings.standings_loaded(") |> should.be_true
+  dispatch |> contains("standings.power_rankings_loaded(") |> should.be_true
+  dispatch |> contains("standings.standings_updated(") |> should.be_true
+  dispatch |> contains("game_detail.game_loaded(") |> should.be_true
+  dispatch |> contains("game_detail.game_score_updated(") |> should.be_true
+  dispatch |> contains("game_detail.games_load_failed(") |> should.be_true
+}
+
+pub fn admin_to_client_dispatch_uses_snake_case_handler_names_test() {
+  let dispatch = read("../client/src/generated/admin/to_client.gleam")
+
+  dispatch |> contains("games.admin_games_loaded(") |> should.be_true
+  dispatch |> contains("games.game_created(") |> should.be_true
+  dispatch |> contains("games.score_update_saved(") |> should.be_true
+  dispatch |> contains("games.result_saved(") |> should.be_true
+  dispatch |> contains("games.game_score_updated(") |> should.be_true
+  dispatch |> contains("games.admin_error(") |> should.be_true
+}
+
+pub fn public_server_dispatch_uses_handler_conventions_test() {
+  let dispatch = read("src/generated/public/dispatch.gleam")
+
+  // Page-load constructors call the page module's unified load function.
+  dispatch |> contains("server_public_pages_games.load(") |> should.be_true
+  dispatch |> contains("server_public_pages_games_id_.load(") |> should.be_true
+  dispatch |> contains("server_public_pages_standings.load(") |> should.be_true
+  dispatch
+  |> contains("server_public_pages_teams_slug_.load(")
+  |> should.be_true
+
+  // Other-Mount constructors are rejected, not silently ignored.
+  dispatch |> contains("reject.reject_invalid_command(") |> should.be_true
+}
+
+pub fn admin_server_dispatch_uses_handler_conventions_test() {
+  let dispatch = read("src/generated/admin/dispatch.gleam")
+
+  // Page-load constructors call the page module's unified load function.
+  dispatch |> contains("server_admin_pages_games.load(") |> should.be_true
+
+  // Command constructors call snake_case handlers with labeled args.
+  dispatch
+  |> contains("server_admin_pages_games.create_game(")
+  |> should.be_true
+  dispatch
+  |> contains("server_admin_pages_games.update_score(")
+  |> should.be_true
+  dispatch |> contains("server_admin_pages_games.mark_final(") |> should.be_true
+  dispatch
+  |> contains("server_admin_pages_games.correct_result(")
+  |> should.be_true
+
+  // Other-Mount constructors are rejected, not silently ignored.
+  dispatch |> contains("reject.reject_invalid_command(") |> should.be_true
+}
+
+pub fn to_client_dispatch_never_calls_receive_function_test() {
+  let public_dispatch = read("../client/src/generated/public/to_client.gleam")
+  let admin_dispatch = read("../client/src/generated/admin/to_client.gleam")
+
+  public_dispatch |> contains(".receive(") |> should.be_false
+  admin_dispatch |> contains(".receive(") |> should.be_false
+}
+
+pub fn to_client_dispatch_explicitly_handles_each_constructor_test() {
+  let dispatch = read("../client/src/generated/public/to_client.gleam")
+
+  // Verify each handled constructor has an explicit case branch,
+  // not relying on the catch-all for constructors that have handlers.
+  dispatch |> contains("to_client.GamesLoaded(") |> should.be_true
+  dispatch |> contains("to_client.GameScoreUpdated(") |> should.be_true
+  dispatch |> contains("to_client.GamesLoadFailed(") |> should.be_true
+  dispatch |> contains("to_client.GameLoaded(") |> should.be_true
+  dispatch |> contains("to_client.StandingsLoaded(") |> should.be_true
+  dispatch |> contains("to_client.PowerRankingsLoaded(") |> should.be_true
+  dispatch |> contains("to_client.StandingsUpdated(") |> should.be_true
+  dispatch |> contains("to_client.TeamLoaded(") |> should.be_true
+}
+
+pub fn to_client_handlers_receive_labeled_args_not_whole_message_test() {
+  // Handlers must use labeled args (label var: Type), not positional (var: Type).
+  // Covers every client page module that owns ToClient handlers.
+
+  let games = read("../client/src/client/public/pages/games.gleam")
+  games |> contains("games games: List") |> should.be_true
+  games |> contains("update update: GameScoreUpdate") |> should.be_true
+  games |> contains("reason reason: String") |> should.be_true
+
+  let game_detail = read("../client/src/client/public/pages/games/id_.gleam")
+  game_detail |> contains("game game: GameDetail") |> should.be_true
+  game_detail |> contains("update update: GameScoreUpdate") |> should.be_true
+  game_detail |> contains("reason reason: String") |> should.be_true
+
+  let standings = read("../client/src/client/public/pages/standings.gleam")
+  standings |> contains("rows rows: List(StandingRow)") |> should.be_true
+  standings
+  |> contains("rows rows: List(PowerRankingRow)")
+  |> should.be_true
+
+  let team = read("../client/src/client/public/pages/teams/slug_.gleam")
+  team |> contains("team team: TeamDetail") |> should.be_true
+  team |> contains("update update: GameScoreUpdate") |> should.be_true
+  team |> contains("reason reason: String") |> should.be_true
+
+  let admin_games = read("../client/src/client/admin/pages/games.gleam")
+  admin_games |> contains("games games: List") |> should.be_true
+  admin_games |> contains("game game: AdminGameDetail") |> should.be_true
+  admin_games |> contains("update update: GameScoreUpdate") |> should.be_true
+  admin_games |> contains("reason reason: String") |> should.be_true
 }
 
 fn authentication_policy_name(

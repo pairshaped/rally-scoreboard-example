@@ -1,11 +1,11 @@
 ---
 # scoreboard-2uax
 title: Fix SSR RequestContext for unified page load
-status: todo
+status: completed
 type: bug
 priority: high
 created_at: 2026-05-28T14:35:25Z
-updated_at: 2026-05-28T14:35:25Z
+updated_at: 2026-05-28T14:40:30Z
 parent: scoreboard-v94b
 ---
 
@@ -15,12 +15,12 @@ Fix the request context built by generated SSR handlers now that SSR and SPA loa
 
 ## Acceptance criteria
 
-- [ ] Public SSR RequestContext includes signed-in user_id when authentication_context has a user.
-- [ ] Admin SSR RequestContext includes signed-in user_id when authentication_context has a user.
-- [ ] Admin SSR passes the real query dictionary into RequestContext.
-- [ ] Route and query params remain strings; no generated coercion is added.
-- [ ] Existing SSR behavior tests and generated snapshots are updated.
-- [ ] Full test suite passes.
+- [x] Public SSR RequestContext includes signed-in user_id when authentication_context has a user.
+- [x] Admin SSR RequestContext includes signed-in user_id when authentication_context has a user.
+- [x] Admin SSR passes the real query dictionary into RequestContext.
+- [x] Route and query params remain strings; no generated coercion is added.
+- [x] Existing SSR behavior tests and generated snapshots are updated.
+- [x] Full test suite passes.
 
 ## Blocked by
 
@@ -28,4 +28,8 @@ None - can start immediately.
 
 ## Notes for Claude
 
-This is a follow-up to the load/load_ssr consolidation. Do not reintroduce load_*_for_ssr functions. The desired server page shape is still one load(request_context, server_context) -> ToClient per loadable page.
+This was a follow-up to the load/load_ssr consolidation. Do not reintroduce load_*_for_ssr functions. The desired convention has since been pinned down in ADR 0006: server page `init` is the SSR boot hook, shared `init_requests` declares first-render requests, and `ToServer.Load*` constructors map to explicit snake_case handlers such as `load_games`.
+
+## Summary of Changes
+
+Verified both generated SSR handlers derive RequestContext.user_id from authentication_context, admin SSR passes query through, route/query params remain strings, and Claude reported all tests passing: 82 server unit tests, 4 client unit tests, and 24 smoke checks.

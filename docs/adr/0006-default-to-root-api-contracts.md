@@ -56,6 +56,22 @@ Apps may split the shared API into additional modules for readability or packagi
 
 The Generator Framework uses client/server language for transport messages. `ToServer` and `ToClient` match the Generator Framework's package and runtime vocabulary. `backend.gleam` names the server-side app state boundary, not a separate protocol vocabulary.
 
+## Runtime Taxonomy
+
+Use these terms consistently:
+
+- `AuthenticationContext`: shared identity facts loaded from the browser session. It answers who the session represents.
+- `RequestContext`: per-request or per-socket facts passed to server handlers. It carries route params, query params, session facts, and authenticated user facts.
+- `ServerContext`: server-side resources such as DB handles, config, clocks, service clients, and logging. It must not carry current route params, query params, session facts, or authenticated user facts.
+- `ClientSharedState`: per-Mount browser state shared by the Mount shell, layouts, and pages. It contains shell-level state such as signed-in display facts, authorization summaries, active section, league name, dark mode, and toast or flash state.
+- SSR `ToClient` page data payload: boot-time server-emitted `ToClient` values produced by generated SSR execution of the route's boot requests. They seed the initial page model during hydration. They are not `ClientSharedState`.
+- page `Model`: client-owned local UI state for a page or root client app.
+- `backend.Model`: app-owned live server state for one Mount connection. It is server process state, not durable business data.
+- `ToServer`: browser-to-server command vocabulary. Commands carry command fields only; route/query/session/user facts come from `RequestContext`.
+- `ToClient`: server-to-browser result and event vocabulary. It is used for command outcomes, live events, and SSR page data hydration.
+
+`ClientSharedState` and SSR `ToClient` page data are separate boot payloads. `ClientSharedState` initializes Mount shell/shared browser state. SSR `ToClient` page data initializes the current page model. They must use separate runtime storage names so one cannot overwrite the other during boot.
+
 ## Wire Graphs
 
 The Generator Framework builds one shared API codec graph:
@@ -107,17 +123,91 @@ client/src/client/{mount}/pages/**/*.gleam
 server/src/server/{mount}/pages/**/*.gleam
 ```
 
-The shared page module owns target-neutral page model, view, pure helpers, and mapping code that compiles for both JavaScript and Erlang.
+The shared page module owns target-neutral page model, view, pure helpers, and mapping code that compiles for both JavaScript and Erlang. When a page has normal first-render data needs, the shared page module declares them with `init_requests() -> List(to_server.ToServer)`.
 
-The client page module owns browser-only behavior such as DOM effects, JS FFI, drag and drop, subscriptions, browser event handling, client-side init/update glue, and client `ToClient` handlers.
+The client page module owns browser-only behavior such as DOM effects, JS FFI, drag and drop, subscriptions, browser event handling, optional client-side `init`, update glue, and client `ToClient` handlers.
 
-The server page module owns server-only behavior such as page data loading, database access, authorization checks, provider/server API calls, and command handlers.
+The server page module owns server-only behavior such as page data loading, database access, authorization checks, provider/server API calls, optional server-side `init`, and command handlers.
 
 The Generator Framework wires matching target modules together by route. It does not ask app authors to put all page code in one file and split that file into target-specific generated output.
 
 Local page `Msg` values do not cross the wire. Server results and pushed events cross the wire as `ToClient` values, then page, layout, or shared-state client handlers map them into local messages.
 
 Page modules may import `shared/api` domain and protocol types. They do not define wire-visible `ToServer`, `ToClient`, or wire domain types.
+
+## Page Boot Requests
+
+Page boot requests are the one true first-render data convention.
+
+Shared page modules declare the normal first-render server requests for a route:
+
+```gleam
+/// First-render server requests for this route.
+///
+/// Generated SSR executes these locally and embeds the returned ToClient
+/// values for hydration. Generated client init sends these over WebSocket
+/// only when hydration has not already populated the page model.
+pub fn init_requests() -> List(to_server.ToServer) {
+  [to_server.LoadGames]
+}
+```
+
+`init_requests` is the canonical boot wiring for the route. It takes no page model, `RequestContext`, `ServerContext`, or `ClientSharedState`. It does not decide whether data is already present and it does not load data itself.
+
+Every user-owned `init_requests` function should have a function comment explaining that it is shared boot wiring consumed by both generated SSR and generated client init. Generated code that calls `init_requests` should also comment that the shared function is the source of truth, and that target-specific `init` hooks must call it when it is non-empty.
+
+For a normal data-backed page, the app author writes `init_requests` and omits target-specific `init` functions. The Generator Framework supplies the boring target behavior:
+
+- generated SSR executes the route's `init_requests`, maps each `ToServer` value to its server handler, and embeds the returned `ToClient` values as page-data hydration flags
+- generated client init skips requests when SSR hydration already populated the page model
+- generated client init sends `init_requests` over WebSocket when hydration is absent or the page model still needs data
+
+Target-specific `init` functions exist only for custom behavior.
+
+Client page modules may define `init` when browser startup needs custom logic:
+
+```gleam
+pub fn init(
+  model model: Model,
+  client_shared_state client_shared_state: ClientSharedState,
+) -> #(Model, List(to_server.ToServer)) {
+  case model.games {
+    Loaded(_) -> #(model, [])
+    _ -> #(model, shared_games.init_requests())
+  }
+}
+```
+
+Custom client `init` owns the conditional. It may inspect the page model, hydration state, browser-only state, or `ClientSharedState`, then return the `ToServer` requests still needed.
+
+Server page modules may define `init` when SSR startup needs server-only request selection or extra boot requests:
+
+```gleam
+pub fn init(
+  request_context request_context: RequestContext,
+  server_context server_context: ServerContext,
+) -> List(to_server.ToServer) {
+  shared_games.init_requests()
+}
+```
+
+Custom server `init` returns `ToServer` requests, not loaded `ToClient` values. Generated SSR still owns request execution and hydration encoding.
+
+If a shared page defines non-empty `init_requests`, any custom client or server `init` for that route must call the shared page's `init_requests` rather than duplicating or replacing the request list. Target `init` functions may filter, augment, or defer those requests, but the shared request declaration remains the source of truth.
+
+Static pages can omit `init_requests`, client `init`, and server `init`. SSR boots no page data for those routes.
+
+The Generator Framework must flag inconsistencies:
+
+- `init_requests` returns `ToServer` constructors that have no matching server handler
+- a `ToServer` constructor from `init_requests` maps to more than one server handler
+- a matching server handler has the wrong signature
+- server dispatch maps a `ToServer` constructor to page `init` instead of the constructor-derived handler
+- custom server `init` exists for a route with non-empty shared `init_requests` but does not call shared `init_requests`
+- custom client `init` exists for a route with non-empty shared `init_requests` but does not call shared `init_requests`
+- target `init` functions duplicate literal boot requests instead of using shared `init_requests`
+
+A `ToServer.LoadGames` constructor maps to `load_games`, `ToServer.LoadTeam` maps to `load_team`, and so on. `init_requests` wires the page boot requests. Target `init` functions customize startup. Neither one replaces the `ToServer` handler convention.
 
 ## User-Owned Package Layout
 
@@ -265,6 +355,8 @@ SaveGeneral  -> save_general
 DeleteWaiver -> delete_waiver
 ```
 
+This rule includes page-data load commands. `ToServer.LoadGames` maps to `load_games`; it does not map to page `init`.
+
 Handlers live in the server target under the matching Mount namespace. By default, page-specific server handlers live in the matching server page module, beside the page-specific queries and mapping code they use. `backend.gleam` is the server update boundary and default interception/delegation point.
 
 ```text
@@ -275,6 +367,21 @@ server/src/server/public/pages/standings.gleam
 Shared server-only helpers are extracted to `server/helpers/...` only after at least two server modules use the same helper. The Generator Framework does not create `store.gleam`, `helpers/`, or another shared app layer by default.
 
 Handlers receive constructor fields as named arguments, plus the Generator Framework-provided context. They do not receive the whole `ToServer` value.
+
+Page-data handlers are the handlers for constructors returned by a shared page's `init_requests`. They return the `ToClient` values that populate the page:
+
+```gleam
+pub fn load_games(
+  request_context request_context: RequestContext,
+  server_context server_context: ServerContext,
+) -> List(to_client.ToClient) {
+  todo
+}
+```
+
+Generated live dispatch sends each returned `ToClient` to the current client and leaves `backend.Model` unchanged. Generated SSR execution calls these same handlers for boot requests and embeds their returned `ToClient` values into SSR hydration.
+
+Operation handlers that need backend state or generated effects use the backend handler signature:
 
 ```gleam
 import server/public/model.{type Model}
@@ -335,11 +442,13 @@ client/src/client/admin/client_shared_state.gleam
 server/src/server/admin/client_shared_state_loader.gleam
 ```
 
-The shared target owns `ClientSharedState` and `ClientSharedStateMsg` because SSR and browser hydration need the same shape. The client target owns browser `init` and `update`. The server target owns SSR `load`.
+The shared target owns `ClientSharedState` and `ClientSharedStateMsg` because SSR and browser hydration need the same shape. The shared page target owns `init_requests`. The client target owns optional browser `init` and update. The server target owns optional server `init` and server handlers.
 
 When `ClientSharedState` exists, page and layout update functions may return `Option(ClientSharedStateMsg)`. Generated root client code applies those messages through `ClientSharedState.update`.
 
 Server-originated `ToClient` values never update `ClientSharedState` directly. Page, layout, or shared-state client handlers decide how a `ToClient` value changes local and shared client state.
+
+`ClientSharedState` is not the SSR page data payload. SSR page data is a list of `ToClient` values produced by generated SSR execution of the current route's boot requests so the page model can start populated. `ClientSharedState` is Mount-level state that the shell and pages can read across routes.
 
 ## Backend State
 
@@ -349,7 +458,7 @@ Server-originated `ToClient` values never update `ClientSharedState` directly. P
 
 ## Request Context
 
-`RequestContext` is built during SSR load, client page init/navigation, and authentication state changes. It carries route params, query params, session facts, and authenticated user facts.
+`RequestContext` is built during SSR boot, client page init/navigation, and authentication state changes. It carries route params, query params, session facts, and authenticated user facts.
 
 `ToServer` constructors carry command-specific data only. Route, query, session, and user facts come from `RequestContext`.
 
@@ -382,15 +491,17 @@ The Generator Framework does not generate separate live-update topic or payload 
 
 ## SSR And Hydration
 
-SSR handlers serve the first HTTP request for a route. Instead of returning an empty shell and waiting for client-side boot, SSR handlers run the same page load path used by `ToServer` commands and render the result into the HTML response.
+SSR handlers serve the first HTTP request for a route. Instead of returning an empty shell and waiting for client-side boot, SSR handlers execute the route's boot requests and render the result into the HTML response.
 
 The SSR contract:
 
-- SSR handlers run the route's page load on HTTP request, producing the same `ToClient` result the client would receive over WebSocket.
-- The server converts the `ToClient` result into the shared page model and renders the shared Lustre view to an HTML string with `lustre/element.to_string`.
-- The HTML response embeds the loaded page data as a base64-encoded ETF `ToClient` value in `__RUNTIME_CLIENT_SHARED_STATE__`. Route, params, and query are not embedded; the client derives them from `window.location` via `modem.initial_uri()`.
-- Client init reads the embedded `ToClient` as Lustre init flags (`Option(ToClient)`). When hydration data exists, the client seeds its model through the generated `to_client` dispatch path and skips the initial `ToServer Load*` command. When hydration data is absent (SSR load failure, non-SSR navigation), the client sends the initial `Load*` command over WebSocket as normal.
-- After hydration, SPA navigation still sends `page_init + ToServer` through the WebSocket connection.
+- SSR handlers execute the route's shared `init_requests` on HTTP request. If custom server `init` exists, SSR executes the requests returned by that function instead. Both paths produce the same `ToClient` values the client would receive over WebSocket after sending those requests.
+- The server applies the `ToClient` values to the shared page model and renders the shared Lustre view to an HTML string with `lustre/element.to_string`.
+- The HTML response embeds the loaded page data as base64-encoded ETF `ToClient` values in a dedicated SSR page-data slot such as `__RUNTIME_SSR_TO_CLIENT__`. Route, params, and query are not embedded; the client derives them from `window.location` via `modem.initial_uri()`.
+- The HTML response separately embeds the Mount `ClientSharedState` payload in `__RUNTIME_CLIENT_SHARED_STATE__`.
+- Client init reads the embedded `ToClient` values as Lustre init flags. When hydration data exists, the client seeds its model through the generated `to_client` dispatch path and can skip requests from `init_requests`. When hydration data is absent, client `init` can send `init_requests` over WebSocket.
+- Client init reads the embedded `ClientSharedState` separately and passes it to the Mount shell/root app. Reading one boot payload must not delete or overwrite the other.
+- After hydration, SPA navigation still runs client page `init` and sends needed `ToServer` requests through the WebSocket connection.
 - Live fanout (`ToClient` broadcast via `pg`) continues as the post-boot update path.
 
 Hydration in this project means client init consumes server-loaded data and starts populated. It does not mean DOM reconciliation. The client renders the same shared page view the server used, wrapped in its app chrome (topbar, shell). When the client has hydrated data, the page-content portion of the initial client render matches the SSR page HTML.
@@ -609,7 +720,7 @@ Type aliases are transparent on the wire, as they are in Gleam. Domain identitie
 34. Client shells use Modem for same-Mount navigation and leave cross-Mount, sign-out, external, and SSR-intent links as normal anchors.
 35. Mount logging is explicit. `user_logging` and `issue_logging` default to `false` when omitted; the framework initializer writes both as `true` in each Mount block. User logging only writes for authenticated users and stores user id plus email. Issue logging writes runtime issues for the Mount with or without authentication, including user id and email when known.
 36. Generated sign-in codes use uppercase `0-9A-Z`; verification trims and normalizes the lookup scope and submitted code to uppercase before hashing.
-37. SSR handlers run the route's page load on HTTP request, render the same shared Lustre view the client uses, and embed the loaded page data as a base64 ETF `ToClient` value in the HTML response. Route, params, and query are derived from the current browser URL rather than embedded as SSR flags.
-38. Client init hydration means consuming server-embedded data to start populated, skipping the initial `ToServer Load*` command when hydration data exists. It does not mean DOM reconciliation.
+37. SSR handlers execute the route's boot requests on HTTP request, render the same shared Lustre view the client uses, and embed the loaded page data as base64 ETF `ToClient` values in a dedicated SSR page-data slot. Route, params, and query are derived from the current browser URL rather than embedded as SSR flags.
+38. Client init hydration means consuming server-embedded SSR `ToClient` page data to start populated, skipping requests from shared `init_requests` when hydration data exists. It does not mean DOM reconciliation.
 39. Shared page views are intentionally pure so they can be rendered by SSR, reused by the client, and tested directly without browser transport or WebSocket setup. Shared views accept data and action callbacks but must not import transport, generated client effects, modem, browser setup, or route modules.
-40. SPA navigation after initial hydration still sends `page_init + ToServer` through the WebSocket connection. Live fanout (`ToClient` broadcast via `pg`) continues as the post-boot update path.
+40. SPA navigation after initial hydration still runs client page `init` and sends needed `ToServer` requests through the WebSocket connection. Live fanout (`ToClient` broadcast via `pg`) continues as the post-boot update path.

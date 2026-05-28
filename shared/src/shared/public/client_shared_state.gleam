@@ -1,4 +1,4 @@
-//// Per-Mount client context for the public Mount.
+//// Per-Mount ClientSharedState for the public Mount.
 ////
 //// Shell-level state that public pages can read without keeping it as local
 //// page state. The server SSR handler encodes this into the boot payload;
@@ -10,8 +10,8 @@
 import gleam/option.{type Option}
 import shared/authentication_context.{type AuthenticationContext}
 
-pub type PublicClientContext {
-  PublicClientContext(
+pub type PublicClientSharedState {
+  PublicClientSharedState(
     league_name: String,
     active_section: String,
     authentication_context: Option(AuthenticationContext),

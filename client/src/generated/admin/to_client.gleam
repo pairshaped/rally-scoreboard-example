@@ -1,0 +1,44 @@
+//// Generated. Do not edit.
+////
+//// Root API ToClient dispatch for the admin Mount.
+////
+//// Derived from shared/api/to_client.gleam and client/admin/pages.
+////
+//// Each ToClient constructor maps to client page handlers named by the
+//// snake_case of the constructor name (e.g. AdminGamesLoaded ->
+//// admin_games_loaded, GameScoreUpdated -> game_score_updated). Handlers
+//// receive constructor fields as labeled args and return the local page
+//// Msg. A constructor with multiple active handlers fans out to every
+//// matching handler. Constructors owned by another Mount fall through
+//// to the catch-all.
+
+import client/admin/pages/games
+import shared/api/to_client.{type ToClient}
+
+pub type Msg {
+  GamesPage(games.Msg)
+}
+
+pub fn to_client(msg: ToClient) -> List(Msg) {
+  case msg {
+    to_client.AdminGamesLoaded(games: games_list) -> [
+      GamesPage(games.admin_games_loaded(games: games_list)),
+    ]
+    to_client.GameCreated(game: game) -> [
+      GamesPage(games.game_created(game: game)),
+    ]
+    to_client.ScoreUpdateSaved(game: game) -> [
+      GamesPage(games.score_update_saved(game: game)),
+    ]
+    to_client.ResultSaved(game: game) -> [
+      GamesPage(games.result_saved(game: game)),
+    ]
+    to_client.GameScoreUpdated(update: update) -> [
+      GamesPage(games.game_score_updated(update: update)),
+    ]
+    to_client.AdminError(reason: reason) -> [
+      GamesPage(games.admin_error(reason: reason)),
+    ]
+    _ -> []
+  }
+}

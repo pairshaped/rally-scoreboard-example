@@ -10,24 +10,8 @@ import lustre/attribute
 import lustre/element.{type Element}
 import lustre/element/html
 import lustre/event
-import shared/api/domain/game.{type GameDetail, type GameScoreUpdate}
-import shared/api/to_client
+import shared/api/domain/game.{type GameDetail}
 import shared/components/ui
-
-pub type Msg {
-  LoadedGame(GameDetail)
-  UpdatedScore(GameScoreUpdate)
-  LoadFailed(String)
-}
-
-pub fn receive(event: to_client.ToClient) -> Option(Msg) {
-  case event {
-    to_client.GameLoaded(game:) -> Some(LoadedGame(game))
-    to_client.GameScoreUpdated(update:) -> Some(UpdatedScore(update))
-    to_client.GamesLoadFailed(reason:) -> Some(LoadFailed(reason))
-    _ -> None
-  }
-}
 
 pub fn view_game_detail(
   game: Option(GameDetail),

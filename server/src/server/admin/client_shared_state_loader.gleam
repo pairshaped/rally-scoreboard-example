@@ -1,4 +1,4 @@
-//// Builds the admin Mount client context from server state.
+//// Builds the admin Mount ClientSharedState from server state.
 ////
 //// The SSR handler calls this before rendering the shell so the boot payload
 //// includes typed shell-level state for the admin client.
@@ -8,15 +8,17 @@
 
 import generated/admin/route.{type Route}
 import gleam/option.{type Option, None}
-import shared/admin/client_context.{type AdminClientContext, AdminClientContext}
+import shared/admin/client_shared_state.{
+  type AdminClientSharedState, AdminClientSharedState,
+}
 import shared/authentication_context.{type AuthenticationContext}
 
 pub fn load(
   route route: Route,
   authentication_context authentication_context: Option(AuthenticationContext),
   dark_mode dark_mode: Bool,
-) -> AdminClientContext {
-  AdminClientContext(
+) -> AdminClientSharedState {
+  AdminClientSharedState(
     authentication_context:,
     league_name: "Rally Rec League",
     dark_mode:,

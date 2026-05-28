@@ -10,7 +10,7 @@ This project does not implement the Generator Framework and does not run app gen
 
 - `shared/` owns wire-visible API types under `shared/api`.
 - `server/` owns handlers, SQL-backed data access, request context, server context, and backend modules.
-- `client/` owns receiver mapping and browser-side app entry modules.
+- `client/` owns ToClient handler mapping and browser-side app entry modules.
 
 App code lives in `client/`, `server/`, and `shared/`. The root `rally.toml` keeps the current Mount namespace config under `[[tools.rally.clients]]`; that literal config name remains until the future generator project renames it.
 

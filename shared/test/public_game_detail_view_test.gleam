@@ -4,11 +4,8 @@ import gleam/option.{None, Some}
 import gleam/string
 import gleeunit/should
 import lustre/element
-import shared/api/domain/game.{
-  type GameDetail, Final, GameDetail, GameScoreUpdate, Live, Team,
-}
-import shared/api/to_client
-import shared/public/pages/game_detail
+import shared/api/domain/game.{type GameDetail, Final, GameDetail, Live, Team}
+import shared/public/pages/games/id_ as game_detail
 
 fn on_navigate_team(_slug: String) -> Nil {
   Nil
@@ -69,30 +66,4 @@ pub fn live_status_renders_period_test() {
   render_view(Some(game))
   |> string.contains("2H")
   |> should.be_true
-}
-
-// --- receive mapping tests ---
-
-pub fn game_detail_receive_maps_loaded_to_msg_test() {
-  let detail = make_detail()
-  game_detail.receive(to_client.GameLoaded(game: detail))
-  |> should.equal(Some(game_detail.LoadedGame(detail)))
-}
-
-pub fn game_detail_receive_maps_score_update_to_msg_test() {
-  let update =
-    GameScoreUpdate(
-      game_id: 1,
-      home_score: 90,
-      away_score: 75,
-      period: "Q3",
-      status: Live("Q3"),
-    )
-  game_detail.receive(to_client.GameScoreUpdated(update:))
-  |> should.equal(Some(game_detail.UpdatedScore(update)))
-}
-
-pub fn game_detail_receive_returns_none_for_unknown_test() {
-  game_detail.receive(to_client.StandingsLoaded(rows: []))
-  |> should.equal(None)
 }

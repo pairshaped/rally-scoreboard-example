@@ -49,13 +49,13 @@ function ssrWindow() {
   return typeof window !== "undefined" ? window : globalThis.window;
 }
 
-/** Decode the SSR-embedded ToClient payload (base64 ETF) into an Option(ToClient). */
-export function readSharedState() {
+/** Decode the SSR-embedded ToClient page-data payload (base64 ETF) into an Option(ToClient). */
+export function readSsrToClient() {
   const win = ssrWindow();
   if (!win) return new None();
-  const raw = win.__RUNTIME_CLIENT_SHARED_STATE__;
+  const raw = win.__RUNTIME_SSR_TO_CLIENT__;
   if (!raw || raw === "" || raw === "{}") return new None();
-  delete win.__RUNTIME_CLIENT_SHARED_STATE__;
+  delete win.__RUNTIME_SSR_TO_CLIENT__;
   try {
     const binary = atob(raw);
     const bytes = new Uint8Array(binary.length);
@@ -68,13 +68,13 @@ export function readSharedState() {
   } catch (_) { return new None(); }
 }
 
-/** Decode the SSR-embedded client context payload (base64 ETF) into an Option(ClientContext). */
-export function readClientContext() {
+/** Decode the SSR-embedded ClientSharedState payload (base64 ETF) into an Option(ClientSharedState). */
+export function readClientSharedState() {
   const win = ssrWindow();
   if (!win) return new None();
-  const raw = win.__RUNTIME_CLIENT_CONTEXT__;
+  const raw = win.__RUNTIME_CLIENT_SHARED_STATE__;
   if (!raw || raw === "" || raw === "{}") return new None();
-  delete win.__RUNTIME_CLIENT_CONTEXT__;
+  delete win.__RUNTIME_CLIENT_SHARED_STATE__;
   try {
     const binary = atob(raw);
     const bytes = new Uint8Array(binary.length);

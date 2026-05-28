@@ -76,9 +76,9 @@ do_ensure() ->
         <<"team_detail">>,
         %% Authentication context constructor atoms
         <<"authentication_context">>,
-        %% Client context constructor atoms
-        <<"admin_client_context">>,
-        <<"public_client_context">>
+        %% ClientSharedState constructor atoms
+        <<"admin_client_shared_state">>,
+        <<"public_client_shared_state">>
     ]),
     persistent_term:put({libero, wire_module}, 'server_generated_protocol_wire_ffi'),
     persistent_term:put({?MODULE, done}, true),

@@ -3,11 +3,14 @@
 //// Owns the public Lustre application shell: route parsing, page model
 //// storage, ToClient fanout, navigation, and public view composition.
 
-import client/public/receivers as public_receivers
+import client/public/pages/games as public_games_client
+import client/public/pages/games/id_ as public_game_detail_client
+import client/public/pages/standings as public_standings_client
+import client/public/pages/teams/slug_ as public_team_client
 import generated/codec
-import generated/public/receiver_dispatch as public_receiver_dispatch
 import generated/public/route as public_route
 import generated/public/router as public_router
+import generated/public/to_client as public_to_client_dispatch
 import generated/runtime/effect as public_effect
 import generated/setup
 import generated/transport
@@ -29,11 +32,11 @@ import shared/api/domain/standing
 import shared/api/to_client as public_to_client
 import shared/api/to_server as public_to_server
 import shared/components/ui
-import shared/public/client_context.{type PublicClientContext}
-import shared/public/pages/game_detail as public_game_detail_page
+import shared/public/client_shared_state.{type PublicClientSharedState}
 import shared/public/pages/games as public_games_page
+import shared/public/pages/games/id_ as public_game_detail_page
 import shared/public/pages/standings as public_standings_page
-import shared/public/pages/team as public_team_page
+import shared/public/pages/teams/slug_ as public_team_page
 
 type Model {
   Model(
@@ -48,12 +51,12 @@ type Model {
     // filters (e.g. ?team=TOR). The initial load and page-init paths both
     // forward query to the server through RequestContext.
     query: Dict(String, String),
-    context: Option(PublicClientContext),
+    context: Option(PublicClientSharedState),
   )
 }
 
 type Msg {
-  Received(public_receivers.Msg)
+  Received(public_to_client_dispatch.Msg)
   Navigate(public_route.Route)
   UrlChanged(Uri)
   SetDarkMode(Bool)
@@ -63,16 +66,16 @@ pub fn main() -> Nil {
   let assert True = codec.ensure_decoders()
   setup.setup()
 
-  let ssr_event = case setup.read_shared_state() {
+  let ssr_event = case setup.read_ssr_to_client() {
     option.Some(value) -> {
       let event: public_to_client.ToClient = transport.coerce(value)
       option.Some(event)
     }
     option.None -> option.None
   }
-  let context = case setup.read_client_context() {
+  let context = case setup.read_client_shared_state() {
     option.Some(value) -> {
-      let ctx: PublicClientContext = transport.coerce(value)
+      let ctx: PublicClientSharedState = transport.coerce(value)
       option.Some(ctx)
     }
     option.None -> option.None
@@ -84,7 +87,7 @@ pub fn main() -> Nil {
 }
 
 fn init(
-  flags: #(Option(public_to_client.ToClient), Option(PublicClientContext)),
+  flags: #(Option(public_to_client.ToClient), Option(PublicClientSharedState)),
 ) -> #(Model, Effect(Msg)) {
   let #(ssr_event, context) = flags
   let uri_result = modem.initial_uri()
@@ -110,10 +113,10 @@ fn init(
     )
   let #(model, hydrated) = case ssr_event {
     option.Some(event) -> {
-      let msgs = public_receiver_dispatch.to_client(event)
+      let msgs = public_to_client_dispatch.to_client(event)
       let model =
-        list.fold(msgs, model, fn(m, receiver_msg) {
-          let #(new_m, _) = update(m, Received(receiver_msg))
+        list.fold(msgs, model, fn(m, msg) {
+          let #(new_m, _) = update(m, Received(msg))
           new_m
         })
       #(model, !list.is_empty(msgs))
@@ -127,7 +130,7 @@ fn init(
   #(
     model,
     effect.batch([
-      register_receivers(),
+      register_to_client_handlers(),
       modem.advanced(
         modem.Options(
           handle_internal_links: False,
@@ -161,11 +164,11 @@ fn initial_load(route: public_route.Route) -> Effect(Msg) {
   }
 }
 
-fn register_receivers() -> Effect(Msg) {
+fn register_to_client_handlers() -> Effect(Msg) {
   effect.from(fn(dispatch) {
     transport.register_push_handler("to_client", fn(value) {
       let event: public_to_client.ToClient = transport.coerce(value)
-      public_receiver_dispatch.to_client(event)
+      public_to_client_dispatch.to_client(event)
       |> list.each(fn(msg) { dispatch(Received(msg)) })
     })
   })
@@ -250,13 +253,13 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
       let query = query_from_uri(uri)
       #(Model(..model, route:, query:), load_route(route, query))
     }
-    Received(public_receivers.GamesPage(page_msg)) ->
+    Received(public_to_client_dispatch.GamesPage(page_msg)) ->
       handle_games(model, page_msg)
-    Received(public_receivers.GameDetailPage(page_msg)) ->
+    Received(public_to_client_dispatch.GameDetailPage(page_msg)) ->
       handle_game_detail(model, page_msg)
-    Received(public_receivers.StandingsPage(page_msg)) ->
+    Received(public_to_client_dispatch.StandingsPage(page_msg)) ->
       handle_standings(model, page_msg)
-    Received(public_receivers.TeamPage(page_msg)) ->
+    Received(public_to_client_dispatch.TeamPage(page_msg)) ->
       handle_team(model, page_msg)
     SetDarkMode(enabled) -> #(
       Model(..model, dark_mode: enabled),
@@ -267,18 +270,18 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
 
 fn handle_games(
   model: Model,
-  msg: public_games_page.Msg,
+  msg: public_games_client.Msg,
 ) -> #(Model, Effect(Msg)) {
   case msg {
-    public_games_page.LoadedGames(games) -> #(
+    public_games_client.LoadedGames(games) -> #(
       Model(..model, games:, notice: ""),
       effect.none(),
     )
-    public_games_page.UpdatedScore(update) -> #(
+    public_games_client.UpdatedScore(update) -> #(
       Model(..model, games: update_games(model.games, update)),
       effect.none(),
     )
-    public_games_page.LoadFailed(reason) -> #(
+    public_games_client.LoadFailed(reason) -> #(
       Model(..model, notice: reason),
       effect.none(),
     )
@@ -287,21 +290,21 @@ fn handle_games(
 
 fn handle_game_detail(
   model: Model,
-  msg: public_game_detail_page.Msg,
+  msg: public_game_detail_client.Msg,
 ) -> #(Model, Effect(Msg)) {
   case msg {
-    public_game_detail_page.LoadedGame(game) -> #(
+    public_game_detail_client.LoadedGame(game) -> #(
       Model(..model, selected_game: Some(game), notice: ""),
       effect.none(),
     )
-    public_game_detail_page.UpdatedScore(update) -> #(
+    public_game_detail_client.UpdatedScore(update) -> #(
       Model(
         ..model,
         selected_game: update_selected_game(model.selected_game, update),
       ),
       effect.none(),
     )
-    public_game_detail_page.LoadFailed(reason) -> #(
+    public_game_detail_client.LoadFailed(reason) -> #(
       Model(..model, notice: reason),
       effect.none(),
     )
@@ -310,14 +313,14 @@ fn handle_game_detail(
 
 fn handle_standings(
   model: Model,
-  msg: public_standings_page.Msg,
+  msg: public_standings_client.Msg,
 ) -> #(Model, Effect(Msg)) {
   case msg {
-    public_standings_page.LoadedStandings(rows) -> #(
+    public_standings_client.LoadedStandings(rows) -> #(
       Model(..model, standings: rows, notice: ""),
       effect.none(),
     )
-    public_standings_page.LoadedPowerRankings(rows) -> #(
+    public_standings_client.LoadedPowerRankings(rows) -> #(
       Model(..model, standings: power_rankings_to_standings(rows), notice: ""),
       effect.none(),
     )
@@ -326,14 +329,14 @@ fn handle_standings(
 
 fn handle_team(
   model: Model,
-  msg: public_team_page.Msg,
+  msg: public_team_client.Msg,
 ) -> #(Model, Effect(Msg)) {
   case msg {
-    public_team_page.LoadedTeam(team) -> #(
+    public_team_client.LoadedTeam(team) -> #(
       Model(..model, team: Some(public_team_page.Model(team:)), notice: ""),
       effect.none(),
     )
-    public_team_page.UpdatedScore(update) -> #(
+    public_team_client.UpdatedScore(update) -> #(
       Model(
         ..model,
         team: option.map(model.team, fn(team_model) {
@@ -342,7 +345,7 @@ fn handle_team(
       ),
       effect.none(),
     )
-    public_team_page.LoadFailed(reason) -> #(
+    public_team_client.LoadFailed(reason) -> #(
       Model(..model, notice: reason),
       effect.none(),
     )
@@ -570,7 +573,7 @@ fn explainer(route route: public_route.Route) -> Element(Msg) {
       ui.page_explainer("What this page exercises", [
         "Route: falls through the generated public router to NotFound.",
         "Load: no page ToServer command is sent.",
-        "ToClient: no page receiver is attached for this route.",
+        "ToClient: no page handler is attached for this route.",
       ])
   }
 }
@@ -578,7 +581,7 @@ fn explainer(route route: public_route.Route) -> Element(Msg) {
 fn topbar(
   route route: public_route.Route,
   dark_mode dark_mode: Bool,
-  context context: Option(PublicClientContext),
+  context context: Option(PublicClientSharedState),
 ) -> Element(Msg) {
   let signed_in = case context {
     Some(ctx) ->

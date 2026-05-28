@@ -1,31 +1,30 @@
 //// Client-side contract tests for the Scoreboard example.
 ////
-//// These tests keep the hand-written receiver hub and generated receiver
-//// dispatch aligned while Generator Framework generation is being rebuilt toward this app.
+//// These tests verify the generated ToClient dispatch calls constructor-named
+//// client page handlers and fans out to all interested pages.
 
-import client/public/receivers
+import client/public/pages/games as games_client
+import client/public/pages/games/id_ as game_detail_client
+import client/public/pages/teams/slug_ as team_client
 import generated/codec
-import generated/public/receiver_dispatch
+import generated/public/to_client as public_to_client_dispatch
 import generated/setup
 import gleam/option
 import gleam/string
 import gleeunit
 import gleeunit/should
 import libero/wire as libero_wire
-import shared/admin/client_context as admin_client_context
+import shared/admin/client_shared_state as admin_client_shared_state
 import shared/api/domain/game
 import shared/api/to_client
 import shared/authentication_context
-import shared/public/client_context as public_client_context
-import shared/public/pages/game_detail as game_detail_page
-import shared/public/pages/games as games_page
-import shared/public/pages/team as team_page
+import shared/public/client_shared_state as public_client_shared_state
 
 pub fn main() {
   gleeunit.main()
 }
 
-pub fn public_to_client_receiver_dispatch_fans_out_to_all_interested_pages_test() {
+pub fn public_to_client_dispatch_fans_out_to_all_interested_pages_test() {
   let update =
     game.GameScoreUpdate(
       game_id: 2,
@@ -36,17 +35,19 @@ pub fn public_to_client_receiver_dispatch_fans_out_to_all_interested_pages_test(
     )
 
   let messages =
-    receiver_dispatch.to_client(to_client.GameScoreUpdated(update:))
+    public_to_client_dispatch.to_client(to_client.GameScoreUpdated(update:))
 
   messages
   |> should.equal([
-    receivers.GamesPage(games_page.UpdatedScore(update)),
-    receivers.GameDetailPage(game_detail_page.UpdatedScore(update)),
-    receivers.TeamPage(team_page.UpdatedScore(update)),
+    public_to_client_dispatch.GamesPage(games_client.UpdatedScore(update)),
+    public_to_client_dispatch.GameDetailPage(game_detail_client.UpdatedScore(
+      update,
+    )),
+    public_to_client_dispatch.TeamPage(team_client.UpdatedScore(update)),
   ])
 }
 
-pub fn admin_client_context_is_importable_test() {
+pub fn admin_client_shared_state_is_importable_test() {
   let auth_ctx =
     authentication_context.AuthenticationContext(
       user_id: 1,
@@ -54,7 +55,7 @@ pub fn admin_client_context_is_importable_test() {
       display_name: option.None,
     )
   let ctx =
-    admin_client_context.AdminClientContext(
+    admin_client_shared_state.AdminClientSharedState(
       authentication_context: option.Some(auth_ctx),
       league_name: "Rally Rec League",
       dark_mode: False,
@@ -67,9 +68,9 @@ pub fn admin_client_context_is_importable_test() {
   }
 }
 
-pub fn public_client_context_is_importable_test() {
+pub fn public_client_shared_state_is_importable_test() {
   let ctx =
-    public_client_context.PublicClientContext(
+    public_client_shared_state.PublicClientSharedState(
       league_name: "Rally Rec League",
       active_section: "games",
       authentication_context: option.None,
@@ -80,10 +81,10 @@ pub fn public_client_context_is_importable_test() {
   ctx.can_access_admin |> should.be_false
 }
 
-@external(javascript, "./client_context_smoke_ffi.mjs", "setWindowContext")
+@external(javascript, "./client_shared_state_smoke_ffi.mjs", "setWindowContext")
 fn set_window_context(base64: String) -> Nil
 
-@external(javascript, "./client_context_smoke_ffi.mjs", "clearWindowContext")
+@external(javascript, "./client_shared_state_smoke_ffi.mjs", "clearWindowContext")
 fn clear_window_context() -> Nil
 
 pub fn client_setup_decodes_admin_context_from_window_variable_test() {
@@ -96,7 +97,7 @@ pub fn client_setup_decodes_admin_context_from_window_variable_test() {
       display_name: option.None,
     )
   let context =
-    admin_client_context.AdminClientContext(
+    admin_client_shared_state.AdminClientSharedState(
       authentication_context: option.Some(auth_ctx),
       league_name: "Rally Rec League",
       dark_mode: False,
@@ -112,9 +113,9 @@ pub fn client_setup_decodes_admin_context_from_window_variable_test() {
 
   set_window_context(base64)
 
-  let result = case setup.read_client_context() {
+  let result = case setup.read_client_shared_state() {
     option.Some(value) -> {
-      let decoded: admin_client_context.AdminClientContext =
+      let decoded: admin_client_shared_state.AdminClientSharedState =
         libero_wire.coerce(value)
       Ok(decoded)
     }

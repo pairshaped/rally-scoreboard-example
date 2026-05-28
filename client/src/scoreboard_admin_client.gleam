@@ -6,10 +6,10 @@
 //// Admin pages are guarded by the server entry. This client only loads
 //// after authentication and admin access have been confirmed.
 
-import client/admin/receivers as admin_receivers
-import generated/admin/receiver_dispatch as admin_receiver_dispatch
+import client/admin/pages/games as admin_games_client
 import generated/admin/route as admin_route
 import generated/admin/router as admin_router
+import generated/admin/to_client as admin_to_client_dispatch
 import generated/codec
 import generated/runtime/effect as admin_effect
 import generated/setup
@@ -28,7 +28,7 @@ import lustre/element.{type Element}
 import lustre/element/html
 import lustre/event
 import modem
-import shared/admin/client_context.{type AdminClientContext}
+import shared/admin/client_shared_state.{type AdminClientSharedState}
 import shared/admin/pages/games as admin_games_page
 import shared/api/domain/game as admin_game
 import shared/api/to_client as admin_to_client
@@ -44,12 +44,12 @@ type Model {
     home_code: String,
     away_code: String,
     dark_mode: Bool,
-    context: Option(AdminClientContext),
+    context: Option(AdminClientSharedState),
   )
 }
 
 type Msg {
-  Received(admin_receivers.Msg)
+  Received(admin_to_client_dispatch.Msg)
   Navigate(admin_route.Route)
   UrlChanged(Uri)
   CreateGame
@@ -65,16 +65,16 @@ pub fn main() -> Nil {
   let assert True = codec.ensure_decoders()
   setup.setup()
 
-  let ssr_event = case setup.read_shared_state() {
+  let ssr_event = case setup.read_ssr_to_client() {
     option.Some(value) -> {
       let event: admin_to_client.ToClient = transport.coerce(value)
       option.Some(event)
     }
     option.None -> option.None
   }
-  let context = case setup.read_client_context() {
+  let context = case setup.read_client_shared_state() {
     option.Some(value) -> {
-      let ctx: AdminClientContext = transport.coerce(value)
+      let ctx: AdminClientSharedState = transport.coerce(value)
       option.Some(ctx)
     }
     option.None -> option.None
@@ -86,7 +86,7 @@ pub fn main() -> Nil {
 }
 
 fn init(
-  flags: #(Option(admin_to_client.ToClient), Option(AdminClientContext)),
+  flags: #(Option(admin_to_client.ToClient), Option(AdminClientSharedState)),
 ) -> #(Model, Effect(Msg)) {
   let #(ssr_event, context) = flags
   let route =
@@ -105,10 +105,10 @@ fn init(
     )
   let #(model, hydrated) = case ssr_event {
     option.Some(event) -> {
-      let msgs = admin_receiver_dispatch.to_client(event)
+      let msgs = admin_to_client_dispatch.to_client(event)
       let model =
-        list.fold(msgs, model, fn(m, receiver_msg) {
-          let #(new_m, _) = update(m, Received(receiver_msg))
+        list.fold(msgs, model, fn(m, msg) {
+          let #(new_m, _) = update(m, Received(msg))
           new_m
         })
       #(model, !list.is_empty(msgs))
@@ -122,7 +122,7 @@ fn init(
   #(
     model,
     effect.batch([
-      register_receivers(),
+      register_to_client_handlers(),
       modem.advanced(
         modem.Options(
           handle_internal_links: False,
@@ -135,11 +135,11 @@ fn init(
   )
 }
 
-fn register_receivers() -> Effect(Msg) {
+fn register_to_client_handlers() -> Effect(Msg) {
   effect.from(fn(dispatch) {
     transport.register_push_handler("to_client", fn(value) {
       let event: admin_to_client.ToClient = transport.coerce(value)
-      admin_receiver_dispatch.to_client(event)
+      admin_to_client_dispatch.to_client(event)
       |> list.each(fn(msg) { dispatch(Received(msg)) })
     })
   })
@@ -184,7 +184,7 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
       let route = admin_router.parse_uri(uri)
       #(Model(..model, route:), load_route(route))
     }
-    Received(admin_receivers.GamesPage(page_msg)) ->
+    Received(admin_to_client_dispatch.GamesPage(page_msg)) ->
       handle_games(model, page_msg)
     UpdateHomeCode(value) -> #(
       Model(..model, home_code: string.uppercase(string.trim(value))),
@@ -232,14 +232,14 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
 
 fn handle_games(
   model: Model,
-  msg: admin_games_page.Msg,
+  msg: admin_games_client.Msg,
 ) -> #(Model, Effect(Msg)) {
   case msg {
-    admin_games_page.LoadedGames(games) -> #(
+    admin_games_client.LoadedGames(games) -> #(
       Model(..model, games:, notice: ""),
       effect.none(),
     )
-    admin_games_page.CreatedGame(game) -> #(
+    admin_games_client.CreatedGame(game) -> #(
       Model(
         ..model,
         games: upsert_game(games: model.games, detail: game),
@@ -247,7 +247,7 @@ fn handle_games(
       ),
       effect.none(),
     )
-    admin_games_page.SavedGame(game) -> #(
+    admin_games_client.SavedGame(game) -> #(
       Model(
         ..model,
         games: upsert_game(games: model.games, detail: game),
@@ -255,11 +255,11 @@ fn handle_games(
       ),
       effect.none(),
     )
-    admin_games_page.ScoreUpdated(update) -> #(
+    admin_games_client.ScoreUpdated(update) -> #(
       Model(..model, games: apply_score_update(model.games, update)),
       effect.none(),
     )
-    admin_games_page.Failed(reason) -> #(
+    admin_games_client.Failed(reason) -> #(
       Model(..model, notice: reason),
       effect.none(),
     )
@@ -323,7 +323,7 @@ fn explainer(route route: admin_route.Route) -> Element(Msg) {
       ui.page_explainer("What this page exercises", [
         "Route: falls through the generated admin router to NotFound.",
         "Load: no page ToServer command is sent.",
-        "ToClient: no page receiver is attached for this route.",
+        "ToClient: no page handler is attached for this route.",
       ])
   }
 }
@@ -331,7 +331,7 @@ fn explainer(route route: admin_route.Route) -> Element(Msg) {
 fn topbar(
   route route: admin_route.Route,
   dark_mode dark_mode: Bool,
-  context context: Option(AdminClientContext),
+  context context: Option(AdminClientSharedState),
 ) -> Element(Msg) {
   html.header([attribute.class("topbar")], [
     html.div([attribute.class("brand")], [

@@ -3,7 +3,7 @@
 // Plain ETF constructor registry for the root API graph.
 // Derived from shared/api/to_server.gleam, shared/api/to_client.gleam,
 // every exported wire-visible custom type under shared/api/domain/,
-// shared/authentication_context, and per-Mount client context types
+// shared/authentication_context, and per-Mount ClientSharedState types
 // under shared/admin/ and shared/public/.
 //
 // Module paths are intentionally absent from wire identity. Constructor
@@ -16,8 +16,8 @@ import * as game from "../../scoreboard_shared/shared/api/domain/game.mjs";
 import * as standing from "../../scoreboard_shared/shared/api/domain/standing.mjs";
 import * as team from "../../scoreboard_shared/shared/api/domain/team.mjs";
 import * as authenticationContext from "../../scoreboard_shared/shared/authentication_context.mjs";
-import * as adminClientContext from "../../scoreboard_shared/shared/admin/client_context.mjs";
-import * as publicClientContext from "../../scoreboard_shared/shared/public/client_context.mjs";
+import * as adminClientSharedState from "../../scoreboard_shared/shared/admin/client_shared_state.mjs";
+import * as publicClientSharedState from "../../scoreboard_shared/shared/public/client_shared_state.mjs";
 
 registerConstructor("load_games", toServer.LoadGames, 0);
 registerConstructor("load_game", toServer.LoadGame, 1);
@@ -54,8 +54,8 @@ registerConstructor("standing_row", standing.StandingRow, 7);
 registerConstructor("power_ranking_row", standing.PowerRankingRow, 7);
 registerConstructor("team_detail", team.TeamDetail, 8);
 registerConstructor("authentication_context", authenticationContext.AuthenticationContext, 3);
-registerConstructor("admin_client_context", adminClientContext.AdminClientContext, 5);
-registerConstructor("public_client_context", publicClientContext.PublicClientContext, 4);
+registerConstructor("admin_client_shared_state", adminClientSharedState.AdminClientSharedState, 5);
+registerConstructor("public_client_shared_state", publicClientSharedState.PublicClientSharedState, 4);
 
 export function ensure_decoders() {
   return true;

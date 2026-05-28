@@ -18,7 +18,7 @@ import gleam/option.{type Option}
 import libero/wire as libero_wire
 import lustre/element
 import mist.{type ResponseData}
-import server/public/client_context_loader
+import server/public/client_shared_state_loader
 import server/public/pages/games as public_games_handler
 import server/public/pages/games/id_ as public_game_handler
 import server/public/pages/standings as public_standings_handler
@@ -26,10 +26,10 @@ import server/public/pages/teams/slug_ as public_team_handler
 import server/server_context.{type ServerContext}
 import shared/api/to_client
 import shared/authentication_context.{type AuthenticationContext}
-import shared/public/pages/game_detail as public_game_detail_page
+import shared/public/pages/games/id_ as public_game_detail_page
 import shared/public/pages/games as public_games_page
 import shared/public/pages/standings as public_standings_page
-import shared/public/pages/team as public_team_page
+import shared/public/pages/teams/slug_ as public_team_page
 
 @external(erlang, "server_generated_protocol_atoms_ffi", "ensure")
 fn ensure_atoms() -> Nil
@@ -46,12 +46,12 @@ pub fn handle_request(
 ) -> response.Response(ResponseData) {
   ensure_atoms()
   let context =
-    client_context_loader.load(
+    client_shared_state_loader.load(
       db: server_context.db,
       route:,
       authentication_context:,
     )
-  let client_context_base64 = libero_wire.encode_flags(context)
+  let client_shared_state_base64 = libero_wire.encode_flags(context)
   let request_context =
     RequestContext(
       route:,
@@ -66,7 +66,7 @@ pub fn handle_request(
     shell_path:,
     page_html:,
     shared_state_base64:,
-    client_context_base64:,
+    client_shared_state_base64:,
     fallback_shell: public_fallback_shell(),
   )
 }

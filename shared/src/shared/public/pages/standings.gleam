@@ -5,28 +5,12 @@
 
 import gleam/int
 import gleam/list
-import gleam/option.{type Option, None, Some}
 import lustre/attribute
 import lustre/element.{type Element}
 import lustre/element/html
 import lustre/event
-import shared/api/domain/standing.{type PowerRankingRow, type StandingRow}
-import shared/api/to_client
+import shared/api/domain/standing.{type StandingRow}
 import shared/components/ui
-
-pub type Msg {
-  LoadedStandings(List(StandingRow))
-  LoadedPowerRankings(List(PowerRankingRow))
-}
-
-pub fn receive(event: to_client.ToClient) -> Option(Msg) {
-  case event {
-    to_client.StandingsLoaded(rows:) -> Some(LoadedStandings(rows))
-    to_client.PowerRankingsLoaded(rows:) -> Some(LoadedPowerRankings(rows))
-    to_client.StandingsUpdated(rows:) -> Some(LoadedStandings(rows))
-    _ -> None
-  }
-}
 
 pub fn view_standings(
   rows: List(StandingRow),

@@ -26,6 +26,15 @@ server/src/server/public/pages/games/[id].gleam
 
 The Generator Framework derives the route from the shared page path and wires matching shared, client, and server modules together. Client-only behavior stays in the client target. Server-only behavior stays in the server target. Shared views and target-neutral page helpers stay in the shared target.
 
+Normal pages use one first-render data convention across targets:
+
+- shared page modules may declare `init_requests() -> List(ToServer)`
+- client page modules may define `init(...)` for custom browser startup decisions
+- server page modules may define `init(...) -> List(ToServer)` for custom SSR request selection
+- server `ToServer` handlers still use constructor-derived snake_case names such as `load_games`
+
+For normal data-backed pages, shared `init_requests` is enough. Generated SSR executes it and generated client init sends it when hydration data is absent. Server and client `init` functions are optional customization hooks, and custom hooks for a route with non-empty shared `init_requests` must call shared `init_requests`.
+
 The Generator Framework maps those files to route constructors, URL parsing, and path builders. Dynamic path segments come from bracketed file or directory names.
 
 ```text
@@ -61,9 +70,9 @@ Upload routes receive multipart input. They can use different request size limit
 
 Webhook and upload modules may be server-only route modules because their request parsing and provider behavior do not compile to JavaScript. They still participate in the generated route table through their file suffix and Mount placement.
 
-## Mount Client Contexts
+## Mount ClientSharedState
 
-Each Mount owns a client context type for shell-level state that pages need but do not keep as local page state.
+Each Mount owns a `ClientSharedState` type for shell-level state that pages need but do not keep as local page state.
 
 Examples include:
 
@@ -77,13 +86,15 @@ Examples include:
 
 The Generator Framework emits the Mount boot contract:
 
-- server shell encodes the Mount client context
-- client setup decodes the context
-- page init receives the context
+- server shell encodes the Mount `ClientSharedState`
+- client setup decodes the `ClientSharedState`
+- page init receives the `ClientSharedState`
 - page `ToClient` handlers can emit shell-level updates
 - the root Mount view can react to shell-level updates
 
-The context type is per Mount. Public and admin can shape their client contexts differently.
+`ClientSharedState` is per Mount. Public and admin can shape their shared client state differently.
+
+`ClientSharedState` is separate from SSR page data. SSR page data is a boot-time `ToClient` value for the current route. `ClientSharedState` is Mount-level state for the shell, layouts, and pages.
 
 ## Authorization Support
 
