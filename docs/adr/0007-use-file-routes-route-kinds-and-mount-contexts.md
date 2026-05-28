@@ -52,7 +52,7 @@ Webhook and upload modules may be server-only route modules because their reques
 
 ## Mount Client Contexts
 
-Each Mount owns a client context type for shell-level state that pages need but should not keep as local page state.
+Each Mount owns a client context type for shell-level state that pages need but do not keep as local page state.
 
 Examples include:
 
@@ -91,15 +91,15 @@ This keeps row-level, function-level, route-level, and role-specific permission 
 
 ## Cross-Mount Updates
 
-The shared root `ToClient` graph remains the live update contract. A server operation in one Mount may emit a `ToClient` value received by another Mount when that Mount has an active receiver for the constructor.
+The shared root `ToClient` graph is the live update contract. A server operation in one Mount may emit a `ToClient` value received by another Mount when that Mount has an active receiver for the constructor.
 
-The Generator Framework does not introduce separate topic payload types yet. Receiver presence is still the client-side interest signal.
+The Generator Framework does not introduce separate topic payload types. Receiver presence is the client-side interest signal.
 
-If the shared `ToClient` graph becomes too broad for larger apps, a later design can add app-domain events and topic subscriptions behind the generated Mount receiver layer.
+App-domain events and topic subscriptions are outside this contract.
 
 ## Extraction Boundary
 
-The Generator Framework should own code that is derived from source files or wire-visible types in places Gleam cannot derive itself.
+The Generator Framework owns code that is derived from source files or wire-visible types in places Gleam cannot derive itself.
 
 Generation is a good fit for:
 

@@ -397,11 +397,11 @@ pub fn admin_mount_routes_through_authentication_test() {
 
 pub fn fan_user_cannot_admin_test() {
   let conn = test_users_db()
-  authentication_context_loader.can_admin(db: conn, user_id: 1)
+  authentication_context_loader.can_access_admin(db: conn, user_id: 1)
   |> should.be_true
-  authentication_context_loader.can_admin(db: conn, user_id: 2)
+  authentication_context_loader.can_access_admin(db: conn, user_id: 2)
   |> should.be_false
-  authentication_context_loader.can_admin(db: conn, user_id: 99)
+  authentication_context_loader.can_access_admin(db: conn, user_id: 99)
   |> should.be_false
 }
 
@@ -427,7 +427,7 @@ pub fn fan_signed_cookie_produces_non_admin_user_id_test() {
   |> should.equal(option.Some(2))
 
   let conn = test_users_db()
-  authentication_context_loader.can_admin(db: conn, user_id: 2)
+  authentication_context_loader.can_access_admin(db: conn, user_id: 2)
   |> should.be_false
 }
 
@@ -445,15 +445,15 @@ pub fn admin_user_cookie_passes_admin_gate_test() {
   |> should.equal(option.Some(1))
 
   let conn = test_users_db()
-  authentication_context_loader.can_admin(db: conn, user_id: 1)
+  authentication_context_loader.can_access_admin(db: conn, user_id: 1)
   |> should.be_true
 }
 
-pub fn entry_returns_forbidden_when_user_can_admin_is_false_test() {
+pub fn entry_returns_forbidden_when_user_can_access_admin_is_false_test() {
   let entry = read("src/generated/entry.gleam")
 
-  // The admin mount handler calls user_can_admin, and on False returns 403
-  entry |> contains("user_can_admin(req,") |> should.be_true
+  // The admin mount handler calls user_can_access_admin, and on False returns 403
+  entry |> contains("user_can_access_admin(req,") |> should.be_true
   entry |> contains("False -> forbidden()") |> should.be_true
 }
 
@@ -1317,21 +1317,21 @@ pub fn authentication_context_loader_returns_demo_users_test() {
   |> should.equal(option.None)
 }
 
-pub fn can_admin_returns_true_for_admin_user_test() {
+pub fn can_access_admin_returns_true_for_admin_user_test() {
   let conn = test_users_db()
-  authentication_context_loader.can_admin(db: conn, user_id: 1)
+  authentication_context_loader.can_access_admin(db: conn, user_id: 1)
   |> should.be_true
 }
 
-pub fn can_admin_returns_false_for_non_admin_users_test() {
+pub fn can_access_admin_returns_false_for_non_admin_users_test() {
   let conn = test_users_db()
-  authentication_context_loader.can_admin(db: conn, user_id: 2)
+  authentication_context_loader.can_access_admin(db: conn, user_id: 2)
   |> should.be_false
-  authentication_context_loader.can_admin(db: conn, user_id: 99)
+  authentication_context_loader.can_access_admin(db: conn, user_id: 99)
   |> should.be_false
 }
 
-pub fn public_context_loader_sets_can_admin_when_user_is_admin_test() {
+pub fn public_context_loader_sets_can_access_admin_when_user_is_admin_test() {
   let conn = test_users_db()
   let auth_ctx =
     authentication_context.AuthenticationContext(
@@ -1345,10 +1345,10 @@ pub fn public_context_loader_sets_can_admin_when_user_is_admin_test() {
       route: public_route.Games,
       authentication_context: option.Some(auth_ctx),
     )
-  ctx.can_admin |> should.be_true
+  ctx.can_access_admin |> should.be_true
 }
 
-pub fn public_context_loader_sets_can_admin_false_for_non_admin_test() {
+pub fn public_context_loader_sets_can_access_admin_false_for_non_admin_test() {
   let conn = test_users_db()
   let auth_ctx =
     authentication_context.AuthenticationContext(
@@ -1362,32 +1362,32 @@ pub fn public_context_loader_sets_can_admin_false_for_non_admin_test() {
       route: public_route.Games,
       authentication_context: option.Some(auth_ctx),
     )
-  ctx.can_admin |> should.be_false
+  ctx.can_access_admin |> should.be_false
 }
 
-pub fn entry_gates_admin_routes_on_can_admin_test() {
+pub fn entry_gates_admin_routes_on_can_access_admin_test() {
   let entry = read("src/generated/entry.gleam")
 
-  entry |> contains("user_can_admin") |> should.be_true
-  entry |> contains("can_admin(") |> should.be_true
+  entry |> contains("user_can_access_admin") |> should.be_true
+  entry |> contains("can_access_admin(") |> should.be_true
   entry |> contains("forbidden()") |> should.be_true
 }
 
-pub fn public_client_nav_shows_admin_only_when_can_admin_test() {
+pub fn public_client_nav_shows_admin_only_when_can_access_admin_test() {
   let public_client = read("../client/src/scoreboard_public_client.gleam")
 
-  public_client |> contains("can_admin") |> should.be_true
+  public_client |> contains("can_access_admin") |> should.be_true
   public_client
-  |> contains("ctx.can_admin")
+  |> contains("ctx.can_access_admin")
   |> should.be_true
 }
 
-pub fn admin_authenticated_and_user_can_admin_are_separate_checks_test() {
+pub fn admin_authenticated_and_user_can_access_admin_are_separate_checks_test() {
   let entry = read("src/generated/entry.gleam")
 
   entry |> contains("admin_authenticated") |> should.be_true
-  entry |> contains("user_can_admin") |> should.be_true
-  // user_can_admin is called after admin_authenticated passes
+  entry |> contains("user_can_access_admin") |> should.be_true
+  // user_can_access_admin is called after admin_authenticated passes
   entry
   |> contains("True ->")
   |> should.be_true
@@ -1469,16 +1469,16 @@ fn test_users_db() -> sqlight.Connection {
         display_name TEXT,
         password_hash TEXT NOT NULL,
         sign_in_code_hash TEXT NOT NULL,
-        can_admin INTEGER NOT NULL DEFAULT 0,
+        role TEXT NOT NULL DEFAULT 'fan' CHECK (role IN ('admin', 'fan')),
         created_at TEXT NOT NULL DEFAULT (datetime('now'))
       )",
       on: conn,
     )
   let assert Ok(Nil) =
     sqlight.exec(
-      "INSERT OR IGNORE INTO users (email, display_name, password_hash, sign_in_code_hash, can_admin) VALUES "
-        <> "('admin@example.com', NULL, '$runtime-pbkdf2-sha256$v=1$i=600000$TLcZ1AIacSW2Y9Sx1n2quA$5BuKTg_PPcRyGNNFWAC-JWc4wHZyGhTfQfbiDtmS_Zo', '$runtime-sign-in-code-hmac-sha256$v=1$FY-UwgWkAUbUUAjKZIrySIhmkDwEniQHxhEw7QwbcGU', 1),"
-        <> "('fan@example.com', 'Fan', '$runtime-pbkdf2-sha256$v=1$i=600000$4JLcFedQMxkwHeAAxL_LjA$FOVkFBcXUNDrPTLYbFHMkqUGw8Bgnv9qdt_hC_bDQxA', '$runtime-sign-in-code-hmac-sha256$v=1$26QkhMJZyJsBDiH3ae0NfkdhN2ynV41mmuBmMphzqB8', 0)",
+      "INSERT OR IGNORE INTO users (email, display_name, password_hash, sign_in_code_hash, role) VALUES "
+        <> "('admin@example.com', NULL, '$runtime-pbkdf2-sha256$v=1$i=600000$TLcZ1AIacSW2Y9Sx1n2quA$5BuKTg_PPcRyGNNFWAC-JWc4wHZyGhTfQfbiDtmS_Zo', '$runtime-sign-in-code-hmac-sha256$v=1$FY-UwgWkAUbUUAjKZIrySIhmkDwEniQHxhEw7QwbcGU', 'admin'),"
+        <> "('fan@example.com', 'Fan', '$runtime-pbkdf2-sha256$v=1$i=600000$4JLcFedQMxkwHeAAxL_LjA$FOVkFBcXUNDrPTLYbFHMkqUGw8Bgnv9qdt_hC_bDQxA', '$runtime-sign-in-code-hmac-sha256$v=1$26QkhMJZyJsBDiH3ae0NfkdhN2ynV41mmuBmMphzqB8', 'fan')",
       on: conn,
     )
   conn

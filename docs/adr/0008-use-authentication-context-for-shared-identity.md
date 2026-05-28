@@ -2,13 +2,13 @@
 
 The Generator Framework uses `authentication_context` for the signed-in browser identity shared by Mounts.
 
-Public, admin, system, and future authentication callback routes do not own authentication. They consume a shared authentication context and apply their own access or authorization rules.
+Public, admin, system, and authentication callback routes do not own authentication. They consume a shared authentication context and apply their own access or authorization rules.
 
 ## Decision Summary
 
 Authentication is framework infrastructure with app-placed routes.
 
-The framework should provide the shared identity contract, normalization helpers, session helpers, access guard plumbing, redirect helpers, and provider handoff helpers. The app decides where user-facing sign-in and sign-out routes live.
+The framework provides the shared identity contract, normalization helpers, session helpers, access guard plumbing, redirect helpers, and provider handoff helpers. The app decides where user-facing sign-in and sign-out routes live.
 
 The framework does not require a fixed authentication Mount. An app can put sign-in routes in the public Mount, in a dedicated authentication Mount, or in multiple entry points. The generated code must carry enough route metadata to support that placement.
 
@@ -65,7 +65,7 @@ pub type AuthenticationContext {
 
 `display_name` is optional. Empty or whitespace-only display names normalize to `None`.
 
-UI code should render a display label through the runtime helper:
+UI code renders a display label through the runtime helper:
 
 ```gleam
 pub fn display_label(context: AuthenticationContext) -> String {
@@ -82,7 +82,7 @@ If `display_name` is `None`, the display label is the normalized email.
 
 Authentication behavior belongs in framework runtime or library code before it belongs in generated code.
 
-The runtime should provide helpers like:
+The runtime provides helpers like:
 
 ```gleam
 pub fn normalize_email(email: String) -> String
@@ -92,13 +92,13 @@ pub fn display_label(context: AuthenticationContext) -> String
 
 Any built-in sign-in link, sign-in code, password, OAuth, or handoff helper must normalize email before lookup, storage, comparison, token creation, password verification, or session creation.
 
-If the framework later provides a reference users table, its email column stores only normalized emails and has a unique index.
+When the framework provides a reference users table, its email column stores only normalized emails and has a unique index.
 
 ## Scoreboard User Model
 
-Scoreboard should exercise authentication and authorization with a tiny app-owned `users` table.
+Scoreboard exercises authentication and authorization with a tiny app-owned `users` table.
 
-The table should include:
+The table includes:
 
 ```text
 id          Int primary identifier
@@ -116,7 +116,7 @@ fan@example.com     role = fan
 
 Both rows are users. The admin user can use public signed-in features. The fan user can use public signed-in features but cannot access admin routes or admin commands. Anonymous visitors have no authentication context.
 
-The `role` field is Scoreboard app policy. It is not the framework authorization model. Scoreboard derives authorization facts such as `can_access_admin` from that role instead of passing the raw role through every call site.
+The `role` field is Scoreboard app policy. It is not the framework authorization model. Scoreboard exposes authorization facts such as `can_access_admin` from that role.
 
 ## Mount Integration
 
@@ -177,7 +177,7 @@ The framework does not require a fixed authentication Mount.
 
 Authentication is shared infrastructure. The app decides where user-facing authentication routes live. A small app may put sign-in and sign-out routes in its public Mount. A larger app may use a dedicated authentication Mount or multiple sign-in entry points.
 
-Generated code should support that placement by carrying route metadata, access guards, redirect targets, and authentication context through the selected Mount.
+Generated code supports that placement by carrying route metadata, access guards, redirect targets, and authentication context through the selected Mount.
 
 For Scoreboard, authentication routes live in the public Mount:
 
@@ -196,7 +196,7 @@ An unauthenticated request to `/admin/games` redirects to `/sign_in?return_to=/a
 
 The sign-in page uses a public authentication layout variant. It does not render the admin Mount shell or admin score-desk navigation. This prevents unauthenticated admin pages from receiving admin client context.
 
-`return_to` must be validated before redirecting. It should be a same-origin path owned by the app, not an arbitrary URL.
+`return_to` must be validated before redirecting. It is a same-origin path owned by the app.
 
 Sign-out clears the shared session, not an admin-only session. Signing out from an admin route redirects to a public route so the browser does not land on a guarded admin page without a session.
 
@@ -204,7 +204,7 @@ Sign-out clears the shared session, not an admin-only session. Signing out from 
 
 External provider callbacks are a separate concern from the placement of user-facing authentication routes.
 
-OAuth provider redirects should use a stable callback host or route so the app does not need to register every league subdomain with the provider.
+OAuth provider redirects use a stable callback host or route so the app does not need to register every league subdomain with the provider.
 
 The callback route verifies provider state and creates a short-lived handoff token. It does not create the final league-subdomain browser session.
 
@@ -233,4 +233,4 @@ The framework pieces are:
 - destination host sets its own session cookie
 - destination host redirects to the safe return path
 
-These routes may live in the same Mount or different Mounts. The framework should not force that choice.
+These routes may live in the same Mount or different Mounts. The framework supports both placements.

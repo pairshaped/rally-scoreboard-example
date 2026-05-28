@@ -15,6 +15,6 @@ pub type PublicClientContext {
     league_name: String,
     active_section: String,
     authentication_context: Option(AuthenticationContext),
-    can_admin: Bool,
+    can_access_admin: Bool,
   )
 }

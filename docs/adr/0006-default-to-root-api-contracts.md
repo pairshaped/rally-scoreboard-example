@@ -68,7 +68,7 @@ Client and server packages may import subsets of `shared/api` for packaging, but
 
 The Generator Framework validates constructor names within the shared API graph. Duplicate plain ETF constructor names fail generation before codegen. The check includes `ToServer` constructors, `ToClient` constructors, domain constructors, and any other public wire-visible custom type constructor. The check does not use module paths, type names, transport direction, arity, namespace prefixes, hashes, or generated identities to disambiguate values.
 
-Diagnostics for codec graph collisions are part of the contract. The Generator Framework must name the duplicate constructor, the plain ETF atom, every file/type involved, and the expected fix. Collision errors should use Marmot-style diagnostics: plain language, exact locations, what the Generator Framework saw, why it is unsafe, and how the app author can fix it.
+Diagnostics for codec graph collisions are part of the contract. The Generator Framework names the duplicate constructor, the plain ETF atom, every file/type involved, and the expected fix. Collision errors use Marmot-style diagnostics: plain language, exact locations, what the Generator Framework saw, why it is unsafe, and how the app author can fix it.
 
 ```text
 Duplicate ETF constructor `User` in the shared API codec graph.
@@ -239,7 +239,7 @@ The backend update may intercept, reject, wrap, or delegate a `ToServer` message
 
 `ToServer` is point-to-point command input for the current Mount connection. The Generator Framework never fans out a `ToServer` value and never forwards a `ToServer` value from one Mount to another Mount. A client command is valid only when the current Mount owns the discovered handler for that constructor.
 
-The shared API graph may still contain `ToServer` constructors handled by other Mounts. Generated dispatch must make those branches explicit, because dispatch is exhaustive over the global `ToServer` type, but the default behavior must not silently no-op. Other-Mount commands are invalid for the current Mount and should go through a generated rejection path that can log an issue, emit a Mount-appropriate `ToClient` error when one exists, and return the backend model unchanged.
+The shared API graph may contain `ToServer` constructors handled by other Mounts. Generated dispatch makes those branches explicit, because dispatch is exhaustive over the global `ToServer` type, and the default behavior does not silently no-op. Other-Mount commands are invalid for the current Mount and go through a generated rejection path that can log an issue, emit a Mount-appropriate `ToClient` error when one exists, and return the backend model unchanged.
 
 Each `ToServer` constructor has exactly one server handler in the app. The Generator Framework generates each Mount dispatch table from the global `ToServer` type and the handlers discovered for that Mount. Generated dispatch owns the exhaustive `ToServer` case under `backend.update`: owned constructors call handlers, and unowned constructors reject the invalid command.
 
@@ -251,7 +251,7 @@ SaveGeneral  -> save_general
 DeleteWaiver -> delete_waiver
 ```
 
-Handlers live in the server target under the matching Mount namespace. By default, page-specific server handlers live in the matching server page module, beside the page-specific queries and mapping code they use. `backend.gleam` remains the server update boundary and default interception/delegation point.
+Handlers live in the server target under the matching Mount namespace. By default, page-specific server handlers live in the matching server page module, beside the page-specific queries and mapping code they use. `backend.gleam` is the server update boundary and default interception/delegation point.
 
 ```text
 server/src/server/admin/pages/games.gleam
@@ -333,7 +333,7 @@ Server-originated `ToClient` values never update `ClientSharedState` directly. P
 
 Generated authentication helpers may issue short-lived sign-in codes for app-owned sign-in flows. Sign-in codes use the uppercase `0-9A-Z` alphabet. The Generator Framework normalizes both the lookup scope and submitted code by trimming whitespace and converting to uppercase before hashing or verifying.
 
-The Generator Framework does not use an ambiguity-reduced sign-in code alphabet. The generated UI should use a readable font and input normalization, rather than making the runtime alphabet smaller.
+The Generator Framework does not use an ambiguity-reduced sign-in code alphabet. The generated UI uses a readable font and input normalization, rather than making the runtime alphabet smaller.
 
 The Generator Framework uses the full words `authentication` and `authorization` in generated paths, module names, comments, and docs. It does not use the abbreviation `auth`, because the abbreviation does not say whether code is proving identity or checking permission. Sign-in and sign-out routes use `sign_in` and `sign_out`; the Generator Framework does not use `login` or `logout` in generated route paths.
 
@@ -365,7 +365,7 @@ The SSR contract:
 - The HTML response embeds the loaded page data as a base64-encoded ETF `ToClient` value in `__RUNTIME_CLIENT_SHARED_STATE__`. Route, params, and query are not embedded; the client derives them from `window.location` via `modem.initial_uri()`.
 - Client init reads the embedded `ToClient` as Lustre init flags (`Option(ToClient)`). When hydration data exists, the client seeds its model through the existing receiver path and skips the initial `ToServer Load*` command. When hydration data is absent (SSR load failure, non-SSR navigation), the client sends the initial `Load*` command over WebSocket as normal.
 - After hydration, SPA navigation still sends `page_init + ToServer` through the WebSocket connection.
-- Live fanout (`ToClient` broadcast via `pg`) is unchanged and remains the post-boot update path.
+- Live fanout (`ToClient` broadcast via `pg`) continues as the post-boot update path.
 
 Hydration in this project means client init consumes server-loaded data and starts populated. It does not mean DOM reconciliation. The client renders the same shared page view the server used, wrapped in its app chrome (topbar, shell). When the client has hydrated data, the page-content portion of the initial client render matches the SSR page HTML.
 
@@ -388,9 +388,9 @@ issue_logging = true
 
 Both logging flags default to `false` when omitted. the framework initializer writes both flags as `true` so new apps visibly opt in to local observability instead of inheriting hidden database writes. `user_logging` records authenticated user activity for the Mount; unauthenticated activity never writes user log rows. User log rows include `created_at`, user id, user email, session id, Mount, route, and message type. User email is stored because the Generator Framework's local system database is not joined to app-owned user tables. `issue_logging` records runtime issues for the Mount and does not require authentication, but includes authenticated user id and email when they are available. Issue log rows include `created_at`, Mount, route, kind, message, optional message type, optional trace, and optional context. Timing is not part of the local logging schema unless the runtime already has that timing without extra instrumentation. Normal server logs and query timing logs are not written to the Generator Framework's system DB; query timing is dev-only logger output. Both logging modes store Mount and route, not page module names, because logs describe handled app activity rather than UI implementation. The local logging schema has `user_logs` and `issue_logs`, separate from jobs and app data.
 
-The Generator Framework's system database is meant to have an app-facing system portal. The portal will let authorized users examine and search user logs, issue logs, and jobs from inside the deployed app. This makes local observability useful without a third-party service and gives teams a place to inspect background job state alongside runtime issues. The portal is a future generated Mount or reserved system route; application Mounts do not hand-roll access to system tables.
+The Generator Framework's system database has an app-facing system portal. The portal lets authorized users examine and search user logs, issue logs, and jobs from inside the deployed app. This makes local observability useful without a third-party service and gives teams a place to inspect background job state alongside runtime issues. The portal is a generated Mount or reserved system route; application Mounts do not hand-roll access to system tables.
 
-The current generated `system_db.gleam` owns the system schema directly. That is acceptable for the Scoreboard target, but it should be broken out soon. The Generator Framework should have first-class system migrations so framework-owned tables and app-owned system extensions are visible, versioned, and runnable through the same migration workflow as app data.
+The Generator Framework has first-class system migrations so framework-owned tables and app-owned system extensions are visible, versioned, and runnable through the same migration workflow as app data.
 
 User-authored app code is namespaced by Mount in every target:
 
@@ -586,4 +586,4 @@ Type aliases are transparent on the wire, as they are in Gleam. Domain identitie
 37. SSR handlers run the route's page load on HTTP request, render the same shared Lustre view the client uses, and embed the loaded page data as a base64 ETF `ToClient` value in the HTML response. Route, params, and query are derived from the current browser URL rather than embedded as SSR flags.
 38. Client init hydration means consuming server-embedded data to start populated, skipping the initial `ToServer Load*` command when hydration data exists. It does not mean DOM reconciliation.
 39. Shared page views are intentionally pure so they can be rendered by SSR, reused by the client, and tested directly without browser transport or WebSocket setup. Shared views accept data and action callbacks but must not import transport, generated client effects, modem, browser setup, or route modules.
-40. SPA navigation after initial hydration still sends `page_init + ToServer` through the WebSocket connection. Live fanout (`ToClient` broadcast via `pg`) is unchanged and remains the post-boot update path.
+40. SPA navigation after initial hydration still sends `page_init + ToServer` through the WebSocket connection. Live fanout (`ToClient` broadcast via `pg`) continues as the post-boot update path.

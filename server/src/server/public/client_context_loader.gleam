@@ -22,16 +22,16 @@ pub fn load(
   route route: Route,
   authentication_context authentication_context: Option(AuthenticationContext),
 ) -> PublicClientContext {
-  let can_admin = case authentication_context {
+  let can_access_admin = case authentication_context {
     Some(AuthenticationContext(user_id:, ..)) ->
-      authentication_context_loader.can_admin(db:, user_id:)
+      authentication_context_loader.can_access_admin(db:, user_id:)
     None -> False
   }
   PublicClientContext(
     league_name: "Rally Rec League",
     active_section: active_section(route),
     authentication_context:,
-    can_admin:,
+    can_access_admin:,
   )
 }
 

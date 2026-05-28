@@ -614,7 +614,7 @@ fn topbar(
         active: route == public_route.Standings,
       ),
       case context {
-        Some(ctx) if ctx.can_admin ->
+        Some(ctx) if ctx.can_access_admin ->
           ui.nav_link_external(
             path: "/admin/games",
             label: "Admin",

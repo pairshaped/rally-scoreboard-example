@@ -1,7 +1,7 @@
 -- Users table for shared authentication.
 --
 -- Stores normalized email, PBKDF2 password hashes, HMAC sign-in code hashes,
--- and an app-owned can_admin flag. Both admin and public Mounts authenticate
+-- and an app-owned role column. Both admin and public Mounts authenticate
 -- against this table.
 --
 -- Email is always stored trimmed and lowercased. Auth lookups normalize input
@@ -13,6 +13,6 @@ CREATE TABLE IF NOT EXISTS users (
     display_name TEXT,
     password_hash TEXT NOT NULL,
     sign_in_code_hash TEXT NOT NULL,
-    can_admin INTEGER NOT NULL DEFAULT 0,
+    role TEXT NOT NULL DEFAULT 'fan' CHECK (role IN ('admin', 'fan')),
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );

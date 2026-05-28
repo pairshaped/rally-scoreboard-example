@@ -86,7 +86,7 @@ fn mount_admin_handle_request(
       case admin_authenticated(req) {
         False -> unauthorized()
         True ->
-          case user_can_admin(req, server_context.db) {
+          case user_can_access_admin(req, server_context.db) {
             True -> mount_admin_handle_ws(req, server_context)
             False -> forbidden()
           }
@@ -103,7 +103,7 @@ fn mount_admin_handle_request(
                     "/sign_in/password?return_to=" <> uri.percent_encode(path),
                   )
                 True ->
-                  case user_can_admin(req, server_context.db) {
+                  case user_can_access_admin(req, server_context.db) {
                     True -> mount_admin_handle_ssr(req, server_context)
                     False -> forbidden()
                   }
@@ -275,7 +275,10 @@ fn admin_authenticated(req: Request(Connection)) -> Bool {
   )
 }
 
-fn user_can_admin(req: Request(Connection), db: sqlight.Connection) -> Bool {
+fn user_can_access_admin(
+  req: Request(Connection),
+  db: sqlight.Connection,
+) -> Bool {
   case
     authentication.authenticated_user_id(
       cookie_header: request.get_header(req, "cookie"),
@@ -283,7 +286,7 @@ fn user_can_admin(req: Request(Connection), db: sqlight.Connection) -> Bool {
     )
   {
     option.Some(user_id) ->
-      authentication_context_loader.can_admin(db:, user_id:)
+      authentication_context_loader.can_access_admin(db:, user_id:)
     option.None -> False
   }
 }

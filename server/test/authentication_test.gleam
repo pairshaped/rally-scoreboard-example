@@ -21,16 +21,16 @@ fn test_db() -> sqlight.Connection {
         display_name TEXT,
         password_hash TEXT NOT NULL,
         sign_in_code_hash TEXT NOT NULL,
-        can_admin INTEGER NOT NULL DEFAULT 0,
+        role TEXT NOT NULL DEFAULT 'fan' CHECK (role IN ('admin', 'fan')),
         created_at TEXT NOT NULL DEFAULT (datetime('now'))
       )",
       on: conn,
     )
   let assert Ok(Nil) =
     sqlight.exec(
-      "INSERT OR IGNORE INTO users (email, display_name, password_hash, sign_in_code_hash, can_admin) VALUES "
-        <> "('admin@example.com', NULL, '$runtime-pbkdf2-sha256$v=1$i=600000$TLcZ1AIacSW2Y9Sx1n2quA$5BuKTg_PPcRyGNNFWAC-JWc4wHZyGhTfQfbiDtmS_Zo', '$runtime-sign-in-code-hmac-sha256$v=1$FY-UwgWkAUbUUAjKZIrySIhmkDwEniQHxhEw7QwbcGU', 1),"
-        <> "('fan@example.com', 'Fan', '$runtime-pbkdf2-sha256$v=1$i=600000$4JLcFedQMxkwHeAAxL_LjA$FOVkFBcXUNDrPTLYbFHMkqUGw8Bgnv9qdt_hC_bDQxA', '$runtime-sign-in-code-hmac-sha256$v=1$26QkhMJZyJsBDiH3ae0NfkdhN2ynV41mmuBmMphzqB8', 0)",
+      "INSERT OR IGNORE INTO users (email, display_name, password_hash, sign_in_code_hash, role) VALUES "
+        <> "('admin@example.com', NULL, '$runtime-pbkdf2-sha256$v=1$i=600000$TLcZ1AIacSW2Y9Sx1n2quA$5BuKTg_PPcRyGNNFWAC-JWc4wHZyGhTfQfbiDtmS_Zo', '$runtime-sign-in-code-hmac-sha256$v=1$FY-UwgWkAUbUUAjKZIrySIhmkDwEniQHxhEw7QwbcGU', 'admin'),"
+        <> "('fan@example.com', 'Fan', '$runtime-pbkdf2-sha256$v=1$i=600000$4JLcFedQMxkwHeAAxL_LjA$FOVkFBcXUNDrPTLYbFHMkqUGw8Bgnv9qdt_hC_bDQxA', '$runtime-sign-in-code-hmac-sha256$v=1$26QkhMJZyJsBDiH3ae0NfkdhN2ynV41mmuBmMphzqB8', 'fan')",
       on: conn,
     )
   conn

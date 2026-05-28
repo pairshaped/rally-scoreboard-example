@@ -2,7 +2,7 @@
 
 The Generator Framework uses its own server runtime state to manage live client connections. The runtime tracks small live facts such as connection identity, session/context, current page/route, active receiver interests, and outgoing `ToClient` delivery.
 
-This state is framework runtime state. App-owned live server state belongs in the Mount backend model. Page models stay on the client. Durable app data stays in SQLite or another database/cache. Large event snapshots should not be stored per connection.
+This state is framework runtime state. App-owned live server state belongs in the Mount backend model. Page models stay on the client. Durable app data stays in SQLite or another database/cache. Large event snapshots are not stored per connection.
 
 The live update flow is:
 
@@ -25,4 +25,4 @@ App-wide string notices use the Generator Framework's built-in layout/client-she
 
 This fits BEAM well: many mostly idle connection processes with small state, supervised brokers, and message-passing fanout. It also supports embedded widgets such as the Curling I/O results widget: initial snapshots can still use CDN-cached reads, while live score changes can be pushed as compact deltas.
 
-The Generator Framework can grow server runtime state over time for presence, current route tracking, receiver counts, fanout stats, slow-consumer stats, and admin introspection. App-owned per-connection server app state belongs in `backend.Model`. Durable app data stays in the database or cache.
+The Generator Framework runtime state supports presence, current route tracking, receiver counts, fanout stats, slow-consumer stats, and admin introspection. App-owned per-connection server app state belongs in `backend.Model`. Durable app data stays in the database or cache.
