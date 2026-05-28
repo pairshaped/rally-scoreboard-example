@@ -8,15 +8,20 @@
 ////
 //// Admin sockets also read the session cookie so RequestContext can include
 //// the authenticated user. Sign-in pages do not create this socket.
+////
+//// Admin game sockets join the live-update scope so multiple open score desks
+//// receive each other's score changes through the same ToClient broadcast lane.
 
 import generated/admin/request_context.{type RequestContext, RequestContext}
 import generated/admin/route
+import generated/protocol_wire
 import generated/runtime/effect_state
+import generated/runtime/live_updates
 import generated/ws_runtime
 import gleam/dict
 import gleam/dynamic
 import gleam/erlang/process
-import gleam/option.{None}
+import gleam/option.{None, Some}
 import lustre/effect.{type Effect}
 import mist.{type WebsocketConnection, type WebsocketMessage}
 import server/admin/authentication
@@ -33,6 +38,7 @@ pub fn on_init(
   hostname hostname: String,
   cookie_header cookie_header: Result(String, Nil),
 ) -> #(Nil, option.Option(process.Selector(dynamic.Dynamic))) {
+  live_updates.join()
   effect_state.put_ws_cookie_header(case cookie_header {
     Ok(h) -> h
     Error(Nil) -> ""
@@ -47,6 +53,7 @@ pub fn on_init(
 }
 
 pub fn on_close(state: Nil) -> Nil {
+  live_updates.leave()
   ws_runtime.on_close(state)
 }
 
@@ -62,7 +69,10 @@ pub fn handler(
     build_route:,
     make_request_context:,
     handle_to_server:,
-    handle_custom: fn(_msg) { option.None },
+    handle_custom: fn(msg) {
+      let update: ToClient = protocol_wire.coerce(msg)
+      Some(protocol_wire.encode_to_client(update))
+    },
   )
 }
 

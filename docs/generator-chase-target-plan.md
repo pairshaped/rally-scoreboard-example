@@ -4,6 +4,23 @@ This plan turns the next Generator Framework design targets into Scoreboard chan
 
 The goal is to keep Scoreboard small while forcing the generated modules to handle shapes already present in the larger Curling app.
 
+## Test Coverage Contract
+
+Every chase target must include tests. Generated snapshots and source-shape assertions are useful, but they are not enough for behavior, security, routing, authentication, authorization, or persistence.
+
+Use this rule for every implementation chunk:
+
+- generated-module changes need snapshot or source-shape coverage
+- runtime and app behavior need behavior tests
+- authentication and authorization rules need positive and negative tests
+- SSR boot contracts need encode/decode roundtrip coverage
+- navigation and layout rules need rendered HTML assertions or client view tests
+- persistence features need database assertions
+- live update features need fanout tests with at least two interested clients when relevant
+- security-sensitive redirects need safe and unsafe target tests
+
+Do not mark a chase target done when it only has source string checks.
+
 ## 1. Add Per-Mount Client Context
 
 ### Purpose
@@ -287,6 +304,11 @@ Generated dispatch should still provide a standard rejection path for:
 
 ### Tests
 
+- Email normalization trims and lowercases before storage, lookup, comparison, token creation, and session creation.
+- Blank or whitespace-only display names normalize to `None`.
+- `authentication_context.display_label` falls back to normalized email when `display_name` is `None`.
+- Admin SSR embeds a decodable admin client context.
+- Public SSR embeds a decodable public client context.
 - Admin user can load `/admin/games`.
 - Anonymous visitor hitting `/admin/games` redirects to `/sign_in?return_to=/admin/games`.
 - Public signed-in user cannot load `/admin/games`.
@@ -301,8 +323,12 @@ Generated dispatch should still provide a standard rejection path for:
 - Anonymous public visitor does not see the Admin nav link.
 - Admin signed-in user sees the Admin nav link.
 - Sign In and Sign Out links match authentication state.
+- Sign-in rejects unsafe `return_to` targets.
+- Sign-in accepts safe `return_to` targets.
 - Sign-out from admin redirects to a public route.
 - Sign-in page does not render the admin shell.
+- Favorite team writes persist by `user_id`.
+- Anonymous favorite attempts reject and do not write the database.
 - Client controls hidden for non-admin users are backed by server tests.
 
 ### Done Criteria

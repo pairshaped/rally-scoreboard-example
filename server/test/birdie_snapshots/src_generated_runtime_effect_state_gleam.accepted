@@ -8,6 +8,10 @@ title: src__generated__runtime__effect_state_gleam
 //// generated server effect and ws_handler modules.
 //// Derived from the Generator Framework's WebSocket effect-state runtime contract.
 //// Binds to server_generated_runtime_effect_state_ffi.erl for per-socket process state.
+////
+//// The backing FFI stores values in the WebSocket process dictionary. This
+//// keeps the public Gleam API typed while letting generated runtime callbacks
+//// share connection state without threading it through every effect boundary.
 
 @external(erlang, "server_generated_runtime_effect_state_ffi", "put_ws_state")
 pub fn put_ws_state(_conn: a, _server_context: b, _page: String) -> Nil {

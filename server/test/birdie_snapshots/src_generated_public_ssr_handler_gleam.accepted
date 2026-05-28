@@ -6,7 +6,11 @@ title: src__generated__public__ssr_handler_gleam
 ////
 //// Server-rendered HTML handler for the public Mount.
 //// Derived from server/public/pages load/view functions, generated/public/route.gleam,
-//// and server/server_context.gleam.
+//// server/public/shell.html, and server/server_context.gleam.
+////
+//// Each SSR branch runs the same page load used by the ToServer handler,
+//// renders the shared page view, and embeds the matching ToClient value as
+//// base64 ETF for browser init.
 
 import generated/public/route.{type Route}
 import generated/runtime/ssr
@@ -19,6 +23,7 @@ import libero/wire as libero_wire
 import lustre/element
 import mist.{type ResponseData}
 import server/helpers/db
+import server/public/client_context_loader
 import server/public/pages/games as public_games_handler
 import server/public/pages/games/id_ as public_game_handler
 import server/public/pages/standings as public_standings_handler
@@ -45,12 +50,15 @@ pub fn handle_request(
   let _ = session_id
   let _ = hostname
   ensure_atoms()
+  let context = client_context_loader.load(route:)
+  let client_context_base64 = libero_wire.encode_flags(context)
   let #(page_html, shared_state_base64) =
     load_route_data(route, server_context, query)
   ssr.render_shell_response(
     shell_path:,
     page_html:,
     shared_state_base64:,
+    client_context_base64:,
     fallback_shell: public_fallback_shell(),
   )
 }

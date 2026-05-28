@@ -36,6 +36,7 @@ import gleam/string
 import gleam/uri
 import mist.{type Connection, type ResponseData}
 import server/admin/authentication
+import server/authentication_context_loader
 import server/server_context.{type ServerContext}
 
 type Mount {
@@ -143,12 +144,22 @@ fn mount_admin_handle_ssr(
       |> dict.from_list
     option.None -> dict.new()
   }
+  let authentication_context = case
+    authentication.authenticated_user_id(
+      cookie_header: request.get_header(req, "cookie"),
+      session_id:,
+    )
+  {
+    option.Some(user_id) -> authentication_context_loader.from_user_id(user_id)
+    option.None -> option.None
+  }
   mount_admin_ssr_handler.handle_request(
     route: route,
     server_context: server_context,
     session_id: session_id,
     hostname: hostname,
     query: query,
+    authentication_context: authentication_context,
   )
   |> set_session_cookie_if_missing(req: req, session_id:)
 }

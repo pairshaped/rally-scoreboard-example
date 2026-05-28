@@ -3,21 +3,34 @@
 //// These tests assert the desired root API shape directly against the example
 //// files, independent of Generator Framework generator internals.
 
+import generated/admin/route as admin_route
+import generated/public/route as public_route
 import generated/runtime/authentication as authentication_runtime
 import generated/runtime/db
 import generated/runtime/effect as server_effect
 import generated/runtime/effect_runner
 import generated/runtime/effect_state
 import generated/runtime/jobs
+import generated/runtime/ssr
 import generated/runtime/system
 import generated/runtime/system_db
 import generated/runtime/trace
+import gleam/bit_array
+import gleam/bytes_tree
 import gleam/dynamic/decode
 import gleam/list
 import gleam/option
 import gleam/string
 import gleeunit/should
+import libero/error.{type DecodeError}
+import libero/wire as libero_wire
+import mist
 import server/admin/authentication
+import server/admin/client_context_loader as admin_client_context_loader
+import server/authentication_context_loader
+import server/public/client_context_loader as public_client_context_loader
+import shared/admin/client_context.{type AdminClientContext, AdminClientContext}
+import shared/authentication_context
 import simplifile
 import sqlight
 
@@ -472,6 +485,10 @@ pub fn generated_ws_handlers_delegate_to_package_runtime_test() {
   admin_handler
   |> contains("import generated/admin/request_context")
   |> should.be_true
+  admin_handler
+  |> contains("import generated/runtime/live_updates")
+  |> should.be_true
+  admin_handler |> contains("live_updates.join()") |> should.be_true
   admin_handler |> contains("ws_runtime.handler(") |> should.be_true
 
   public_handler |> contains("import generated/ws_runtime") |> should.be_true
@@ -548,7 +565,9 @@ pub fn mount_clients_use_generated_routers_and_effects_test() {
   admin_client
   |> contains("admin_receiver_dispatch.to_client(event)")
   |> should.be_true
-  admin_client |> contains("admin_effect.send_to_server(") |> should.be_true
+  admin_client
+  |> contains("admin_effect.send_page_init_and_command(")
+  |> should.be_true
   admin_client |> contains("admin_effect.read_dark_mode()") |> should.be_true
   admin_client
   |> contains("admin_effect.set_dark_mode(enabled)")
@@ -588,7 +607,7 @@ pub fn generated_browser_imports_stay_inside_static_build_prefix_test() {
 pub fn admin_save_updates_do_not_refetch_the_games_list_test() {
   let admin_client = read("../client/src/scoreboard_admin_client.gleam")
 
-  count(admin_client, "LoadAdminGames") |> should.equal(1)
+  count(admin_client, "admin_to_server.LoadAdminGames") |> should.equal(1)
   admin_client
   |> contains("games: upsert_game(games: model.games, detail: game)")
   |> should.be_true
@@ -896,6 +915,318 @@ pub fn generated_runtime_helpers_are_exercised_test() {
 pub fn generated_trace_helpers_are_exercised_test() {
   trace.try_call(fn() { "ok" }) |> should.equal(Ok("ok"))
   { trace.new_trace_id() |> string.length > 0 } |> should.be_true
+}
+
+pub fn admin_ssr_handler_loads_and_encodes_client_context_test() {
+  let admin_ssr = read("src/generated/admin/ssr_handler.gleam")
+  let admin_loader = read("src/server/admin/client_context_loader.gleam")
+
+  admin_ssr
+  |> contains("import server/admin/client_context_loader")
+  |> should.be_true
+  admin_ssr |> contains("client_context_loader.load(") |> should.be_true
+  admin_ssr
+  |> contains("libero_wire.encode_flags(context)")
+  |> should.be_true
+  admin_ssr |> contains("client_context_base64:") |> should.be_true
+  admin_loader |> contains("authentication_context") |> should.be_true
+  admin_loader
+  |> contains("league_name: \"Rally Rec League\"")
+  |> should.be_true
+}
+
+pub fn public_ssr_handler_loads_and_encodes_client_context_test() {
+  let public_ssr = read("src/generated/public/ssr_handler.gleam")
+  let public_loader = read("src/server/public/client_context_loader.gleam")
+
+  public_ssr
+  |> contains("import server/public/client_context_loader")
+  |> should.be_true
+  public_ssr |> contains("client_context_loader.load(") |> should.be_true
+  public_ssr
+  |> contains("libero_wire.encode_flags(context)")
+  |> should.be_true
+  public_ssr |> contains("client_context_base64:") |> should.be_true
+  public_loader
+  |> contains("league_name: \"Rally Rec League\"")
+  |> should.be_true
+}
+
+pub fn ssr_runtime_injects_client_context_into_shell_test() {
+  let runtime = read("src/generated/runtime/ssr.gleam")
+
+  runtime |> contains("window.__RUNTIME_CLIENT_CONTEXT__") |> should.be_true
+  runtime |> contains("client_context_base64") |> should.be_true
+}
+
+pub fn admin_and_public_client_contexts_are_different_types_test() {
+  let admin_ctx = read("../shared/src/shared/admin/client_context.gleam")
+  let public_ctx = read("../shared/src/shared/public/client_context.gleam")
+
+  admin_ctx |> contains("AuthenticationContext") |> should.be_true
+  admin_ctx |> contains("dark_mode: Bool") |> should.be_true
+  admin_ctx |> contains("toast: Option(String)") |> should.be_true
+
+  public_ctx |> contains("AuthenticationContext") |> should.be_false
+  public_ctx |> contains("dark_mode: Bool") |> should.be_false
+  public_ctx |> contains("toast: Option(String)") |> should.be_false
+}
+
+pub fn ssr_shell_embeds_context_base64_in_response_body_test() {
+  let resp =
+    ssr.render_shell_response(
+      shell_path: "src/server/admin/shell.html",
+      page_html: "<p>test</p>",
+      shared_state_base64: "",
+      client_context_base64: "dGVzdC1jb250ZXh0",
+      fallback_shell: "<html><head></head><body><div id=\"app\"></div></body></html>",
+    )
+  case resp.body {
+    mist.Bytes(tree) -> {
+      let bits = bytes_tree.to_bit_array(tree)
+      let assert Ok(html) = bit_array.to_string(bits)
+      html
+      |> contains("window.__RUNTIME_CLIENT_CONTEXT__='dGVzdC1jb250ZXh0'")
+      |> should.be_true
+    }
+    _ -> should.be_true(False)
+  }
+}
+
+pub fn ssr_context_roundtrips_through_encode_embed_decode_test() {
+  let auth_ctx =
+    authentication_context.AuthenticationContext(
+      user_id: 1,
+      email: "admin@example.com",
+      display_name: option.None,
+    )
+  let context =
+    AdminClientContext(
+      authentication_context: option.Some(auth_ctx),
+      league_name: "Rally Rec League",
+      dark_mode: False,
+      active_section: "games",
+      toast: option.None,
+    )
+
+  let encoded = libero_wire.encode_flags(context)
+  let result: Result(AdminClientContext, DecodeError) =
+    libero_wire.decode_flags_typed(encoded, "admin_client_context")
+  let assert Ok(decoded) = result
+
+  case decoded.authentication_context {
+    option.Some(ac) -> {
+      ac.user_id |> should.equal(1)
+      ac.email |> should.equal("admin@example.com")
+    }
+    option.None -> should.be_true(False)
+  }
+  decoded.league_name |> should.equal("Rally Rec League")
+  decoded.dark_mode |> should.equal(False)
+  decoded.active_section |> should.equal("games")
+}
+
+pub fn client_setup_exposes_read_client_context_test() {
+  let setup_gleam = read("../client/src/generated/setup.gleam")
+  let setup_js = read("../client/src/generated/setup_ffi.mjs")
+
+  setup_gleam |> contains("read_client_context") |> should.be_true
+  setup_js |> contains("readClientContext") |> should.be_true
+  setup_js |> contains("__RUNTIME_CLIENT_CONTEXT__") |> should.be_true
+  setup_js |> contains("ssrWindow") |> should.be_true
+}
+
+pub fn client_context_constructors_are_registered_for_etf_test() {
+  let codec = read("../client/src/generated/codec_ffi.mjs")
+  let atoms = read("src/generated/server_generated_protocol_atoms_ffi.erl")
+
+  codec |> contains("authentication_context") |> should.be_true
+  codec |> contains("admin_client_context") |> should.be_true
+  codec |> contains("public_client_context") |> should.be_true
+  codec
+  |> contains("authenticationContext.AuthenticationContext, 3")
+  |> should.be_true
+  codec
+  |> contains("adminClientContext.AdminClientContext, 5")
+  |> should.be_true
+  codec
+  |> contains("publicClientContext.PublicClientContext, 2")
+  |> should.be_true
+  atoms |> contains("<<\"authentication_context\">>") |> should.be_true
+  atoms |> contains("<<\"admin_client_context\">>") |> should.be_true
+  atoms |> contains("<<\"public_client_context\">>") |> should.be_true
+}
+
+pub fn admin_client_stores_and_renders_context_test() {
+  let admin_client = read("../client/src/scoreboard_admin_client.gleam")
+
+  admin_client
+  |> contains("import shared/admin/client_context.{type AdminClientContext}")
+  |> should.be_true
+  admin_client
+  |> contains("context: Option(AdminClientContext)")
+  |> should.be_true
+  admin_client |> contains("setup.read_client_context()") |> should.be_true
+  admin_client
+  |> contains("authentication_context.display_label(ac)")
+  |> should.be_true
+  admin_client |> contains("ctx.league_name <> \" admin\"") |> should.be_true
+}
+
+pub fn public_client_stores_context_test() {
+  let public_client = read("../client/src/scoreboard_public_client.gleam")
+
+  public_client
+  |> contains("import shared/public/client_context.{type PublicClientContext}")
+  |> should.be_true
+  public_client
+  |> contains("context: Option(PublicClientContext)")
+  |> should.be_true
+  public_client |> contains("setup.read_client_context()") |> should.be_true
+  public_client |> contains("ctx.league_name") |> should.be_true
+}
+
+pub fn entry_passes_authentication_context_to_admin_ssr_test() {
+  let entry = read("src/generated/entry.gleam")
+  let admin_ssr = read("src/generated/admin/ssr_handler.gleam")
+
+  entry
+  |> contains("import server/authentication_context_loader")
+  |> should.be_true
+  entry
+  |> contains("authentication_context_loader.from_user_id(user_id)")
+  |> should.be_true
+  entry
+  |> contains("authentication_context: authentication_context")
+  |> should.be_true
+  admin_ssr
+  |> contains("authentication_context: Option(AuthenticationContext)")
+  |> should.be_true
+  admin_ssr
+  |> contains("authentication_context:,")
+  |> should.be_true
+}
+
+pub fn authentication_context_type_has_expected_shape_and_helper_test() {
+  let source = read("../shared/src/shared/authentication_context.gleam")
+
+  source |> contains("user_id: Int") |> should.be_true
+  source |> contains("email: String") |> should.be_true
+  source |> contains("display_name: Option(String)") |> should.be_true
+  source |> contains("pub fn display_label(") |> should.be_true
+
+  let ctx =
+    authentication_context.AuthenticationContext(
+      user_id: 1,
+      email: "admin@example.com",
+      display_name: option.None,
+    )
+  authentication_context.display_label(ctx)
+  |> should.equal("admin@example.com")
+
+  let named_ctx =
+    authentication_context.AuthenticationContext(
+      user_id: 2,
+      email: "fan@example.com",
+      display_name: option.Some("Fan"),
+    )
+  authentication_context.display_label(named_ctx)
+  |> should.equal("Fan")
+}
+
+pub fn normalize_email_trims_whitespace_and_lowercases_test() {
+  authentication_context.normalize_email(" Admin@Example.com ")
+  |> should.equal("admin@example.com")
+  authentication_context.normalize_email("admin@example.com")
+  |> should.equal("admin@example.com")
+  authentication_context.normalize_email("  ADMIN@EXAMPLE.COM  ")
+  |> should.equal("admin@example.com")
+}
+
+pub fn normalize_display_name_trims_and_rejects_blank_test() {
+  authentication_context.normalize_display_name("Dana")
+  |> should.equal(option.Some("Dana"))
+  authentication_context.normalize_display_name("  Dana  ")
+  |> should.equal(option.Some("Dana"))
+  authentication_context.normalize_display_name("")
+  |> should.equal(option.None)
+  authentication_context.normalize_display_name("   ")
+  |> should.equal(option.None)
+}
+
+pub fn authentication_context_loader_returns_demo_users_test() {
+  let admin = authentication_context_loader.from_user_id(1)
+  case admin {
+    option.Some(ctx) -> {
+      ctx.user_id |> should.equal(1)
+      ctx.email |> should.equal("admin@example.com")
+      ctx.display_name |> should.equal(option.None)
+    }
+    option.None -> should.be_true(False)
+  }
+
+  let fan = authentication_context_loader.from_user_id(2)
+  case fan {
+    option.Some(ctx) -> {
+      ctx.user_id |> should.equal(2)
+      ctx.email |> should.equal("fan@example.com")
+      ctx.display_name |> should.equal(option.Some("Fan"))
+    }
+    option.None -> should.be_true(False)
+  }
+
+  authentication_context_loader.from_user_id(99)
+  |> should.equal(option.None)
+}
+
+pub fn admin_context_loader_passes_authentication_context_through_test() {
+  let auth_ctx =
+    authentication_context.AuthenticationContext(
+      user_id: 1,
+      email: "admin@example.com",
+      display_name: option.None,
+    )
+
+  let ctx =
+    admin_client_context_loader.load(
+      route: admin_route.AdminGames,
+      authentication_context: option.Some(auth_ctx),
+      dark_mode: False,
+    )
+  case ctx.authentication_context {
+    option.Some(ac) -> {
+      ac.user_id |> should.equal(1)
+      ac.email |> should.equal("admin@example.com")
+    }
+    option.None -> should.be_true(False)
+  }
+  ctx.league_name |> should.equal("Rally Rec League")
+  should.equal(ctx.dark_mode, False)
+  ctx.active_section |> should.equal("games")
+}
+
+pub fn admin_context_loader_returns_none_authentication_for_sign_in_routes_test() {
+  let ctx =
+    admin_client_context_loader.load(
+      route: admin_route.AdminSignInPassword,
+      authentication_context: option.None,
+      dark_mode: False,
+    )
+  case ctx.authentication_context {
+    option.Some(_) -> should.be_true(False)
+    option.None -> Nil
+  }
+  ctx.active_section |> should.equal("sign_in")
+}
+
+pub fn public_context_loader_returns_expected_shape_test() {
+  let ctx = public_client_context_loader.load(route: public_route.Games)
+  ctx.league_name |> should.equal("Rally Rec League")
+  ctx.active_section |> should.equal("games")
+
+  let standings_ctx =
+    public_client_context_loader.load(route: public_route.Standings)
+  standings_ctx.active_section |> should.equal("standings")
 }
 
 fn read(path: String) -> String {

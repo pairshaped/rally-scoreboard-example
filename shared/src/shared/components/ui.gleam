@@ -3,6 +3,7 @@
 //// These are pure Lustre elements. They do not import transport, modem,
 //// browser setup, or route modules.
 
+import gleam/list
 import lustre/attribute
 import lustre/element.{type Element}
 import lustre/element/html
@@ -30,7 +31,22 @@ pub fn section_head(title: String, subtitle: String) -> Element(msg) {
   html.div([attribute.class("section-head")], [
     html.div([], [
       html.h1([], [html.text(title)]),
-      html.p([attribute.class("muted")], [html.text(subtitle)]),
+      case subtitle {
+        "" -> html.span([], [])
+        _ -> html.p([attribute.class("muted")], [html.text(subtitle)])
+      },
+    ]),
+  ])
+}
+
+pub fn page_explainer(summary: String, points: List(String)) -> Element(msg) {
+  html.section([attribute.class("page-explainer")], [
+    html.details([], [
+      html.summary([], [html.text(summary)]),
+      html.ul(
+        [],
+        list.map(points, fn(point) { html.li([], [html.text(point)]) }),
+      ),
     ]),
   ])
 }

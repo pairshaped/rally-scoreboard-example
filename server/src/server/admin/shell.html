@@ -66,6 +66,48 @@
       margin-bottom: 20px;
     }
 
+    .page-explainer {
+      margin: -8px 0 20px;
+    }
+
+    .page-explainer details {
+      background: var(--score-panel);
+      border: 1px solid var(--score-line);
+      border-left: 4px solid var(--score-blue);
+      border-radius: 8px;
+    }
+
+    .page-explainer summary {
+      cursor: pointer;
+      font-weight: 750;
+      list-style: none;
+      padding: 12px 14px;
+    }
+
+    .page-explainer summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .page-explainer summary::after {
+      content: "+";
+      float: right;
+      color: var(--score-muted);
+    }
+
+    .page-explainer details[open] summary::after {
+      content: "-";
+    }
+
+    .page-explainer ul {
+      color: var(--score-muted);
+      margin: 0;
+      padding: 6px 14px 14px 34px;
+    }
+
+    .page-explainer li + li {
+      margin-top: 6px;
+    }
+
     .brand {
       display: flex;
       align-items: center;

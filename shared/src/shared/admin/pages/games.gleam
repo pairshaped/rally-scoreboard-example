@@ -11,7 +11,7 @@ import lustre/element.{type Element}
 import lustre/element/html
 import lustre/event
 import shared/api/domain/game.{
-  type AdminGameDetail, type AdminGameSummary, Final,
+  type AdminGameDetail, type AdminGameSummary, type GameScoreUpdate, Final,
 }
 import shared/api/to_client
 import shared/components/ui
@@ -20,6 +20,7 @@ pub type Msg {
   LoadedGames(List(AdminGameSummary))
   CreatedGame(AdminGameDetail)
   SavedGame(AdminGameDetail)
+  ScoreUpdated(GameScoreUpdate)
   Failed(String)
 }
 
@@ -29,6 +30,7 @@ pub fn receive(event: to_client.ToClient) -> Option(Msg) {
     to_client.GameCreated(game:) -> Some(CreatedGame(game))
     to_client.ScoreUpdateSaved(game:) -> Some(SavedGame(game))
     to_client.ResultSaved(game:) -> Some(SavedGame(game))
+    to_client.GameScoreUpdated(update:) -> Some(ScoreUpdated(update))
     to_client.AdminError(reason:) -> Some(Failed(reason))
     _ -> None
   }

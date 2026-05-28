@@ -47,7 +47,7 @@
       padding: 28px 20px 44px;
     }
 
-    .topbar, .panel, .game-card, .stat-card {
+    .topbar, .panel, .game-card {
       background: var(--score-panel);
       border: 1px solid var(--score-line);
       border-radius: 8px;
@@ -60,6 +60,48 @@
       gap: 16px;
       padding: 16px 18px;
       margin-bottom: 20px;
+    }
+
+    .page-explainer {
+      margin: -8px 0 20px;
+    }
+
+    .page-explainer details {
+      background: var(--score-panel);
+      border: 1px solid var(--score-line);
+      border-left: 4px solid var(--score-blue);
+      border-radius: 8px;
+    }
+
+    .page-explainer summary {
+      cursor: pointer;
+      font-weight: 750;
+      list-style: none;
+      padding: 12px 14px;
+    }
+
+    .page-explainer summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .page-explainer summary::after {
+      content: "+";
+      float: right;
+      color: var(--score-muted);
+    }
+
+    .page-explainer details[open] summary::after {
+      content: "-";
+    }
+
+    .page-explainer ul {
+      color: var(--score-muted);
+      margin: 0;
+      padding: 6px 14px 14px 34px;
+    }
+
+    .page-explainer li + li {
+      margin-top: 6px;
     }
 
     .brand {
@@ -167,6 +209,43 @@
 
     .game-card {
       padding: 14px;
+    }
+
+    .team-record-card {
+      margin: 0;
+    }
+
+    .team-record-title {
+      margin-bottom: 14px;
+      color: var(--score-muted);
+    }
+
+    .team-record-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin: 0;
+    }
+
+    .team-record-grid > div {
+      min-width: 0;
+      padding: 10px 12px;
+      border: 1px solid var(--score-line);
+      border-radius: 6px;
+      background: var(--score-bg);
+    }
+
+    .team-record-grid dt {
+      color: var(--score-muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .team-record-grid dd {
+      margin: 2px 0 0;
+      font-size: 22px;
+      font-weight: 800;
+      line-height: 1.1;
     }
 
     .team-row, .score-line {
@@ -284,6 +363,10 @@
       .topbar {
         align-items: flex-start;
         flex-direction: column;
+      }
+
+      .team-record-grid {
+        grid-template-columns: 1fr;
       }
     }
   </style>

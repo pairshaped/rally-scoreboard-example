@@ -16,3 +16,8 @@ pub fn setup() -> Nil {
 pub fn read_shared_state() -> Option(a) {
   option.None
 }
+
+@external(javascript, "./setup_ffi.mjs", "readClientContext")
+pub fn read_client_context() -> Option(a) {
+  option.None
+}

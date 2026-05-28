@@ -20,13 +20,25 @@ pub fn render_shell_response(
   shell_path shell_path: String,
   page_html page_html: String,
   shared_state_base64 shared_state_base64: String,
+  client_context_base64 client_context_base64: String,
   fallback_shell fallback_shell: String,
 ) -> response.Response(ResponseData) {
   let html = case simplifile.read(shell_path) {
     Ok(content) ->
-      assemble_shell(content, page_html, shared_state_base64)
+      assemble_shell(
+        content,
+        page_html,
+        shared_state_base64,
+        client_context_base64,
+      )
       <> browser_env_script()
-    Error(_) -> assemble_shell(fallback_shell, page_html, shared_state_base64)
+    Error(_) ->
+      assemble_shell(
+        fallback_shell,
+        page_html,
+        shared_state_base64,
+        client_context_base64,
+      )
   }
   response.new(200)
   |> response.set_header("content-type", "text/html")
@@ -37,16 +49,27 @@ fn assemble_shell(
   shell: String,
   page_html: String,
   shared_state_base64: String,
+  client_context_base64: String,
 ) -> String {
-  let script = case shared_state_base64 {
+  let shared_state_script = case shared_state_base64 {
     "" -> ""
     _ ->
       "<script>window.__RUNTIME_CLIENT_SHARED_STATE__='"
       <> shared_state_base64
       <> "'</script>\n"
   }
+  let context_script = case client_context_base64 {
+    "" -> ""
+    _ ->
+      "<script>window.__RUNTIME_CLIENT_CONTEXT__='"
+      <> client_context_base64
+      <> "'</script>\n"
+  }
   shell
-  |> string.replace(each: "</head>", with: script <> "</head>")
+  |> string.replace(
+    each: "</head>",
+    with: shared_state_script <> context_script <> "</head>",
+  )
   |> inject_page_html(page_html)
 }
 

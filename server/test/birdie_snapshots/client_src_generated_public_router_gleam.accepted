@@ -4,9 +4,12 @@ title: client__src__generated__public__router_gleam
 ---
 //// Generated. Do not edit.
 ////
-//// Route parser and path builder for this client app.
-//// Derived from the discovered page routes and the shared Route type from
-//// generated/public/route.
+//// Browser-side route parser and path builder for the public Mount.
+//// Derived from the Mount route root (`/`), discovered page route patterns,
+//// and the shared Route type from generated/public/route.
+////
+//// Client shells use this module for Modem navigation and href generation.
+//// It should stay in lockstep with server/src/generated/public/router.gleam.
 
 import generated/public/route.{type Route}
 import gleam/result

@@ -4,7 +4,9 @@ import gleam/option.{None, Some}
 import gleam/string
 import gleeunit/should
 import lustre/element
-import shared/api/domain/game.{Final, PublicGameSummary, Team}
+import shared/api/domain/game.{
+  Final, GameScoreUpdate, Live, PublicGameSummary, Team,
+}
 import shared/api/domain/team.{type TeamDetail, TeamDetail}
 import shared/api/to_client
 import shared/public/pages/team as team_page
@@ -49,9 +51,12 @@ pub fn loaded_team_renders_name_and_code_test() {
 
 pub fn loaded_team_renders_record_and_stats_test() {
   let html = render_view(Some(team_page.Model(team: make_detail())))
-  html |> string.contains("W-L: 12-3") |> should.be_true
-  html |> string.contains("PF: 600") |> should.be_true
-  html |> string.contains("PA: 450") |> should.be_true
+  html |> string.contains("W-L") |> should.be_true
+  html |> string.contains("12-3") |> should.be_true
+  html |> string.contains("PF") |> should.be_true
+  html |> string.contains("600") |> should.be_true
+  html |> string.contains("PA") |> should.be_true
+  html |> string.contains("450") |> should.be_true
 }
 
 pub fn loaded_team_shows_recent_games_header_test() {
@@ -100,7 +105,86 @@ pub fn team_receive_maps_failed_to_msg_test() {
   |> should.equal(Some(team_page.LoadFailed("boom")))
 }
 
+pub fn team_receive_maps_score_update_to_msg_test() {
+  let update =
+    GameScoreUpdate(
+      game_id: 1,
+      home_score: 4,
+      away_score: 5,
+      period: "Final",
+      status: Final,
+    )
+  team_page.receive(to_client.GameScoreUpdated(update:))
+  |> should.equal(Some(team_page.UpdatedScore(update)))
+}
+
 pub fn team_receive_returns_none_for_unknown_test() {
   team_page.receive(to_client.StandingsLoaded(rows: []))
   |> should.equal(None)
+}
+
+pub fn score_update_changes_recent_game_test() {
+  let detail =
+    TeamDetail(..make_detail(), recent_games: [
+      PublicGameSummary(
+        id: 1,
+        home: Team(code: "TOR", name: "Toronto", slug: "tor"),
+        away: Team(code: "NYC", name: "New York", slug: "nyc"),
+        home_score: 1,
+        away_score: 2,
+        status: Live("4th"),
+      ),
+    ])
+  let updated =
+    team_page.apply_score_update(
+      team_page.Model(team: detail),
+      GameScoreUpdate(
+        game_id: 1,
+        home_score: 3,
+        away_score: 4,
+        period: "4th",
+        status: Live("4th"),
+      ),
+    )
+  let html = render_view(Some(updated))
+  html |> string.contains("3") |> should.be_true
+  html |> string.contains("4") |> should.be_true
+}
+
+pub fn final_score_update_changes_record_and_points_test() {
+  let detail =
+    TeamDetail(
+      code: "MTL",
+      name: "Montreal",
+      slug: "mtl",
+      wins: 0,
+      losses: 0,
+      points_for: 0,
+      points_against: 0,
+      recent_games: [
+        PublicGameSummary(
+          id: 1,
+          home: Team(code: "TOR", name: "Toronto", slug: "tor"),
+          away: Team(code: "MTL", name: "Montreal", slug: "mtl"),
+          home_score: 4,
+          away_score: 4,
+          status: Live("4th"),
+        ),
+      ],
+    )
+  let updated =
+    team_page.apply_score_update(
+      team_page.Model(team: detail),
+      GameScoreUpdate(
+        game_id: 1,
+        home_score: 4,
+        away_score: 5,
+        period: "Final",
+        status: Final,
+      ),
+    )
+  updated.team.wins |> should.equal(1)
+  updated.team.losses |> should.equal(0)
+  updated.team.points_for |> should.equal(5)
+  updated.team.points_against |> should.equal(4)
 }

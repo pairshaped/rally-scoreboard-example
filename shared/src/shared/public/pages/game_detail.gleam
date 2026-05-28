@@ -83,10 +83,7 @@ pub fn view_game_detail_page(
 ) -> Element(msg) {
   html.main([], [
     html.section([attribute.class("panel")], [
-      ui.section_head(
-        "Game detail",
-        "Rendered by SSR, hydrated from embedded ETF page data.",
-      ),
+      ui.section_head("Game detail", ""),
       view_game_detail(game, on_navigate_team),
     ]),
   ])

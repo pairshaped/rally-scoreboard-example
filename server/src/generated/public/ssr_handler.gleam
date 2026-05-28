@@ -19,6 +19,7 @@ import libero/wire as libero_wire
 import lustre/element
 import mist.{type ResponseData}
 import server/helpers/db
+import server/public/client_context_loader
 import server/public/pages/games as public_games_handler
 import server/public/pages/games/id_ as public_game_handler
 import server/public/pages/standings as public_standings_handler
@@ -45,12 +46,15 @@ pub fn handle_request(
   let _ = session_id
   let _ = hostname
   ensure_atoms()
+  let context = client_context_loader.load(route:)
+  let client_context_base64 = libero_wire.encode_flags(context)
   let #(page_html, shared_state_base64) =
     load_route_data(route, server_context, query)
   ssr.render_shell_response(
     shell_path:,
     page_html:,
     shared_state_base64:,
+    client_context_base64:,
     fallback_shell: public_fallback_shell(),
   )
 }

@@ -29,6 +29,7 @@ import shared/api/domain/standing
 import shared/api/to_client as public_to_client
 import shared/api/to_server as public_to_server
 import shared/components/ui
+import shared/public/client_context.{type PublicClientContext}
 import shared/public/pages/game_detail as public_game_detail_page
 import shared/public/pages/games as public_games_page
 import shared/public/pages/standings as public_standings_page
@@ -47,6 +48,7 @@ type Model {
     // filters (e.g. ?team=TOR). The initial load and page-init paths both
     // forward query to the server through RequestContext.
     query: Dict(String, String),
+    context: Option(PublicClientContext),
   )
 }
 
@@ -61,20 +63,30 @@ pub fn main() -> Nil {
   let assert True = codec.ensure_decoders()
   setup.setup()
 
-  let flags = case setup.read_shared_state() {
+  let ssr_event = case setup.read_shared_state() {
     option.Some(value) -> {
       let event: public_to_client.ToClient = transport.coerce(value)
       option.Some(event)
     }
     option.None -> option.None
   }
+  let context = case setup.read_client_context() {
+    option.Some(value) -> {
+      let ctx: PublicClientContext = transport.coerce(value)
+      option.Some(ctx)
+    }
+    option.None -> option.None
+  }
 
   let app = lustre.application(init, update, view)
-  let assert Ok(_) = lustre.start(app, "#app", flags)
+  let assert Ok(_) = lustre.start(app, "#app", #(ssr_event, context))
   Nil
 }
 
-fn init(flags: Option(public_to_client.ToClient)) -> #(Model, Effect(Msg)) {
+fn init(
+  flags: #(Option(public_to_client.ToClient), Option(PublicClientContext)),
+) -> #(Model, Effect(Msg)) {
+  let #(ssr_event, context) = flags
   let uri_result = modem.initial_uri()
   let route =
     uri_result
@@ -94,8 +106,9 @@ fn init(flags: Option(public_to_client.ToClient)) -> #(Model, Effect(Msg)) {
       notice: "",
       dark_mode: public_effect.read_dark_mode(),
       query:,
+      context:,
     )
-  let #(model, hydrated) = case flags {
+  let #(model, hydrated) = case ssr_event {
     option.Some(event) -> {
       let msgs = public_receiver_dispatch.to_client(event)
       let model =
@@ -311,6 +324,15 @@ fn handle_team(
       Model(..model, team: Some(public_team_page.Model(team:)), notice: ""),
       effect.none(),
     )
+    public_team_page.UpdatedScore(update) -> #(
+      Model(
+        ..model,
+        team: option.map(model.team, fn(team_model) {
+          public_team_page.apply_score_update(team_model, update)
+        }),
+      ),
+      effect.none(),
+    )
     public_team_page.LoadFailed(reason) -> #(
       Model(..model, notice: reason),
       effect.none(),
@@ -327,7 +349,12 @@ fn view(model: Model) -> Element(Msg) {
   }
 
   html.div([attribute.class("scoreboard-app")], [
-    topbar(route: model.route, dark_mode: model.dark_mode),
+    topbar(
+      route: model.route,
+      dark_mode: model.dark_mode,
+      context: model.context,
+    ),
+    explainer(route: model.route),
     case model.route {
       public_route.Games ->
         public_games_page.view_games_page(
@@ -356,16 +383,63 @@ fn view(model: Model) -> Element(Msg) {
   ])
 }
 
+fn explainer(route route: public_route.Route) -> Element(Msg) {
+  case route {
+    public_route.Games ->
+      ui.page_explainer("What this page exercises", [
+        "Route: generated from the public Mount file path for /games.",
+        "Load: sends LoadGames during page init and renders GamesLoaded data.",
+        "ToClient: receives GamesLoaded, GameScoreUpdated, and GamesLoadFailed.",
+        "Fanout: score updates patch visible game cards without a reload.",
+        "Navigation: team and detail links use the generated public router.",
+      ])
+    public_route.GamesId(id) ->
+      ui.page_explainer("What this page exercises", [
+        "Route: generated from the public Mount file path for /games/:id.",
+        "Load: parses " <> id <> " and sends LoadGame with that game id.",
+        "ToClient: receives GameLoaded, GameScoreUpdated, and GamesLoadFailed.",
+        "Fanout: score updates for this game patch the detail view score and status.",
+      ])
+    public_route.Standings ->
+      ui.page_explainer("What this page exercises", [
+        "Route: generated from the public Mount file path for /standings.",
+        "Load: sends LoadStandings during page init.",
+        "ToClient: receives StandingsLoaded, StandingsUpdated, and PowerRankingsLoaded.",
+        "Fanout: finalized game results publish fresh standings rows.",
+      ])
+    public_route.Team(slug) ->
+      ui.page_explainer("What this page exercises", [
+        "Route: generated from the public Mount file path for /teams/:slug.",
+        "Load: sends LoadTeam with the slug " <> slug <> ".",
+        "ToClient: receives TeamLoaded, GameScoreUpdated, and GamesLoadFailed.",
+        "Fanout: the socket joins games involving this team, so score pushes only arrive for relevant games.",
+        "Stats: final game updates patch recent games plus W-L, points for, and points against.",
+      ])
+    public_route.NotFound ->
+      ui.page_explainer("What this page exercises", [
+        "Route: falls through the generated public router to NotFound.",
+        "Load: no page ToServer command is sent.",
+        "ToClient: no page receiver is attached for this route.",
+      ])
+  }
+}
+
 fn topbar(
   route route: public_route.Route,
   dark_mode dark_mode: Bool,
+  context context: Option(PublicClientContext),
 ) -> Element(Msg) {
   html.header([attribute.class("topbar")], [
     html.div([attribute.class("brand")], [
       html.span([attribute.class("brand-mark")], [html.text("S")]),
       html.div([], [
         html.strong([], [html.text("Scoreboard")]),
-        html.p([attribute.class("muted")], [html.text("Public scores")]),
+        html.p([attribute.class("muted")], [
+          html.text(case context {
+            Some(ctx) -> ctx.league_name
+            None -> "Public scores"
+          }),
+        ]),
       ]),
     ]),
     html.nav([attribute.class("nav")], [

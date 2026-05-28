@@ -1,12 +1,14 @@
 %% Generated. Do not edit.
 %%
 %% Per-type wire-format encode/decode transformers.
-%% Derived from the shared API codec graph, mirroring the client
-%% codec_ffi.mjs constructor registry one-for-one.
+%% Derived from the shared API codec graph, shared authentication_context,
+%% and per-Mount client context types, mirroring the client codec_ffi.mjs
+%% constructor registry one-for-one.
 %%
-%% Every ToServer, ToClient, and shared API domain constructor is
-%% represented. Backend types (e.g. server/admin/model.Model) are
-%% intentionally absent: they do not cross the wire.
+%% Every ToServer, ToClient, shared API domain, authentication context,
+%% and per-Mount client context constructor is represented. Backend types
+%% (e.g. server/admin/model.Model) are intentionally absent: they do not
+%% cross the wire.
 %%
 %% Constructor atoms are unique across the whole shared API graph,
 %% so encode/decode functions are identity transforms. The Generator

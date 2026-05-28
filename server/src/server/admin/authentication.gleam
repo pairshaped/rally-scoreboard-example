@@ -16,6 +16,7 @@ import gleam/int
 import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/string
+import shared/authentication_context
 
 const admin_email = "admin@example.com"
 
@@ -54,12 +55,12 @@ pub fn sign_in_code_hash() -> String {
 }
 
 pub fn verify_password(email email: String, password password: String) -> Bool {
-  normalize_email(email) == admin_email
+  authentication_context.normalize_email(email) == admin_email
   && authentication_runtime.verify(stored: password_hash(), secret: password)
 }
 
 pub fn verify_sign_in_code(email email: String, code code: String) -> Bool {
-  normalize_email(email) == admin_email
+  authentication_context.normalize_email(email) == admin_email
   && authentication_runtime.verify_sign_in_code(
     stored: sign_in_code_hash(),
     scope: admin_email,
@@ -180,10 +181,4 @@ fn parse_cookie_header(header: String) -> List(#(String, String)) {
       Error(Nil) -> Error(Nil)
     }
   })
-}
-
-fn normalize_email(value: String) -> String {
-  value
-  |> string.trim
-  |> string.lowercase
 }

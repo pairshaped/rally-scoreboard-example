@@ -69,6 +69,11 @@ async function signIn() {
   updateCookies(res2);
 }
 
+run("gleam", ["run", "-m", "marmot", "migrate"], serverDir);
+run("sqlite3", [
+  "db/scoreboard.db",
+  ".read db/migrations/003_six_team_round_robin_seed.sql",
+], serverDir);
 run("gleam", ["build"], clientDir);
 run("gleam", ["build"], serverDir);
 
@@ -188,6 +193,23 @@ try {
     assert.equal(response.status, 200);
   });
 
+  await check("seed data is a six-team round robin", async () => {
+    assert.equal(sqliteValue("SELECT COUNT(*) FROM teams;"), "6");
+    assert.equal(sqliteValue("SELECT COUNT(*) FROM games;"), "15");
+    assert.equal(
+      sqliteValue(
+        "SELECT COUNT(*) FROM (SELECT CASE WHEN home_code < away_code THEN home_code || '-' || away_code ELSE away_code || '-' || home_code END AS pair FROM games GROUP BY pair HAVING COUNT(*) = 1);",
+      ),
+      "15",
+    );
+    assert.equal(
+      sqliteValue(
+        "SELECT COUNT(*) FROM games WHERE home_code = away_code;",
+      ),
+      "0",
+    );
+  });
+
   await check("served shells use separate mount loaders", async () => {
     const publicHtml = await textAt("/games");
     const adminHtml = await textAt("/admin/games");
@@ -259,6 +281,111 @@ try {
     }
   });
 
+  await check("admin game tabs receive live score broadcasts", async () => {
+    const adminProtocol = protocol;
+    const adminToServer = await import(
+      "../../client/build/dev/javascript/scoreboard_shared/shared/api/to_server.mjs"
+    );
+
+    const senderWs = await openWs("/admin/ws");
+    const observerWs = await openWs("/admin/ws");
+    try {
+      senderWs.send(toPayload(adminProtocol.encode_request("AdminGames", 0, null)));
+      await expectResponse(adminProtocol, senderWs, 0);
+
+      observerWs.send(toPayload(adminProtocol.encode_request("AdminGames", 0, null)));
+      await expectResponse(adminProtocol, observerWs, 0);
+
+      senderWs.send(toPayload(adminProtocol.encode_request(
+        "to_server",
+        1,
+        adminToServer.ToServer$UpdateScore(1, 16, 11, "4th"),
+      )));
+
+      const senderPush = await waitForPushMatching(
+        adminProtocol,
+        senderWs,
+        "ScoreUpdateSaved",
+      );
+      assert.equal(senderPush.value.game.id, 1);
+
+      const observerPush = await waitForPushMatching(
+        adminProtocol,
+        observerWs,
+        "GameScoreUpdated",
+      );
+      assert.equal(observerPush.value.update.game_id, 1);
+      assert.equal(observerPush.value.update.home_score, 16);
+      assert.equal(observerPush.value.update.away_score, 11);
+    } finally {
+      senderWs.close();
+      observerWs.close();
+    }
+  });
+
+  await check("admin score update persists across SSR reload", async () => {
+    const adminProtocol = protocol;
+    const adminToServer = await import(
+      "../../client/build/dev/javascript/scoreboard_shared/shared/api/to_server.mjs"
+    );
+
+    const adminWs = await openWs("/admin/ws");
+    try {
+      adminWs.send(toPayload(adminProtocol.encode_request("AdminGames", 0, null)));
+      await expectResponse(adminProtocol, adminWs, 0);
+
+      adminWs.send(toPayload(adminProtocol.encode_request(
+        "to_server",
+        1,
+        adminToServer.ToServer$UpdateScore(1, 14, 9, "4th"),
+      )));
+      const push = await waitForPush(adminProtocol, adminWs);
+      assert.equal(push.value.constructor.name, "ScoreUpdateSaved");
+      assert.equal(push.value.game.id, 1);
+      assert.equal(push.value.game.home_score, 14);
+      assert.equal(push.value.game.away_score, 9);
+
+      const reloadedAdminHtml = await textAt("/admin/games");
+      assert.match(
+        reloadedAdminHtml,
+        /<strong[^>]*>MTL<\/strong>[\s\S]*?<span class="score">9<\/span>[\s\S]*?<strong[^>]*>TOR<\/strong>[\s\S]*?<span class="score">14<\/span>/,
+      );
+    } finally {
+      adminWs.close();
+    }
+  });
+
+  await check("admin score update writes through to SQLite", async () => {
+    const adminProtocol = protocol;
+    const adminToServer = await import(
+      "../../client/build/dev/javascript/scoreboard_shared/shared/api/to_server.mjs"
+    );
+
+    const adminWs = await openWs("/admin/ws");
+    try {
+      adminWs.send(toPayload(adminProtocol.encode_request("AdminGames", 0, null)));
+      await expectResponse(adminProtocol, adminWs, 0);
+
+      adminWs.send(toPayload(adminProtocol.encode_request(
+        "to_server",
+        1,
+        adminToServer.ToServer$UpdateScore(1, 15, 10, "4th"),
+      )));
+      const push = await waitForPush(adminProtocol, adminWs);
+      assert.equal(push.value.constructor.name, "ScoreUpdateSaved");
+      assert.equal(push.value.game.id, 1);
+
+      assert.equal(
+        sqliteValue(
+          "SELECT home_score || '|' || away_score || '|' || period FROM games WHERE id = 1;",
+        ),
+        "15|10|4th",
+      );
+    } finally {
+      adminWs.close();
+    }
+  });
+
   await check("admin final broadcasts GameScoreUpdated to public sockets", async () => {
     const publicProtocol = protocol;
     const adminProtocol = protocol;
@@ -275,30 +402,45 @@ try {
       adminWs.send(toPayload(adminProtocol.encode_request("AdminGames", 0, null)));
       await expectResponse(adminProtocol, adminWs, 0);
 
+      const finalizedPromise = waitForPushMatching(
+        adminProtocol,
+        adminWs,
+        "ResultSaved",
+      );
+      const standingsPushPromise = waitForPushMatching(
+        publicProtocol,
+        standingsWs,
+        "GameScoreUpdated",
+      );
       adminWs.send(toPayload(adminProtocol.encode_request(
         "to_server",
         1,
         adminToServer.ToServer$MarkFinal(1),
       )));
 
-      const finalized = await waitForPush(adminProtocol, adminWs);
+      const finalized = await finalizedPromise;
       assert.equal(finalized.value.constructor.name, "ResultSaved");
       assert.equal(finalized.value.game.id, 1);
 
+      const unfinalizedPromise = waitForPushMatching(
+        adminProtocol,
+        adminWs,
+        "ScoreUpdateSaved",
+      );
       adminWs.send(toPayload(adminProtocol.encode_request(
         "to_server",
         2,
         adminToServer.ToServer$UpdateScore(1, 12, 7, "4th"),
       )));
 
-      const unfinalized = await waitForPush(adminProtocol, adminWs);
+      const unfinalized = await unfinalizedPromise;
       assert.equal(unfinalized.value.constructor.name, "ScoreUpdateSaved");
       assert.equal(unfinalized.value.game.id, 1);
 
       // MarkFinal also broadcasts StandingsUpdated through the same
       // live_updates.broadcast path. Both push types share the identical
       // pg fanout, so GameScoreUpdated arrival proves the transport.
-      const markFinalPush = await waitForPush(publicProtocol, standingsWs);
+      const markFinalPush = await standingsPushPromise;
       assert.equal(
         markFinalPush.value.constructor.name,
         "GameScoreUpdated",
@@ -343,7 +485,11 @@ try {
         2,
         adminToServer.ToServer$UpdateScore(2, 5, 3, "OT"),
       )));
-      const adminPush = await waitForPush(adminProtocol, adminWs);
+      const adminPush = await waitForPushMatching(
+        adminProtocol,
+        adminWs,
+        "ScoreUpdateSaved",
+      );
       assert.equal(adminPush.value.constructor.name, "ScoreUpdateSaved");
       const live2 = await waitForPush(publicProtocol, detailWs);
       assert.equal(live2.value.constructor.name, "GameScoreUpdated");
@@ -359,6 +505,46 @@ try {
       assert.equal(push.value.game.id, 2);
     } finally {
       detailWs.close();
+      adminWs.close();
+    }
+  });
+
+  await check("team detail receives live updates for its games", async () => {
+    const publicProtocol = protocol;
+    const adminProtocol = protocol;
+    const adminToServer = await import(
+      "../../client/build/dev/javascript/scoreboard_shared/shared/api/to_server.mjs"
+    );
+
+    const teamWs = await openWs("/ws");
+    const adminWs = await openWs("/admin/ws");
+    try {
+      teamWs.send(toPayload(publicProtocol.encode_request(
+        "Team",
+        0,
+        "montréal-meteors",
+      )));
+      await expectResponse(publicProtocol, teamWs, 0);
+
+      adminWs.send(toPayload(adminProtocol.encode_request("AdminGames", 0, null)));
+      await expectResponse(adminProtocol, adminWs, 0);
+
+      adminWs.send(toPayload(adminProtocol.encode_request(
+        "to_server",
+        1,
+        adminToServer.ToServer$UpdateScore(1, 17, 12, "4th"),
+      )));
+
+      const teamPush = await waitForPushMatching(
+        publicProtocol,
+        teamWs,
+        "GameScoreUpdated",
+      );
+      assert.equal(teamPush.value.update.game_id, 1);
+      assert.equal(teamPush.value.update.home_score, 17);
+      assert.equal(teamPush.value.update.away_score, 12);
+    } finally {
+      teamWs.close();
       adminWs.close();
     }
   });
@@ -426,11 +612,13 @@ try {
     assert.match(filteredHtml, /<div id="app">/);
     assert.match(filteredHtml, /window\.__RUNTIME_CLIENT_SHARED_STATE__='[^']+'/);
     assert.match(filteredHtml, /Toronto Towers/);
-    // The seeded VAN–NYC game should appear in all-games but not in the TOR filter.
-    assert.match(allHtml, /Vancouver Voyagers/);
+    // Seeded game 3 is BOS-LAK, so it should appear in all-games but not
+    // in the TOR filter. Team names are not enough because every team plays TOR
+    // somewhere in a round robin.
+    assert.match(allHtml, /href="\/games\/3"/);
     assert.ok(
-      !filteredHtml.includes("Vancouver Voyagers"),
-      "Filtered /games?team=TOR should not contain Vancouver Voyagers",
+      !filteredHtml.includes('href="/games/3"'),
+      "Filtered /games?team=TOR should not contain game 3",
     );
   });
 
@@ -473,7 +661,7 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
-console.log("19 smoke checks passed");
+console.log("24 smoke checks passed");
 
 async function check(name, fn) {
   try {
@@ -502,6 +690,26 @@ function run(command, args, cwd) {
       result.stderr,
     ].join("\n"),
   );
+}
+
+function sqliteValue(sql) {
+  const result = spawnSync("sqlite3", ["db/scoreboard.db", sql], {
+    cwd: serverDir,
+    encoding: "utf8",
+    stdio: "pipe",
+  });
+
+  assert.equal(
+    result.status,
+    0,
+    [
+      "sqlite3 query failed",
+      result.stdout,
+      result.stderr,
+    ].join("\n"),
+  );
+
+  return result.stdout.trim();
 }
 
 function toPayload(value) {
@@ -534,6 +742,15 @@ async function waitForPush(protocol, ws) {
     if (frame.kind === "push" && frame.module === "to_client") return frame;
   }
   throw new Error("Timed out waiting for to_client push");
+}
+
+async function waitForPushMatching(protocol, ws, constructorName) {
+  const deadline = Date.now() + 4000;
+  while (Date.now() < deadline) {
+    const frame = await waitForPush(protocol, ws);
+    if (frame.value.constructor.name === constructorName) return frame;
+  }
+  throw new Error(`Timed out waiting for ${constructorName} push`);
 }
 
 function first(list) {

@@ -100,10 +100,7 @@ pub fn view_games_page(
 ) -> Element(msg) {
   html.main([], [
     html.section([attribute.class("panel")], [
-      ui.section_head(
-        "Today",
-        "Live scores streamed through the ToClient wire lane.",
-      ),
+      ui.section_head("Today", ""),
       view_game_grid(games, on_navigate_team, on_navigate_game),
     ]),
   ])

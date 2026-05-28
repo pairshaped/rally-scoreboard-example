@@ -69,7 +69,12 @@ do_ensure() ->
         <<"scheduled">>,
         <<"standing_row">>,
         <<"team">>,
-        <<"team_detail">>
+        <<"team_detail">>,
+        %% Authentication context constructor atoms
+        <<"authentication_context">>,
+        %% Client context constructor atoms
+        <<"admin_client_context">>,
+        <<"public_client_context">>
     ]),
     persistent_term:put({libero, wire_module}, 'server_generated_protocol_wire_ffi'),
     persistent_term:put({?MODULE, done}, true),

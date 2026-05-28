@@ -13,14 +13,17 @@ import generated/runtime/ssr
 import gleam/dict
 import gleam/http/response
 import gleam/io
+import gleam/option.{type Option}
 import libero/wire as libero_wire
 import lustre/element
 import mist.{type ResponseData}
+import server/admin/client_context_loader
 import server/admin/pages/games as admin_games_handler
 import server/helpers/db
 import server/server_context.{type ServerContext}
 import shared/admin/pages/games as admin_games_page
 import shared/api/to_client
+import shared/authentication_context.{type AuthenticationContext}
 
 @external(erlang, "server_generated_protocol_atoms_ffi", "ensure")
 fn ensure_atoms() -> Nil
@@ -33,16 +36,25 @@ pub fn handle_request(
   session_id session_id: String,
   hostname hostname: String,
   query query: dict.Dict(String, String),
+  authentication_context authentication_context: Option(AuthenticationContext),
 ) -> response.Response(ResponseData) {
   let _ = session_id
   let _ = hostname
   let _ = query
   ensure_atoms()
+  let context =
+    client_context_loader.load(
+      route:,
+      authentication_context:,
+      dark_mode: False,
+    )
+  let client_context_base64 = libero_wire.encode_flags(context)
   let #(page_html, shared_state_base64) = load_route_data(route, server_context)
   ssr.render_shell_response(
     shell_path:,
     page_html:,
     shared_state_base64:,
+    client_context_base64:,
     fallback_shell: admin_fallback_shell(),
   )
 }

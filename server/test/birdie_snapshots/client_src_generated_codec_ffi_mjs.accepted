@@ -6,7 +6,9 @@ title: client__src__generated__codec_ffi_mjs
 //
 // Plain ETF constructor registry for the root API graph.
 // Derived from shared/api/to_server.gleam, shared/api/to_client.gleam,
-// and every exported wire-visible custom type under shared/api/domain/.
+// every exported wire-visible custom type under shared/api/domain/,
+// shared/authentication_context, and per-Mount client context types
+// under shared/admin/ and shared/public/.
 //
 // Module paths are intentionally absent from wire identity. Constructor
 // atoms must be unique across the whole shared API graph.
@@ -17,6 +19,9 @@ import * as toClient from "../../scoreboard_shared/shared/api/to_client.mjs";
 import * as game from "../../scoreboard_shared/shared/api/domain/game.mjs";
 import * as standing from "../../scoreboard_shared/shared/api/domain/standing.mjs";
 import * as team from "../../scoreboard_shared/shared/api/domain/team.mjs";
+import * as authenticationContext from "../../scoreboard_shared/shared/authentication_context.mjs";
+import * as adminClientContext from "../../scoreboard_shared/shared/admin/client_context.mjs";
+import * as publicClientContext from "../../scoreboard_shared/shared/public/client_context.mjs";
 
 registerConstructor("load_games", toServer.LoadGames, 0);
 registerConstructor("load_game", toServer.LoadGame, 1);
@@ -52,6 +57,9 @@ registerConstructor("final", game.Final, 0);
 registerConstructor("standing_row", standing.StandingRow, 7);
 registerConstructor("power_ranking_row", standing.PowerRankingRow, 7);
 registerConstructor("team_detail", team.TeamDetail, 8);
+registerConstructor("authentication_context", authenticationContext.AuthenticationContext, 3);
+registerConstructor("admin_client_context", adminClientContext.AdminClientContext, 5);
+registerConstructor("public_client_context", publicClientContext.PublicClientContext, 2);
 
 export function ensure_decoders() {
   return true;

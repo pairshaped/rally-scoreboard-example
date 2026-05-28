@@ -44,12 +44,37 @@ export function readCurrentQuery() {
   return query;
 }
 
+/** Resolve the browser window or a Node.js test globalThis mock. */
+function ssrWindow() {
+  return typeof window !== "undefined" ? window : globalThis.window;
+}
+
 /** Decode the SSR-embedded ToClient payload (base64 ETF) into an Option(ToClient). */
 export function readSharedState() {
-  if (typeof window === "undefined") return new None();
-  const raw = window.__RUNTIME_CLIENT_SHARED_STATE__;
+  const win = ssrWindow();
+  if (!win) return new None();
+  const raw = win.__RUNTIME_CLIENT_SHARED_STATE__;
   if (!raw || raw === "" || raw === "{}") return new None();
-  delete window.__RUNTIME_CLIENT_SHARED_STATE__;
+  delete win.__RUNTIME_CLIENT_SHARED_STATE__;
+  try {
+    const binary = atob(raw);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    const result = decode_safe(bytes);
+    if (result instanceof Ok) {
+      return new Some(result[0]);
+    }
+    return new None();
+  } catch (_) { return new None(); }
+}
+
+/** Decode the SSR-embedded client context payload (base64 ETF) into an Option(ClientContext). */
+export function readClientContext() {
+  const win = ssrWindow();
+  if (!win) return new None();
+  const raw = win.__RUNTIME_CLIENT_CONTEXT__;
+  if (!raw || raw === "" || raw === "{}") return new None();
+  delete win.__RUNTIME_CLIENT_CONTEXT__;
   try {
     const binary = atob(raw);
     const bytes = new Uint8Array(binary.length);

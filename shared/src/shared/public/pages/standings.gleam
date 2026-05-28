@@ -85,10 +85,7 @@ pub fn view_standings_page(
 ) -> Element(msg) {
   html.main([], [
     html.section([attribute.class("panel")], [
-      ui.section_head(
-        "League table",
-        "Standings and power rankings share the same ToClient receiver path.",
-      ),
+      ui.section_head("League table", ""),
       view_standings(rows, on_navigate_team),
     ]),
   ])
