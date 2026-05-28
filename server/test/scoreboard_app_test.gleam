@@ -3,6 +3,7 @@
 //// These tests assert the desired root API shape directly against the example
 //// files, independent of Generator Framework generator internals.
 
+import generated/admin/request_context.{RequestContext}
 import generated/admin/route as admin_route
 import generated/public/route as public_route
 import generated/runtime/authentication as authentication_runtime
@@ -17,6 +18,7 @@ import generated/runtime/system_db
 import generated/runtime/trace
 import gleam/bit_array
 import gleam/bytes_tree
+import gleam/dict
 import gleam/dynamic/decode
 import gleam/list
 import gleam/option
@@ -27,9 +29,15 @@ import libero/wire as libero_wire
 import mist
 import server/admin/authentication
 import server/admin/client_context_loader as admin_client_context_loader
+import server/admin/model.{Model}
+import server/admin/pages/games as admin_games_handler
 import server/authentication_context_loader
+import server/helpers/domain
 import server/public/client_context_loader as public_client_context_loader
+import server/server_context.{ServerContext}
 import shared/admin/client_context.{type AdminClientContext, AdminClientContext}
+import shared/api/domain/game
+import shared/api/to_client
 import shared/authentication_context
 import simplifile
 import sqlight
@@ -706,6 +714,83 @@ pub fn admin_score_controls_live_next_to_team_names_test() {
   admin_shell
   |> contains(".admin-status-row")
   |> should.be_true
+}
+
+pub fn game_status_returns_final_when_final_is_1_test() {
+  // Regression: final=0 with period "Final" returns Live("Final"), not Final.
+  // correct_result must use the final_admin_result row (final=1), not the
+  // update_admin_score row (final=0).
+  case domain.game_status(1, "Final") {
+    game.Final -> Nil
+    _ -> should.be_true(False)
+  }
+}
+
+pub fn game_status_returns_live_when_final_is_0_test() {
+  case domain.game_status(0, "Final") {
+    game.Live("Final") -> Nil
+    _ -> should.be_true(False)
+  }
+}
+
+pub fn correct_result_returns_final_status_test() {
+  let conn = test_db_with_game()
+  let context = ServerContext(db: conn, system_db: conn)
+  let request_context =
+    RequestContext(
+      route: admin_route.NotFound,
+      query: dict.new(),
+      session_id: "test",
+      user_id: option.Some(1),
+      hostname: "localhost",
+    )
+
+  let #(_, effect) =
+    admin_games_handler.correct_result(
+      game_id: 1,
+      home_score: 5,
+      away_score: 3,
+      request_context:,
+      server_context: context,
+      backend_model: Model,
+    )
+
+  effect_runner.run_to_client_effect(effect, fn(msg) {
+    case msg {
+      to_client.ResultSaved(game:) -> {
+        case game.status {
+          game.Final -> Nil
+          _ -> should.be_true(False)
+        }
+      }
+      _ -> Nil
+    }
+  })
+}
+
+fn test_db_with_game() -> sqlight.Connection {
+  let assert Ok(conn) = db.open(":memory:")
+  let assert Ok(Nil) =
+    sqlight.exec(
+      "CREATE TABLE teams (code TEXT PRIMARY KEY, name TEXT NOT NULL, slug TEXT NOT NULL)",
+      on: conn,
+    )
+  let assert Ok(Nil) =
+    sqlight.exec(
+      "CREATE TABLE games (id INTEGER PRIMARY KEY, home_code TEXT NOT NULL REFERENCES teams(code), away_code TEXT NOT NULL REFERENCES teams(code), home_score INTEGER NOT NULL DEFAULT 0, away_score INTEGER NOT NULL DEFAULT 0, period TEXT NOT NULL DEFAULT 'Scheduled', final INTEGER NOT NULL DEFAULT 0, CHECK (home_code <> away_code), CHECK (final IN (0, 1)))",
+      on: conn,
+    )
+  let assert Ok(Nil) =
+    sqlight.exec(
+      "INSERT INTO teams (code, name, slug) VALUES ('TOR', 'Toronto', 'toronto'), ('NYC', 'New York', 'new-york')",
+      on: conn,
+    )
+  let assert Ok(Nil) =
+    sqlight.exec(
+      "INSERT INTO games (id, home_code, away_code, home_score, away_score, period, final) VALUES (1, 'TOR', 'NYC', 2, 1, '3rd', 0)",
+      on: conn,
+    )
+  conn
 }
 
 pub fn to_server_frames_are_fire_and_forget_test() {
