@@ -403,6 +403,32 @@ Use app code for:
 - SQL decisions
 - domain-specific page state
 
+For app-owned SQL, prefer file names that describe the operation:
+
+`<verb>_<entity>[_qualifier].sql`
+
+Use the primary entity the handler is asking for, not every table the query
+touches. Include the entity for write operations so Marmot function and module
+names stay readable as the schema grows. Use qualifiers for audience, route,
+or sub-operation.
+
+Examples:
+
+- `create_game.sql`
+- `get_game.sql`
+- `list_admin_games.sql`
+- `list_public_games.sql`
+- `update_game_score.sql`
+- `update_game_final.sql`
+- `get_team_by_slug.sql`
+- `list_standings.sql`
+
+Prefer placing the SQL file under the directory for the primary query owner:
+
+- `sql/games/` for game commands and game lists
+- `sql/teams/` for team entry points such as `get_team_by_slug.sql`
+- `sql/standings/` for standings reads
+
 ### Tests
 
 This step is mostly design review. If it creates no code, the output should be a checked-in doc and a short list of recommended follow-up issues.
