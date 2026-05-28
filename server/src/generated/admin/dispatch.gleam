@@ -3,15 +3,20 @@
 //// Root API ToServer dispatch for the admin Mount.
 ////
 //// Derived from shared/api/to_server.gleam and the page/server modules
-//// that define matching `*_to_server` handlers. The WebSocket runtime
-//// decodes one typed ToServer value, then calls this function so the
-//// backend can update its model and emit zero or more ToClient messages.
+//// that define matching handlers. The WebSocket runtime decodes one typed
+//// ToServer value, then calls this function so the backend can update its
+//// model and emit zero or more ToClient messages.
 ////
 //// Constructors owned by the other Mount (public) are rejected through
 //// the generated rejection helper, which logs the rejection as an issue
 //// so operators can detect misrouted commands.
+////
+//// Page-load constructors call the page module's unified `load` function
+//// and wrap the returned ToClient into an effect.
 
-import generated/admin/request_context.{type RequestContext}
+import generated/admin/request_context.{type RequestContext, RequestContext}
+import generated/admin/route
+import generated/runtime/effect as server_effect
 import generated/runtime/reject
 import lustre/effect.{type Effect}
 import server/admin/model.{type Model}
@@ -67,12 +72,13 @@ pub fn to_server(
         server_context:,
         backend_model:,
       )
-    to_server.LoadAdminGames ->
-      server_admin_pages_games.load_admin_games(
-        request_context:,
-        server_context:,
-        backend_model:,
-      )
+    to_server.LoadAdminGames -> {
+      let request_context =
+        RequestContext(..request_context, route: route.AdminGames)
+      let result =
+        server_admin_pages_games.load(request_context:, server_context:)
+      #(backend_model, server_effect.send_to_client(result))
+    }
     to_server.CreateGame(home_code:, away_code:) ->
       server_admin_pages_games.create_game(
         home_code:,

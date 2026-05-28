@@ -4,10 +4,11 @@
 //// Derived from server/admin/pages load/view functions, generated/admin/route.gleam,
 //// server/admin/shell.html, and server/server_context.gleam.
 ////
-//// Each SSR branch runs the same page load used by the ToServer handler,
-//// renders the shared page view, and embeds the matching ToClient value as
-//// base64 ETF for browser init.
+//// Each SSR branch calls the same unified page `load` function that the
+//// WebSocket dispatch uses, renders the shared page view from the returned
+//// ToClient, and embeds the same ToClient value as base64 ETF for browser init.
 
+import generated/admin/request_context.{type RequestContext, RequestContext}
 import generated/admin/route.{type Route}
 import generated/runtime/ssr
 import gleam/dict
@@ -19,7 +20,6 @@ import lustre/element
 import mist.{type ResponseData}
 import server/admin/client_context_loader
 import server/admin/pages/games as admin_games_handler
-import server/helpers/db
 import server/server_context.{type ServerContext}
 import shared/admin/pages/games as admin_games_page
 import shared/api/to_client
@@ -38,9 +38,6 @@ pub fn handle_request(
   query query: dict.Dict(String, String),
   authentication_context authentication_context: Option(AuthenticationContext),
 ) -> response.Response(ResponseData) {
-  let _ = session_id
-  let _ = hostname
-  let _ = query
   ensure_atoms()
   let context =
     client_context_loader.load(
@@ -49,7 +46,16 @@ pub fn handle_request(
       dark_mode: False,
     )
   let client_context_base64 = libero_wire.encode_flags(context)
-  let #(page_html, shared_state_base64) = load_route_data(route, server_context)
+  let request_context =
+    RequestContext(
+      route:,
+      query:,
+      session_id:,
+      user_id: option.map(authentication_context, fn(ctx) { ctx.user_id }),
+      hostname:,
+    )
+  let #(page_html, shared_state_base64) =
+    load_route_data(request_context, server_context)
   ssr.render_shell_response(
     shell_path:,
     page_html:,
@@ -60,13 +66,14 @@ pub fn handle_request(
 }
 
 fn load_route_data(
-  route: Route,
+  request_context: RequestContext,
   server_context: ServerContext,
 ) -> #(String, String) {
-  case route {
-    route.AdminGames ->
-      case admin_games_handler.load_admin_games_for_ssr(server_context) {
-        Ok(games) -> {
+  case request_context.route {
+    route.AdminGames -> {
+      let result = admin_games_handler.load(request_context:, server_context:)
+      case result {
+        to_client.AdminGamesLoaded(games:) -> {
           let nil_on_adjust = fn(_, _, _, _) { Nil }
           let nil_on_final = fn(_) { Nil }
           #(
@@ -77,14 +84,11 @@ fn load_route_data(
               nil_on_final,
             )
               |> element.to_string,
-            libero_wire.encode_flags(to_client.AdminGamesLoaded(games:)),
+            libero_wire.encode_flags(result),
           )
         }
-        Error(reason) -> {
-          let _ =
-            io.println_error(
-              "SSR admin/games load failed: " <> db.to_string(reason),
-            )
+        to_client.AdminError(reason:) -> {
+          let _ = io.println_error("SSR admin/games load failed: " <> reason)
           #(
             admin_games_page.view_games(
               [],
@@ -96,7 +100,9 @@ fn load_route_data(
             "",
           )
         }
+        _ -> #("", "")
       }
+    }
     _ -> #("", "")
   }
 }

@@ -4,21 +4,20 @@
 //// Derived from server/public/pages load/view functions, generated/public/route.gleam,
 //// server/public/shell.html, and server/server_context.gleam.
 ////
-//// Each SSR branch runs the same page load used by the ToServer handler,
-//// renders the shared page view, and embeds the matching ToClient value as
-//// base64 ETF for browser init.
+//// Each SSR branch calls the same unified page `load` function that the
+//// WebSocket dispatch uses, renders the shared page view from the returned
+//// ToClient, and embeds the same ToClient value as base64 ETF for browser init.
 
+import generated/public/request_context.{type RequestContext, RequestContext}
 import generated/public/route.{type Route}
 import generated/runtime/ssr
 import gleam/dict
 import gleam/http/response
-import gleam/int
 import gleam/io
 import gleam/option.{type Option}
 import libero/wire as libero_wire
 import lustre/element
 import mist.{type ResponseData}
-import server/helpers/db
 import server/public/client_context_loader
 import server/public/pages/games as public_games_handler
 import server/public/pages/games/id_ as public_game_handler
@@ -45,8 +44,6 @@ pub fn handle_request(
   query query: dict.Dict(String, String),
   authentication_context authentication_context: Option(AuthenticationContext),
 ) -> response.Response(ResponseData) {
-  let _ = session_id
-  let _ = hostname
   ensure_atoms()
   let context =
     client_context_loader.load(
@@ -55,8 +52,16 @@ pub fn handle_request(
       authentication_context:,
     )
   let client_context_base64 = libero_wire.encode_flags(context)
+  let request_context =
+    RequestContext(
+      route:,
+      query:,
+      session_id:,
+      user_id: option.map(authentication_context, fn(ctx) { ctx.user_id }),
+      hostname:,
+    )
   let #(page_html, shared_state_base64) =
-    load_route_data(route, server_context, query)
+    load_route_data(request_context, server_context)
   ssr.render_shell_response(
     shell_path:,
     page_html:,
@@ -67,111 +72,93 @@ pub fn handle_request(
 }
 
 fn load_route_data(
-  route: Route,
+  request_context: RequestContext,
   server_context: ServerContext,
-  query: dict.Dict(String, String),
 ) -> #(String, String) {
   let nil_on_navigate = fn(_) { Nil }
   let nil_on_game = fn(_) { Nil }
 
-  case route {
+  case request_context.route {
     route.Games -> {
-      let team_filter = case dict.get(query, "team") {
-        Ok(team) -> option.Some(team)
-        Error(Nil) -> option.None
-      }
-      case
-        public_games_handler.load_games_for_ssr(server_context, team_filter)
-      {
-        Ok(games) -> #(
+      let result = public_games_handler.load(request_context:, server_context:)
+      case result {
+        to_client.GamesLoaded(games:) -> #(
           public_games_page.view_games_page(games, nil_on_navigate, nil_on_game)
             |> element.to_string,
-          libero_wire.encode_flags(to_client.GamesLoaded(games:)),
+          libero_wire.encode_flags(result),
         )
-        Error(reason) -> {
-          let _ =
-            io.println_error(
-              "SSR public/games load failed: " <> db.to_string(reason),
-            )
+        to_client.GamesLoadFailed(reason:) -> {
+          let _ = io.println_error("SSR public/games load failed: " <> reason)
           #(
             public_games_page.view_games_page([], nil_on_navigate, nil_on_game)
               |> element.to_string,
             "",
           )
         }
+        _ -> #("", "")
       }
     }
-    route.GamesId(id) ->
-      case int.parse(id) {
-        Ok(game_id) ->
-          case public_game_handler.load_game_for_ssr(server_context, game_id) {
-            Ok(game) -> #(
-              public_game_detail_page.view_game_detail_page(
-                option.Some(game),
-                nil_on_navigate,
-              )
-                |> element.to_string,
-              libero_wire.encode_flags(to_client.GameLoaded(game:)),
-            )
-            Error(reason) -> {
-              let _ =
-                io.println_error(
-                  "SSR public/game-detail load failed: " <> db.to_string(reason),
-                )
-              #(
-                public_game_detail_page.view_game_detail_page(
-                  option.None,
-                  nil_on_navigate,
-                )
-                  |> element.to_string,
-                "",
-              )
-            }
-          }
-        Error(_) -> #(
+    route.GamesId(_) -> {
+      let result = public_game_handler.load(request_context:, server_context:)
+      case result {
+        to_client.GameLoaded(game:) -> #(
           public_game_detail_page.view_game_detail_page(
-            option.None,
+            option.Some(game),
             nil_on_navigate,
           )
             |> element.to_string,
-          "",
+          libero_wire.encode_flags(result),
         )
+        to_client.GamesLoadFailed(reason:) -> {
+          let _ =
+            io.println_error("SSR public/game-detail load failed: " <> reason)
+          #(
+            public_game_detail_page.view_game_detail_page(
+              option.None,
+              nil_on_navigate,
+            )
+              |> element.to_string,
+            "",
+          )
+        }
+        _ -> #("", "")
       }
-    route.Standings ->
-      case public_standings_handler.load_standings_for_ssr(server_context) {
-        Ok(rows) -> #(
+    }
+    route.Standings -> {
+      let result =
+        public_standings_handler.load(request_context:, server_context:)
+      case result {
+        to_client.StandingsLoaded(rows:) -> #(
           public_standings_page.view_standings_page(rows, nil_on_navigate)
             |> element.to_string,
-          libero_wire.encode_flags(to_client.StandingsLoaded(rows:)),
+          libero_wire.encode_flags(result),
         )
-        Error(reason) -> {
+        to_client.GamesLoadFailed(reason:) -> {
           let _ =
-            io.println_error(
-              "SSR public/standings load failed: " <> db.to_string(reason),
-            )
+            io.println_error("SSR public/standings load failed: " <> reason)
           #(
             public_standings_page.view_standings_page([], nil_on_navigate)
               |> element.to_string,
             "",
           )
         }
+        _ -> #("", "")
       }
-    route.Team(slug) ->
-      case public_team_handler.load_team_for_ssr(server_context, slug) {
-        Ok(detail) -> #(
+    }
+    route.Team(_) -> {
+      let result = public_team_handler.load(request_context:, server_context:)
+      case result {
+        to_client.TeamLoaded(team:) -> #(
           public_team_page.view_team_page(
-            option.Some(public_team_page.Model(team: detail)),
+            option.Some(public_team_page.Model(team:)),
             nil_on_navigate,
             nil_on_game,
           )
             |> element.to_string,
-          libero_wire.encode_flags(to_client.TeamLoaded(team: detail)),
+          libero_wire.encode_flags(result),
         )
-        Error(reason) -> {
-          let _ =
-            io.println_error(
-              "SSR public/team load failed: " <> db.to_string(reason),
-            )
+        to_client.GamesLoadFailed(reason:) -> {
+          let _ = io.println_error("SSR public/team load failed: " <> reason)
           #(
             public_team_page.view_team_page(
               option.None,
@@ -182,7 +169,9 @@ fn load_route_data(
             "",
           )
         }
+        _ -> #("", "")
       }
+    }
     route.SignIn | route.SignInPassword | route.SignInCode -> #("", "")
     route.NotFound -> #("", "")
   }

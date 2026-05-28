@@ -99,13 +99,29 @@ browser-only UI data
 local mapping functions
 ```
 
-Local page `Msg` values do not cross the wire. Server results and pushed events cross the wire as `ToClient` values, then page or layout receivers map them into local messages.
+Pages are a three-target concept. A route may have matching page modules in shared, client, and server targets:
+
+```text
+shared/src/shared/{mount}/pages/**/*.gleam
+client/src/client/{mount}/pages/**/*.gleam
+server/src/server/{mount}/pages/**/*.gleam
+```
+
+The shared page module owns target-neutral page model, view, pure helpers, and mapping code that compiles for both JavaScript and Erlang.
+
+The client page module owns browser-only behavior such as DOM effects, JS FFI, drag and drop, subscriptions, browser event handling, client-side init/update glue, and client `ToClient` handlers.
+
+The server page module owns server-only behavior such as page data loading, database access, authorization checks, provider/server API calls, and command handlers.
+
+The Generator Framework wires matching target modules together by route. It does not ask app authors to put all page code in one file and split that file into target-specific generated output.
+
+Local page `Msg` values do not cross the wire. Server results and pushed events cross the wire as `ToClient` values, then page, layout, or shared-state client handlers map them into local messages.
 
 Page modules may import `shared/api` domain and protocol types. They do not define wire-visible `ToServer`, `ToClient`, or wire domain types.
 
 ## User-Owned Package Layout
 
-User-owned app code is Mount-first. A Mount is a runnable app boundary mounted at a route root. The Mount owns page views, client pages, receivers, backend state, SSR loaders, its shell, and Mount-specific policy.
+User-owned app code is Mount-first. A Mount is a runnable app boundary mounted at a route root. The Mount owns shared page modules, client page modules, server page modules, backend state, SSR loaders, its shell, and Mount-specific policy.
 
 The shared package has one exception: `shared/api` is the wire graph and is not Mount-namespaced. It does not use `shared/api/public` or `shared/api/admin`.
 
@@ -135,7 +151,6 @@ Public client and server user code lives under:
 
 ```text
 client/src/client/public/pages/**/*.gleam
-client/src/client/public/receivers.gleam
 client/src/client/public/client_shared_state.gleam
 
 server/src/server/public/backend.gleam
@@ -149,7 +164,6 @@ Admin client and server user code lives under:
 
 ```text
 client/src/client/admin/pages/**/*.gleam
-client/src/client/admin/receivers.gleam
 client/src/client/admin/client_shared_state.gleam
 
 server/src/server/admin/backend.gleam
@@ -277,23 +291,35 @@ pub fn add_article_comment(
 
 The Generator Framework fails generation when a `ToServer` constructor has no handler or more than one matching handler. Handler signature mismatches fail during generation when the Generator Framework can explain them, or during compilation when the generated dispatch calls the handler.
 
-## Client Receivers
+## Client ToClient Handlers
 
-`ToClient` is the server emission vocabulary. Pages, layouts, and shared client state may receive `ToClient` values through generated receiver dispatch or explicit receiver functions. Generated receiver dispatch owns the exhaustive `ToClient` case for active receivers.
+`ToClient` is the server emission vocabulary. Pages, layouts, and shared client state handle `ToClient` values through generated `to_client` dispatch and constructor-named client handlers. Generated `to_client` dispatch owns the exhaustive `ToClient` case for active handlers.
 
-Client receivers live with the client code that owns the local `Msg` they produce. Page-owned receivers live in page modules. Layout or shared-state receivers live with those client modules.
+Client `ToClient` handlers live with the client code that owns the local `Msg` they produce. Page-owned handlers live in client page modules. Layout or shared-state handlers live with those client modules.
 
-A receiver maps constructor fields into local messages:
+A client `ToClient` handler maps constructor fields into local messages. Its function name is the snake_case form of the `ToClient` constructor name:
 
 ```gleam
-pub fn article_comment_added_to_client(comment comment: article.Comment) -> Msg {
+pub fn article_comment_added(comment comment: article.Comment) -> Msg {
   ReceivedArticleCommentAdded(comment)
 }
 ```
 
-Apps may expose a user-owned receiver hub per Mount. In that shape, generated client receiver dispatch delegates to the hub and the hub returns the mounted page or layout messages to dispatch into the Lustre app. This keeps route-specific receiver policy in user code while preserving the generated transport boundary.
+Handlers receive constructor fields as named arguments. They do not receive the whole `ToClient` value. The return type is the local `Msg` owned by the page, layout, or shared-state module.
 
-A `ToClient` constructor can be accepted by more than one active receiver. The Generator Framework drops opportunistic messages with no active receiver when the app declares that behavior. Constructors with no receiver anywhere are generation warnings or errors according to policy.
+This mirrors server `ToServer` handler naming:
+
+```text
+ToServer.LoadGames       -> server handler load_games
+ToServer.UpdateScore     -> server handler update_score
+
+ToClient.GamesLoaded     -> client handler games_loaded
+ToClient.GameScoreUpdated -> client handler game_score_updated
+```
+
+The Generator Framework recognizes only the constructor-derived snake_case handler name for this convention. A generic `receive` function is not a `ToClient` handler. The Generator Framework fails generation when a discovered client `ToClient` handler has a signature that does not match the constructor fields. It also fails when a module declares interest in a `ToClient` constructor but the matching snake_case handler is missing. Constructors with no active handler follow the app's configured no-handler policy.
+
+A `ToClient` constructor can be handled by more than one active client module. The Generator Framework fans the value out to every active handler for that constructor.
 
 ## Client Shared State
 
@@ -313,7 +339,7 @@ The shared target owns `ClientSharedState` and `ClientSharedStateMsg` because SS
 
 When `ClientSharedState` exists, page and layout update functions may return `Option(ClientSharedStateMsg)`. Generated root client code applies those messages through `ClientSharedState.update`.
 
-Server-originated `ToClient` values never update `ClientSharedState` directly. Page, layout, or shared-state receiver code decides how a received API value changes local and shared client state.
+Server-originated `ToClient` values never update `ClientSharedState` directly. Page, layout, or shared-state client handlers decide how a `ToClient` value changes local and shared client state.
 
 ## Backend State
 
@@ -350,7 +376,7 @@ pub type ToClient {
 }
 ```
 
-The browser receives every server-originated `ToClient` through the same receiver dispatch. Receiver handlers signal client-side interest. If multiple active receivers handle the constructor, the Generator Framework fans the value out to all of them. If no active receiver handles the constructor, the configured no-receiver policy applies.
+The browser routes every server-originated `ToClient` through the same generated `to_client` dispatch. Constructor-named client handlers signal client-side interest. If multiple active handlers handle the constructor, the Generator Framework fans the value out to all of them. If no active handler handles the constructor, the configured no-handler policy applies.
 
 The Generator Framework does not generate separate live-update topic or payload contract types.
 
@@ -363,7 +389,7 @@ The SSR contract:
 - SSR handlers run the route's page load on HTTP request, producing the same `ToClient` result the client would receive over WebSocket.
 - The server converts the `ToClient` result into the shared page model and renders the shared Lustre view to an HTML string with `lustre/element.to_string`.
 - The HTML response embeds the loaded page data as a base64-encoded ETF `ToClient` value in `__RUNTIME_CLIENT_SHARED_STATE__`. Route, params, and query are not embedded; the client derives them from `window.location` via `modem.initial_uri()`.
-- Client init reads the embedded `ToClient` as Lustre init flags (`Option(ToClient)`). When hydration data exists, the client seeds its model through the existing receiver path and skips the initial `ToServer Load*` command. When hydration data is absent (SSR load failure, non-SSR navigation), the client sends the initial `Load*` command over WebSocket as normal.
+- Client init reads the embedded `ToClient` as Lustre init flags (`Option(ToClient)`). When hydration data exists, the client seeds its model through the generated `to_client` dispatch path and skips the initial `ToServer Load*` command. When hydration data is absent (SSR load failure, non-SSR navigation), the client sends the initial `Load*` command over WebSocket as normal.
 - After hydration, SPA navigation still sends `page_init + ToServer` through the WebSocket connection.
 - Live fanout (`ToClient` broadcast via `pg`) continues as the post-boot update path.
 
@@ -375,7 +401,7 @@ The Scoreboard example's generated files describe the intended generated output 
 
 ## Generated Ownership
 
-One `[[tools.rally.clients]]` entry defines one Mount. The Mount namespace derives generated paths only for files whose inputs are Mount-specific: routes, request context, backend dispatch, SSR, static handling, WebSocket handling, and receiver dispatch.
+One `[[tools.rally.clients]]` entry defines one Mount. The Mount namespace derives generated paths only for files whose inputs are Mount-specific: routes, request context, backend dispatch, SSR, static handling, WebSocket handling, and `to_client` dispatch.
 
 Mounts can enable local logging independently:
 
@@ -443,13 +469,13 @@ client/src/generated/runtime/client_effect_ffi.mjs
 client/src/generated/runtime/authentication.gleam
 
 client/src/generated/public/router.gleam
-client/src/generated/public/receiver_dispatch.gleam
+client/src/generated/public/to_client.gleam
 
 client/src/generated/admin/router.gleam
-client/src/generated/admin/receiver_dispatch.gleam
+client/src/generated/admin/to_client.gleam
 ```
 
-Client `protocol_wire`, `codec`, transport, setup, and effect modules are generated once because the shared API graph and transport runtime are package-level. Client routers and receiver dispatch are Mount-specific because they depend on active routes and active page receivers.
+Client `protocol_wire`, `codec`, transport, setup, and effect modules are generated once because the shared API graph and transport runtime are package-level. Client routers and `to_client` dispatch are Mount-specific because they depend on active routes and active page handlers.
 
 Client shells use Modem for same-Mount browser navigation. Generated routers expose `parse_uri(uri: Uri) -> Route` and `route_to_path(route:) -> String`; the shell reads the initial URI from Modem, pushes same-Mount routes through Modem, and reloads page data when Modem reports a URI change.
 
@@ -501,7 +527,7 @@ Server runtime modules under `server/src/generated/runtime` are generated once. 
 
 Server `dispatch`, `request_context`, `router`, `ssr_handler`, and `ws_handler` are Mount-specific. The static asset handler is generated once at `server/src/generated/static_handler.gleam` because all Mounts serve the same client build tree. The WebSocket runtime is generated once at `server/src/generated/ws_runtime.gleam`; Mount WebSocket handlers adapt their route and backend modules into that runtime. Mount modules import package-level generated runtime modules from `generated/runtime` and package-level protocol modules from `generated`.
 
-The Generator Framework does not generate Mount RPC dispatch, page dispatch, or server-side receiver stubs for the root API path. Page init, `ToServer`, and `ToClient` use the package-level protocol wire module.
+The Generator Framework does not generate Mount RPC dispatch, page dispatch, or server-side `ToClient` handler stubs for the root API path. Page init, `ToServer`, and `ToClient` use the package-level protocol wire module.
 
 The Generator Framework does not create additional `generated/` directories under user-owned Mount namespaces such as `client/public`, `server/public`, or `shared/public`.
 
@@ -543,7 +569,7 @@ Type aliases are transparent on the wire, as they are in Gleam. Domain identitie
 
 `ToServer` frames are fire-and-forget commands. The client does not register a response callback for them and the server does not send a transport acknowledgement. Server operation outcomes travel as `ToClient` pushes. Root API transport does not expose an RPC lane.
 
-`ToClient` values are global server emissions. They may be delivered to any active client receiver in any Mount that handles the constructor. This is intentionally different from `ToServer`: commands are current-Mount input, while server emissions are receiver-driven app events and results. For example, an admin score command may emit `GameScoreUpdated`, and public pages may receive that `ToClient` value through their active receivers.
+`ToClient` values are global server emissions. They may be delivered to any active client handler in any Mount that handles the constructor. This is intentionally different from `ToServer`: commands are current-Mount input, while server emissions are handler-driven app events and results. For example, an admin score command may emit `GameScoreUpdated`, and public pages may handle that `ToClient` value through their active `game_score_updated` handlers.
 
 ## Rules
 
@@ -561,15 +587,15 @@ Type aliases are transparent on the wire, as they are in Gleam. Domain identitie
 12. `ToServer` constructors carry command data only.
 13. Route, query, session, and user facts come from `RequestContext`.
 14. Server handlers may use `ServerContext` for app resources and I/O.
-15. `ToClient` values are mapped into local page, layout, or shared-state messages by receivers.
+15. `ToClient` values are mapped into local page, layout, or shared-state messages by constructor-named client handlers.
 16. Local page `Msg` values do not cross the wire.
 17. Each Mount has a user-owned `backend.gleam` with `Msg`, `init`, and `update`; the `Model` type lives in sibling `model.gleam` so generated dispatch can import it without a cyclic dependency on `backend.gleam`.
 18. `backend.Msg` includes a client-message branch carrying `ToServer` and `RequestContext`.
 19. `backend.update` may intercept `ToServer` messages or delegate to generated dispatch. The generated dispatch module is emitted at `generated/{mount_namespace}/dispatch.gleam` and imported as `generated_dispatch`.
 20. Generated dispatch exhaustively matches the global `ToServer` type for each Mount. Constructors owned by the current Mount call server page handlers with constructor fields. Constructors owned by other Mounts are invalid for the current Mount and use a generated rejection path instead of silently returning `effect.none()`. The dispatch entry point is `generated_dispatch.to_server(msg, request_context, server_context, backend_model) -> #(Model, Effect(ToClient))`.
 21. The Generator Framework never fans out or forwards `ToServer` values across Mounts. A `ToServer` command is handled only by the Mount connection that received it.
-22. Generated receiver dispatch exhaustively matches `ToClient` and routes constructor fields to active receivers. All server-originated `ToClient` values use the same receiver path.
-23. `ToClient` delivery is global and receiver-driven. Any active receiver in any Mount may opt into any `ToClient` constructor.
+22. Generated `to_client` dispatch exhaustively matches `ToClient` and routes constructor fields to active client handlers. All server-originated `ToClient` values use the same `to_client` dispatch path.
+23. `ToClient` delivery is global and handler-driven. Any active client handler in any Mount may opt into any `ToClient` constructor.
 24. `ClientSharedState` is per Mount by default.
 25. `backend.Model` is per live SPA root connection.
 26. App-wide string notices use the built-in layout/client-shell lane.

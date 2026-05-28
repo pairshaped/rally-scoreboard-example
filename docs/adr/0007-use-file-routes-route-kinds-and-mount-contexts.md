@@ -6,7 +6,7 @@ The generated routing contract follows an Elm Land style convention: the file pa
 
 ## File Routes
 
-Normal page modules use the `.gleam` suffix and are mounted through the Mount shell. They usually live in the shared Mount page tree so the view code can compile for both targets.
+Normal page modules use the `.gleam` suffix and are mounted through the Mount shell. The shared page module declares the route file path so target-neutral view code can compile for both targets.
 
 ```text
 shared/src/shared/public/pages/games.gleam
@@ -14,6 +14,17 @@ shared/src/shared/public/pages/games/[id].gleam
 shared/src/shared/public/pages/teams/[slug].gleam
 shared/src/shared/admin/pages/games.gleam
 ```
+
+The same route may have matching client and server page modules at the same Mount-relative path:
+
+```text
+client/src/client/public/pages/games.gleam
+server/src/server/public/pages/games.gleam
+client/src/client/public/pages/games/[id].gleam
+server/src/server/public/pages/games/[id].gleam
+```
+
+The Generator Framework derives the route from the shared page path and wires matching shared, client, and server modules together. Client-only behavior stays in the client target. Server-only behavior stays in the server target. Shared views and target-neutral page helpers stay in the shared target.
 
 The Generator Framework maps those files to route constructors, URL parsing, and path builders. Dynamic path segments come from bracketed file or directory names.
 
@@ -69,7 +80,7 @@ The Generator Framework emits the Mount boot contract:
 - server shell encodes the Mount client context
 - client setup decodes the context
 - page init receives the context
-- page receivers can emit shell-level updates
+- page `ToClient` handlers can emit shell-level updates
 - the root Mount view can react to shell-level updates
 
 The context type is per Mount. Public and admin can shape their client contexts differently.
@@ -91,9 +102,9 @@ This keeps row-level, function-level, route-level, and role-specific permission 
 
 ## Cross-Mount Updates
 
-The shared root `ToClient` graph is the live update contract. A server operation in one Mount may emit a `ToClient` value received by another Mount when that Mount has an active receiver for the constructor.
+The shared root `ToClient` graph is the live update contract. A server operation in one Mount may emit a `ToClient` value handled by another Mount when that Mount has an active handler for the constructor.
 
-The Generator Framework does not introduce separate topic payload types. Receiver presence is the client-side interest signal.
+The Generator Framework does not introduce separate topic payload types. Constructor-named client handler presence is the client-side interest signal.
 
 App-domain events and topic subscriptions are outside this contract.
 

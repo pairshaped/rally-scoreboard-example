@@ -913,13 +913,13 @@ pub fn public_routes_have_matching_page_handlers_test() {
 
   let dispatch = read("src/generated/public/dispatch.gleam")
   dispatch
-  |> contains("server_public_pages_games.load_games")
+  |> contains("server_public_pages_games.load(")
   |> should.be_true
   dispatch
-  |> contains("server_public_pages_games_id_.load_game")
+  |> contains("server_public_pages_games_id_.load(")
   |> should.be_true
   dispatch
-  |> contains("server_public_pages_standings.load_standings")
+  |> contains("server_public_pages_standings.load(")
   |> should.be_true
 }
 

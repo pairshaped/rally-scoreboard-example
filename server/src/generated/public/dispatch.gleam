@@ -3,16 +3,22 @@
 //// Root API ToServer dispatch for the public Mount.
 ////
 //// Derived from shared/api/to_server.gleam and the page/server modules
-//// that define matching `*_to_server` handlers. The WebSocket runtime
-//// decodes one typed ToServer value, then calls this function so the
-//// backend can update its model and emit zero or more ToClient messages.
+//// that define matching handlers. The WebSocket runtime decodes one typed
+//// ToServer value, then calls this function so the backend can update its
+//// model and emit zero or more ToClient messages.
 ////
 //// Constructors owned by the other Mount (admin) are rejected through
 //// the generated rejection helper, which logs the rejection as an issue
 //// so operators can detect misrouted commands.
+////
+//// Page-load constructors call the page module's unified `load` function
+//// and wrap the returned ToClient into an effect.
 
-import generated/public/request_context.{type RequestContext}
+import generated/public/request_context.{type RequestContext, RequestContext}
+import generated/public/route
+import generated/runtime/effect as server_effect
 import generated/runtime/reject
+import gleam/int
 import lustre/effect.{type Effect}
 import server/public/model.{type Model}
 import server/public/pages/games as server_public_pages_games
@@ -30,32 +36,37 @@ pub fn to_server(
   backend_model backend_model: Model,
 ) -> #(Model, Effect(ToClient)) {
   case msg {
-    to_server.LoadGames ->
-      server_public_pages_games.load_games(
-        request_context:,
-        server_context:,
-        backend_model:,
-      )
-    to_server.LoadGame(game_id:) ->
-      server_public_pages_games_id_.load_game(
-        game_id:,
-        request_context:,
-        server_context:,
-        backend_model:,
-      )
-    to_server.LoadStandings ->
-      server_public_pages_standings.load_standings(
-        request_context:,
-        server_context:,
-        backend_model:,
-      )
-    to_server.LoadTeam(slug:) ->
-      server_public_pages_teams_slug_.load_team(
-        slug:,
-        request_context:,
-        server_context:,
-        backend_model:,
-      )
+    to_server.LoadGames -> {
+      let request_context =
+        RequestContext(..request_context, route: route.Games)
+      let result =
+        server_public_pages_games.load(request_context:, server_context:)
+      #(backend_model, server_effect.send_to_client(result))
+    }
+    to_server.LoadGame(game_id:) -> {
+      let request_context =
+        RequestContext(
+          ..request_context,
+          route: route.GamesId(id: int.to_string(game_id)),
+        )
+      let result =
+        server_public_pages_games_id_.load(request_context:, server_context:)
+      #(backend_model, server_effect.send_to_client(result))
+    }
+    to_server.LoadStandings -> {
+      let request_context =
+        RequestContext(..request_context, route: route.Standings)
+      let result =
+        server_public_pages_standings.load(request_context:, server_context:)
+      #(backend_model, server_effect.send_to_client(result))
+    }
+    to_server.LoadTeam(slug:) -> {
+      let request_context =
+        RequestContext(..request_context, route: route.Team(slug:))
+      let result =
+        server_public_pages_teams_slug_.load(request_context:, server_context:)
+      #(backend_model, server_effect.send_to_client(result))
+    }
     to_server.LoadAdminGames ->
       reject.reject_invalid_command(
         mount: "public",

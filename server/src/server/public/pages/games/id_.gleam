@@ -1,31 +1,36 @@
 //// Public server handlers for one game route.
 ////
-//// Generated public dispatch calls this module when the client asks for a
-//// specific game by id.
+//// Generated public dispatch and SSR both call `load` to produce the page's
+//// ToClient result. Route params are extracted from request_context.route.
 
 import generated/public/request_context.{type RequestContext}
-import generated/runtime/effect.{type Effect}
+import generated/public/route
 import generated/sql/server/games_sql
+import gleam/int
 import server/helpers/db
 import server/helpers/domain
-import server/public/model.{type Model}
 import server/server_context.{type ServerContext}
 import shared/api/domain/game
 import shared/api/to_client.{type ToClient}
 import sqlight
 
-pub fn load_game(
-  game_id game_id: Int,
-  request_context _request_context: RequestContext,
+pub fn load(
+  request_context request_context: RequestContext,
   server_context context: ServerContext,
-  backend_model backend_model: Model,
-) -> #(Model, Effect(ToClient)) {
-  let event = case public_game(db: context.db, game_id:) {
-    Ok(game) -> to_client.GameLoaded(game:)
-    Error(reason) -> to_client.GamesLoadFailed(reason: db.to_string(reason))
+) -> ToClient {
+  case request_context.route {
+    route.GamesId(id_str) ->
+      case int.parse(id_str) {
+        Ok(game_id) ->
+          case public_game(db: context.db, game_id:) {
+            Ok(game) -> to_client.GameLoaded(game:)
+            Error(reason) ->
+              to_client.GamesLoadFailed(reason: db.to_string(reason))
+          }
+        Error(_) -> to_client.GamesLoadFailed(reason: "invalid game id")
+      }
+    _ -> to_client.GamesLoadFailed(reason: "unexpected route for game detail")
   }
-
-  #(backend_model, effect.send_to_client(event))
 }
 
 fn public_game(
@@ -61,16 +66,4 @@ fn game_detail_from_row(row: games_sql.GetGameRow) -> game.GameDetail {
       row.away_code <> " answered late",
     ],
   )
-}
-
-pub fn load_game_for_ssr(
-  server_context: ServerContext,
-  game_id: Int,
-) -> Result(game.GameDetail, db.QueryError) {
-  case games_sql.get_game(db: server_context.db, game_id:) {
-    Ok([row]) -> Ok(game_detail_from_row(row))
-    Ok([]) -> Error(db.not_found(message: "game not found"))
-    Ok(_) -> Error(db.unexpected_rows(message: "expected one game"))
-    Error(err) -> Error(db.from_sqlight(err))
-  }
 }

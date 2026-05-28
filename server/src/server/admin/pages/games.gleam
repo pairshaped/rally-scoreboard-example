@@ -5,6 +5,9 @@
 //// After writing to the database, admin handlers also broadcast
 //// GameScoreUpdated and StandingsUpdated through the live-update pubsub
 //// so all connected public clients see changes without a page reload.
+////
+//// Generated admin dispatch and SSR both call `load` to produce the page's
+//// ToClient result.
 
 import generated/admin/request_context.{type RequestContext}
 import generated/runtime/effect.{type Effect}
@@ -22,17 +25,14 @@ import shared/api/domain/standing
 import shared/api/to_client.{type ToClient}
 import sqlight
 
-pub fn load_admin_games(
+pub fn load(
   request_context _request_context: RequestContext,
   server_context context: ServerContext,
-  backend_model backend_model: Model,
-) -> #(Model, Effect(ToClient)) {
-  let event = case admin_games(context.db) {
+) -> ToClient {
+  case admin_games(context.db) {
     Ok(games) -> to_client.AdminGamesLoaded(games:)
     Error(reason) -> to_client.AdminError(reason: db.to_string(reason))
   }
-
-  #(backend_model, effect.send_to_client(event))
 }
 
 pub fn create_game(
@@ -309,13 +309,4 @@ fn admin_detail_from_final(
     status: domain.game_status(row.final, row.period),
     period: row.period,
   )
-}
-
-pub fn load_admin_games_for_ssr(
-  server_context: ServerContext,
-) -> Result(List(admin_game.AdminGameSummary), db.QueryError) {
-  case games_sql.list_admin_games(db: server_context.db) {
-    Ok(rows) -> Ok(list.map(rows, admin_summary_from_row))
-    Error(err) -> Error(db.from_sqlight(err))
-  }
 }
