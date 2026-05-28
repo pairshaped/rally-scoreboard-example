@@ -47,3 +47,5 @@ Admin pages require authentication. Admin users can create games, update scores,
 The app intentionally uses one shared API graph for public and admin messages. Wire-visible constructor names must be globally unique across that graph, regardless of module path.
 
 Generated code is checked in here as the hand-written target for the Generator Framework. Server tests snapshot every generated module so future generator work has a tight comparison loop.
+
+The next generator chase targets are tracked in [docs/generator-chase-target-plan.md](docs/generator-chase-target-plan.md). The current intended routing and Mount context design is recorded in [docs/adr/0007-use-file-routes-route-kinds-and-mount-contexts.md](docs/adr/0007-use-file-routes-route-kinds-and-mount-contexts.md). Shared identity vocabulary is recorded in [docs/adr/0008-use-authentication-context-for-shared-identity.md](docs/adr/0008-use-authentication-context-for-shared-identity.md).
