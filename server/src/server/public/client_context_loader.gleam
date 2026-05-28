@@ -7,20 +7,31 @@
 //// Sign In / Sign Out and conditionally show the Admin link.
 
 import generated/public/route.{type Route}
-import gleam/option.{type Option}
-import shared/authentication_context.{type AuthenticationContext}
+import gleam/option.{type Option, None, Some}
+import server/authentication_context_loader
+import shared/authentication_context.{
+  type AuthenticationContext, AuthenticationContext,
+}
 import shared/public/client_context.{
   type PublicClientContext, PublicClientContext,
 }
+import sqlight
 
 pub fn load(
+  db db: sqlight.Connection,
   route route: Route,
   authentication_context authentication_context: Option(AuthenticationContext),
 ) -> PublicClientContext {
+  let can_admin = case authentication_context {
+    Some(AuthenticationContext(user_id:, ..)) ->
+      authentication_context_loader.can_admin(db:, user_id:)
+    None -> False
+  }
   PublicClientContext(
     league_name: "Rally Rec League",
     active_section: active_section(route),
     authentication_context:,
+    can_admin:,
   )
 }
 

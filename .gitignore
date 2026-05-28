@@ -10,10 +10,10 @@ server/manifest.toml
 shared/build/
 shared/manifest.toml
 
-# Runtime database files. Keep migrations checked in.
-server/db/*
-!server/db/migrations/
-!server/db/migrations/**
+# Runtime database files. Keep migrations and seeds checked in.
+server/db/*.db
+server/db/*.db-shm
+server/db/*.db-wal
 
 erl_crash.dump
 *.bak

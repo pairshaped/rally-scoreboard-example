@@ -4,7 +4,7 @@
 //// into wire-visible domain types. Extracted here so admin code does not
 //// need to import public page modules for shared row-to-domain mapping.
 
-import generated/sql/server/games_sql
+import generated/sql/server/standings_sql
 import gleam/option
 import shared/api/domain/game
 import shared/api/domain/standing
@@ -16,7 +16,9 @@ pub fn game_status(final: Int, period: String) -> game.GameStatus {
   }
 }
 
-pub fn standing_from_row(row: games_sql.StandingsRow) -> standing.StandingRow {
+pub fn standing_from_row(
+  row: standings_sql.ListStandingsRow,
+) -> standing.StandingRow {
   let team_code = case row.team_code {
     option.Some(code) -> code
     option.None -> ""

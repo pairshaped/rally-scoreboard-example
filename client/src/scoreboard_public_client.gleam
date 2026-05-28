@@ -613,14 +613,14 @@ fn topbar(
         label: "Standings",
         active: route == public_route.Standings,
       ),
-      case signed_in {
-        True ->
+      case context {
+        Some(ctx) if ctx.can_admin ->
           ui.nav_link_external(
             path: "/admin/games",
             label: "Admin",
             active: False,
           )
-        False -> html.text("")
+        _ -> html.text("")
       },
       case signed_in {
         True -> html.a([attribute.href("/sign_out")], [html.text("Sign Out")])

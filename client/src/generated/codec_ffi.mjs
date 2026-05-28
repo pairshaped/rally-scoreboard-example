@@ -55,7 +55,7 @@ registerConstructor("power_ranking_row", standing.PowerRankingRow, 7);
 registerConstructor("team_detail", team.TeamDetail, 8);
 registerConstructor("authentication_context", authenticationContext.AuthenticationContext, 3);
 registerConstructor("admin_client_context", adminClientContext.AdminClientContext, 5);
-registerConstructor("public_client_context", publicClientContext.PublicClientContext, 3);
+registerConstructor("public_client_context", publicClientContext.PublicClientContext, 4);
 
 export function ensure_decoders() {
   return true;

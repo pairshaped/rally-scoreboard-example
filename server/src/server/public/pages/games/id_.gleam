@@ -32,7 +32,7 @@ fn public_game(
   db db: sqlight.Connection,
   game_id game_id: Int,
 ) -> Result(game.GameDetail, db.QueryError) {
-  case games_sql.get(db:, game_id:) {
+  case games_sql.get_game(db:, game_id:) {
     Ok([row]) -> Ok(game_detail_from_row(row))
     Ok([]) -> Error(db.not_found(message: "game not found"))
     Ok(_) -> Error(db.unexpected_rows(message: "expected one game"))
@@ -40,7 +40,7 @@ fn public_game(
   }
 }
 
-fn game_detail_from_row(row: games_sql.GetRow) -> game.GameDetail {
+fn game_detail_from_row(row: games_sql.GetGameRow) -> game.GameDetail {
   game.GameDetail(
     id: row.id,
     home: game.Team(
@@ -67,7 +67,7 @@ pub fn load_game_for_ssr(
   server_context: ServerContext,
   game_id: Int,
 ) -> Result(game.GameDetail, db.QueryError) {
-  case games_sql.get(db: server_context.db, game_id:) {
+  case games_sql.get_game(db: server_context.db, game_id:) {
     Ok([row]) -> Ok(game_detail_from_row(row))
     Ok([]) -> Error(db.not_found(message: "game not found"))
     Ok(_) -> Error(db.unexpected_rows(message: "expected one game"))

@@ -73,9 +73,11 @@ pub fn public_client_context_is_importable_test() {
       league_name: "Rally Rec League",
       active_section: "games",
       authentication_context: option.None,
+      can_admin: False,
     )
   ctx.league_name |> should.equal("Rally Rec League")
   ctx.active_section |> should.equal("games")
+  ctx.can_admin |> should.be_false
 }
 
 @external(javascript, "./client_context_smoke_ffi.mjs", "setWindowContext")

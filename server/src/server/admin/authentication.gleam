@@ -1,26 +1,26 @@
-//// Demo authentication for the admin Mount.
+//// Demo authentication backed by the users table.
 ////
-//// This intentionally exercises the Generator Framework's generated authentication helpers in
-//// the golden-path app. Password sign-in accepts admin@example.com/admin.
-//// Sign-in code authentication shows a fixed demo code on the page,
-//// pretending it was emailed.
+//// Password sign-in accepts admin@example.com/admin and fan@example.com/fan
+//// after they have been seeded into the users table. Sign-in code
+//// authentication uses a fixed demo code per user.
 ////
 //// The auth cookie value is a signed token: `session_id.hmac_signature`. The
 //// client cannot forge a valid token without the server secret, so checking
 //// that the cookie is merely equal to the session ID is not enough.
+////
+//// Normalize email at every boundary before lookup. Store only normalized
+//// email. Treat DB-loaded email as canonical.
 
 import generated/runtime/authentication as authentication_runtime
 import gleam/bit_array
 import gleam/crypto
+import gleam/dynamic/decode
 import gleam/int
 import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/string
 import shared/authentication_context
-
-const admin_email = "admin@example.com"
-
-const admin_password = "admin"
+import sqlight
 
 const demo_sign_in_code = "A1Z9Q"
 
@@ -30,51 +30,95 @@ const cookie_name = "scoreboard_admin"
 
 const cookie_max_age = 3600
 
+// --- DB-backed verification ---
+
+pub fn verify_password(
+  db db: sqlight.Connection,
+  email email: String,
+  password password: String,
+) -> Option(Int) {
+  let normalized = authentication_context.normalize_email(email)
+  case
+    sqlight.query(
+      "SELECT id, password_hash FROM users WHERE email = ?1",
+      on: db,
+      with: [sqlight.text(normalized)],
+      expecting: {
+        use id <- decode.field(0, decode.int)
+        use hash <- decode.field(1, decode.string)
+        decode.success(#(id, hash))
+      },
+    )
+  {
+    Ok([#(user_id, stored_hash), ..]) ->
+      case
+        authentication_runtime.verify(stored: stored_hash, secret: password)
+      {
+        True -> Some(user_id)
+        False -> None
+      }
+    _ -> None
+  }
+}
+
+pub fn verify_sign_in_code(
+  db db: sqlight.Connection,
+  email email: String,
+  code code: String,
+) -> Option(Int) {
+  let normalized = authentication_context.normalize_email(email)
+  case
+    sqlight.query(
+      "SELECT id, email, sign_in_code_hash FROM users WHERE email = ?1",
+      on: db,
+      with: [sqlight.text(normalized)],
+      expecting: {
+        use id <- decode.field(0, decode.int)
+        use scope <- decode.field(1, decode.string)
+        use hash <- decode.field(2, decode.string)
+        decode.success(#(id, scope, hash))
+      },
+    )
+  {
+    Ok([#(user_id, scope, stored_hash), ..]) ->
+      case
+        authentication_runtime.verify_sign_in_code(
+          stored: stored_hash,
+          scope:,
+          code:,
+          secret_key:,
+        )
+      {
+        True -> Some(user_id)
+        False -> None
+      }
+    _ -> None
+  }
+}
+
+// --- Form pre-fill helpers (return demo values for the sign-in form) ---
+
 pub fn email() -> String {
-  admin_email
+  "admin@example.com"
 }
 
 pub fn password() -> String {
-  admin_password
+  "admin"
 }
 
 pub fn sign_in_code() -> String {
   demo_sign_in_code
 }
 
-pub fn password_hash() -> String {
-  authentication_runtime.hash(secret: admin_password)
-}
-
-pub fn sign_in_code_hash() -> String {
-  authentication_runtime.hash_sign_in_code(
-    scope: admin_email,
-    code: demo_sign_in_code,
-    secret_key:,
-  )
-}
-
-pub fn verify_password(email email: String, password password: String) -> Bool {
-  authentication_context.normalize_email(email) == admin_email
-  && authentication_runtime.verify(stored: password_hash(), secret: password)
-}
-
-pub fn verify_sign_in_code(email email: String, code code: String) -> Bool {
-  authentication_context.normalize_email(email) == admin_email
-  && authentication_runtime.verify_sign_in_code(
-    stored: sign_in_code_hash(),
-    scope: admin_email,
-    code:,
-    secret_key:,
-  )
-}
+// --- Cookie helpers ---
 
 pub fn issue_cookie(
   session_id session_id: String,
+  user_id user_id: Int,
 ) -> authentication_runtime.Cookie {
   authentication_runtime.SetCookie(
     name: cookie_name,
-    value: sign_token(session_id, admin_user_id),
+    value: sign_token(session_id, user_id),
     max_age: cookie_max_age,
   )
 }
@@ -121,7 +165,7 @@ pub fn authenticated_user_id(
   }
 }
 
-const admin_user_id = 1
+// --- Token helpers ---
 
 fn sign_token(session_id: String, user_id: Int) -> String {
   let payload = session_id <> "." <> int.to_string(user_id)

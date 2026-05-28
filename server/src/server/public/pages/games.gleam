@@ -44,14 +44,14 @@ fn public_games(
     None -> ""
   }
 
-  case games_sql.list_public(db:, team_filter:) {
+  case games_sql.list_public_games(db:, team_filter:) {
     Ok(rows) -> Ok(list.map(rows, game_summary_from_row))
     Error(err) -> Error(db.from_sqlight(err))
   }
 }
 
 pub fn game_summary_from_row(
-  row: games_sql.ListPublicRow,
+  row: games_sql.ListPublicGamesRow,
 ) -> game.PublicGameSummary {
   game.PublicGameSummary(
     id: row.id,
@@ -79,7 +79,7 @@ pub fn load_games_for_ssr(
     Some(code) -> code
     None -> ""
   }
-  case games_sql.list_public(db: server_context.db, team_filter:) {
+  case games_sql.list_public_games(db: server_context.db, team_filter:) {
     Ok(rows) -> Ok(list.map(rows, game_summary_from_row))
     Error(err) -> Error(db.from_sqlight(err))
   }

@@ -38,6 +38,7 @@ import mist.{type Connection, type ResponseData}
 import server/admin/authentication
 import server/authentication_context_loader
 import server/server_context.{type ServerContext}
+import sqlight
 
 type Mount {
   MountAdmin
@@ -83,8 +84,12 @@ fn mount_admin_handle_request(
   case path, method {
     "/admin/ws", _ ->
       case admin_authenticated(req) {
-        True -> mount_admin_handle_ws(req, server_context)
         False -> unauthorized()
+        True ->
+          case user_can_admin(req, server_context.db) {
+            True -> mount_admin_handle_ws(req, server_context)
+            False -> forbidden()
+          }
       }
     _, _ ->
       case static_handler.try_serve(path) {
@@ -93,11 +98,15 @@ fn mount_admin_handle_request(
           case method {
             Get ->
               case admin_authenticated(req) {
-                True -> mount_admin_handle_ssr(req, server_context)
                 False ->
                   redirect_to(
                     "/sign_in/password?return_to=" <> uri.percent_encode(path),
                   )
+                True ->
+                  case user_can_admin(req, server_context.db) {
+                    True -> mount_admin_handle_ssr(req, server_context)
+                    False -> forbidden()
+                  }
               }
             _ -> not_found()
           }
@@ -149,7 +158,11 @@ fn mount_admin_handle_ssr(
       session_id:,
     )
   {
-    option.Some(user_id) -> authentication_context_loader.from_user_id(user_id)
+    option.Some(user_id) ->
+      authentication_context_loader.from_user_id(
+        db: server_context.db,
+        user_id:,
+      )
     option.None -> option.None
   }
   mount_admin_ssr_handler.handle_request(
@@ -174,7 +187,7 @@ fn mount_public_handle_request(
     "/sign_in", Get -> redirect_to("/sign_in/password")
     "/sign_in/password", Get -> mount_public_handle_ssr(req, server_context)
     "/sign_in/code", Get -> mount_public_handle_ssr(req, server_context)
-    "/sign_in", Post -> mount_public_handle_sign_in(req)
+    "/sign_in", Post -> mount_public_handle_sign_in(req, server_context)
     "/sign_out", Get -> mount_public_sign_out(req)
     "/ws", _ -> mount_public_handle_ws(req, server_context)
     _, _ ->
@@ -231,7 +244,11 @@ fn mount_public_handle_ssr(
       session_id:,
     )
   {
-    option.Some(user_id) -> authentication_context_loader.from_user_id(user_id)
+    option.Some(user_id) ->
+      authentication_context_loader.from_user_id(
+        db: server_context.db,
+        user_id:,
+      )
     option.None -> option.None
   }
   mount_public_ssr_handler.handle_request(
@@ -258,14 +275,43 @@ fn admin_authenticated(req: Request(Connection)) -> Bool {
   )
 }
 
+fn user_can_admin(req: Request(Connection), db: sqlight.Connection) -> Bool {
+  case
+    authentication.authenticated_user_id(
+      cookie_header: request.get_header(req, "cookie"),
+      session_id: get_session_id(req),
+    )
+  {
+    option.Some(user_id) ->
+      authentication_context_loader.can_admin(db:, user_id:)
+    option.None -> False
+  }
+}
+
 fn mount_public_handle_sign_in(
   req: Request(Connection),
+  server_context: ServerContext,
 ) -> Response(ResponseData) {
   let session_id = get_session_id(req)
   case read_sign_in_form(req) {
-    Ok(form) ->
-      case accepts_sign_in(form) {
-        True -> {
+    Ok(form) -> {
+      let user_id = case
+        authentication.verify_password(
+          db: server_context.db,
+          email: form.email,
+          password: form.password,
+        )
+      {
+        option.Some(id) -> option.Some(id)
+        option.None ->
+          authentication.verify_sign_in_code(
+            db: server_context.db,
+            email: form.email,
+            code: form.code,
+          )
+      }
+      case user_id {
+        option.Some(id) -> {
           let return_to = case form.return_to {
             "" -> "/admin/games"
             target ->
@@ -275,10 +321,13 @@ fn mount_public_handle_sign_in(
               }
           }
           redirect_to(return_to)
-          |> set_cookie_header(authentication.issue_cookie(session_id:))
+          |> set_cookie_header(authentication.issue_cookie(
+            session_id:,
+            user_id: id,
+          ))
           |> set_session_cookie_if_missing(req: req, session_id:)
         }
-        False -> {
+        option.None -> {
           let failure_path = case form.return_to {
             "" -> "/sign_in/password"
             target ->
@@ -292,6 +341,7 @@ fn mount_public_handle_sign_in(
           |> set_session_cookie_if_missing(req: req, session_id:)
         }
       }
+    }
     Error(Nil) ->
       redirect_to("/sign_in/password")
       |> set_session_cookie_if_missing(req: req, session_id:)
@@ -335,13 +385,6 @@ fn form_value(pairs: List(#(String, String)), name: String) -> String {
   |> result.unwrap("")
 }
 
-fn accepts_sign_in(form: SignInForm) -> Bool {
-  let SignInForm(email:, password:, code:, return_to:) = form
-  let _ = return_to
-  authentication.verify_password(email:, password:)
-  || authentication.verify_sign_in_code(email:, code:)
-}
-
 // ---------- Helpers ----------
 
 fn redirect_to(path: String) -> Response(ResponseData) {
@@ -353,6 +396,11 @@ fn redirect_to(path: String) -> Response(ResponseData) {
 fn unauthorized() -> Response(ResponseData) {
   response.new(401)
   |> response.set_body(mist.Bytes(bytes_tree.from_string("Unauthorized")))
+}
+
+fn forbidden() -> Response(ResponseData) {
+  response.new(403)
+  |> response.set_body(mist.Bytes(bytes_tree.from_string("Forbidden")))
 }
 
 fn get_session_id(req: Request(Connection)) -> String {

@@ -283,8 +283,13 @@ pub fn generated_sign_in_codes_use_uppercase_alphanumeric_text_test() {
 
 pub fn generated_authentication_helpers_are_exercised_test() {
   let password_hash = authentication_runtime.hash(secret: "scoreboard-secret")
-  let demo_password_hash = authentication.password_hash()
-  let demo_sign_in_code_hash = authentication.sign_in_code_hash()
+  let demo_password_hash = authentication_runtime.hash(secret: "admin")
+  let demo_sign_in_code_hash =
+    authentication_runtime.hash_sign_in_code(
+      scope: "admin@example.com",
+      code: "A1Z9Q",
+      secret_key: "scoreboard-demo-secret",
+    )
   let assert Ok(try_password_hash) =
     authentication_runtime.try_hash(secret: "scoreboard-secret")
   let assert Ok(sign_in_code_hash) =
@@ -353,13 +358,16 @@ pub fn admin_mount_routes_through_authentication_test() {
   entry |> contains("\"/admin/ws\"") |> should.be_true
   entry |> contains("admin_authenticated(req)") |> should.be_true
   entry
-  |> contains("authentication.verify_password(email:, password:)")
+  |> contains("authentication.verify_password(")
   |> should.be_true
   entry
-  |> contains("authentication.verify_sign_in_code(email:, code:)")
+  |> contains("authentication.verify_sign_in_code(")
   |> should.be_true
   entry
-  |> contains("set_cookie_header(authentication.issue_cookie(session_id:))")
+  |> contains("authentication.issue_cookie(")
+  |> should.be_true
+  entry
+  |> contains("session_id:,")
   |> should.be_true
   entry
   |> contains("set_cookie_header(authentication.clear_cookie())")
@@ -372,17 +380,73 @@ pub fn admin_mount_routes_through_authentication_test() {
   |> should.be_true
 
   admin_authentication
-  |> contains("authentication_runtime.hash(")
-  |> should.be_true
-  admin_authentication
   |> contains("authentication_runtime.verify(")
-  |> should.be_true
-  admin_authentication
-  |> contains("authentication_runtime.hash_sign_in_code(")
   |> should.be_true
   admin_authentication
   |> contains("authentication_runtime.verify_sign_in_code(")
   |> should.be_true
+}
+
+pub fn fan_user_cannot_admin_test() {
+  let conn = test_users_db()
+  authentication_context_loader.can_admin(db: conn, user_id: 1)
+  |> should.be_true
+  authentication_context_loader.can_admin(db: conn, user_id: 2)
+  |> should.be_false
+  authentication_context_loader.can_admin(db: conn, user_id: 99)
+  |> should.be_false
+}
+
+pub fn entry_passes_db_to_verify_password_test() {
+  let entry = read("src/generated/entry.gleam")
+
+  entry |> contains("authentication.verify_password(") |> should.be_true
+  entry |> contains("db: server_context.db") |> should.be_true
+  entry |> contains("authentication.verify_sign_in_code(") |> should.be_true
+}
+
+pub fn fan_signed_cookie_produces_non_admin_user_id_test() {
+  let session_id = "test-session-fan"
+  let cookie = authentication.issue_cookie(session_id:, user_id: 2)
+  let assert authentication_runtime.SetCookie(name:, value:, max_age: _) =
+    cookie
+
+  let cookie_header = name <> "=" <> value
+  authentication.authenticated_user_id(
+    cookie_header: Ok(cookie_header),
+    session_id:,
+  )
+  |> should.equal(option.Some(2))
+
+  let conn = test_users_db()
+  authentication_context_loader.can_admin(db: conn, user_id: 2)
+  |> should.be_false
+}
+
+pub fn admin_user_cookie_passes_admin_gate_test() {
+  let session_id = "test-session-admin"
+  let cookie = authentication.issue_cookie(session_id:, user_id: 1)
+  let assert authentication_runtime.SetCookie(name:, value:, max_age: _) =
+    cookie
+
+  let cookie_header = name <> "=" <> value
+  authentication.authenticated_user_id(
+    cookie_header: Ok(cookie_header),
+    session_id:,
+  )
+  |> should.equal(option.Some(1))
+
+  let conn = test_users_db()
+  authentication_context_loader.can_admin(db: conn, user_id: 1)
+  |> should.be_true
+}
+
+pub fn entry_returns_forbidden_when_user_can_admin_is_false_test() {
+  let entry = read("src/generated/entry.gleam")
+
+  // The admin mount handler calls user_can_admin, and on False returns 403
+  entry |> contains("user_can_admin(req,") |> should.be_true
+  entry |> contains("False -> forbidden()") |> should.be_true
 }
 
 pub fn public_sign_in_pages_are_client_routes_test() {
@@ -415,8 +479,21 @@ pub fn public_sign_in_pages_are_client_routes_test() {
   |> should.be_true
 }
 
+pub fn update_game_final_sql_only_updates_final_state_test() {
+  let sql = read("src/server/sql/games/update_game_final.sql")
+
+  sql |> contains("period = 'Final'") |> should.be_true
+  sql |> contains("final = 1") |> should.be_true
+  // Score columns should not appear in the SET clause
+  sql |> contains("home_score =") |> should.be_false
+  sql |> contains("away_score =") |> should.be_false
+  // RETURNING may read scores back, that's fine
+}
+
 pub fn generated_files_stay_under_top_level_generated_dirs_test() {
   file_exists("src/generated/sql/server/games_sql.gleam") |> should.be_true
+  file_exists("src/generated/sql/server/standings_sql.gleam") |> should.be_true
+  file_exists("src/generated/sql/server/teams_sql.gleam") |> should.be_true
   file_exists("src/generated/sql/games_sql.gleam") |> should.be_false
   file_exists("src/server/generated/sql/server/games_sql.gleam")
   |> should.be_false
@@ -1022,7 +1099,7 @@ pub fn client_context_constructors_are_registered_for_etf_test() {
   |> contains("adminClientContext.AdminClientContext, 5")
   |> should.be_true
   codec
-  |> contains("publicClientContext.PublicClientContext, 3")
+  |> contains("publicClientContext.PublicClientContext, 4")
   |> should.be_true
   atoms |> contains("<<\"authentication_context\">>") |> should.be_true
   atoms |> contains("<<\"admin_client_context\">>") |> should.be_true
@@ -1066,7 +1143,10 @@ pub fn entry_passes_authentication_context_to_admin_ssr_test() {
   |> contains("import server/authentication_context_loader")
   |> should.be_true
   entry
-  |> contains("authentication_context_loader.from_user_id(user_id)")
+  |> contains("authentication_context_loader.from_user_id(")
+  |> should.be_true
+  entry
+  |> contains("db: server_context.db")
   |> should.be_true
   entry
   |> contains("authentication_context: authentication_context")
@@ -1127,7 +1207,8 @@ pub fn normalize_display_name_trims_and_rejects_blank_test() {
 }
 
 pub fn authentication_context_loader_returns_demo_users_test() {
-  let admin = authentication_context_loader.from_user_id(1)
+  let conn = test_users_db()
+  let admin = authentication_context_loader.from_user_id(db: conn, user_id: 1)
   case admin {
     option.Some(ctx) -> {
       ctx.user_id |> should.equal(1)
@@ -1137,7 +1218,7 @@ pub fn authentication_context_loader_returns_demo_users_test() {
     option.None -> should.be_true(False)
   }
 
-  let fan = authentication_context_loader.from_user_id(2)
+  let fan = authentication_context_loader.from_user_id(db: conn, user_id: 2)
   case fan {
     option.Some(ctx) -> {
       ctx.user_id |> should.equal(2)
@@ -1147,8 +1228,84 @@ pub fn authentication_context_loader_returns_demo_users_test() {
     option.None -> should.be_true(False)
   }
 
-  authentication_context_loader.from_user_id(99)
+  authentication_context_loader.from_user_id(db: conn, user_id: 99)
   |> should.equal(option.None)
+}
+
+pub fn can_admin_returns_true_for_admin_user_test() {
+  let conn = test_users_db()
+  authentication_context_loader.can_admin(db: conn, user_id: 1)
+  |> should.be_true
+}
+
+pub fn can_admin_returns_false_for_non_admin_users_test() {
+  let conn = test_users_db()
+  authentication_context_loader.can_admin(db: conn, user_id: 2)
+  |> should.be_false
+  authentication_context_loader.can_admin(db: conn, user_id: 99)
+  |> should.be_false
+}
+
+pub fn public_context_loader_sets_can_admin_when_user_is_admin_test() {
+  let conn = test_users_db()
+  let auth_ctx =
+    authentication_context.AuthenticationContext(
+      user_id: 1,
+      email: "admin@example.com",
+      display_name: option.None,
+    )
+  let ctx =
+    public_client_context_loader.load(
+      db: conn,
+      route: public_route.Games,
+      authentication_context: option.Some(auth_ctx),
+    )
+  ctx.can_admin |> should.be_true
+}
+
+pub fn public_context_loader_sets_can_admin_false_for_non_admin_test() {
+  let conn = test_users_db()
+  let auth_ctx =
+    authentication_context.AuthenticationContext(
+      user_id: 2,
+      email: "fan@example.com",
+      display_name: option.Some("Fan"),
+    )
+  let ctx =
+    public_client_context_loader.load(
+      db: conn,
+      route: public_route.Games,
+      authentication_context: option.Some(auth_ctx),
+    )
+  ctx.can_admin |> should.be_false
+}
+
+pub fn entry_gates_admin_routes_on_can_admin_test() {
+  let entry = read("src/generated/entry.gleam")
+
+  entry |> contains("user_can_admin") |> should.be_true
+  entry |> contains("can_admin(") |> should.be_true
+  entry |> contains("forbidden()") |> should.be_true
+}
+
+pub fn public_client_nav_shows_admin_only_when_can_admin_test() {
+  let public_client = read("../client/src/scoreboard_public_client.gleam")
+
+  public_client |> contains("can_admin") |> should.be_true
+  public_client
+  |> contains("ctx.can_admin")
+  |> should.be_true
+}
+
+pub fn admin_authenticated_and_user_can_admin_are_separate_checks_test() {
+  let entry = read("src/generated/entry.gleam")
+
+  entry |> contains("admin_authenticated") |> should.be_true
+  entry |> contains("user_can_admin") |> should.be_true
+  // user_can_admin is called after admin_authenticated passes
+  entry
+  |> contains("True ->")
+  |> should.be_true
 }
 
 pub fn admin_context_loader_passes_authentication_context_through_test() {
@@ -1198,8 +1355,10 @@ pub fn admin_context_loader_preserves_authentication_context_test() {
 }
 
 pub fn public_context_loader_returns_expected_shape_test() {
+  let conn = test_users_db()
   let ctx =
     public_client_context_loader.load(
+      db: conn,
       route: public_route.Games,
       authentication_context: option.None,
     )
@@ -1208,10 +1367,36 @@ pub fn public_context_loader_returns_expected_shape_test() {
 
   let standings_ctx =
     public_client_context_loader.load(
+      db: conn,
       route: public_route.Standings,
       authentication_context: option.None,
     )
   standings_ctx.active_section |> should.equal("standings")
+}
+
+fn test_users_db() -> sqlight.Connection {
+  let assert Ok(conn) = db.open(":memory:")
+  let assert Ok(Nil) =
+    sqlight.exec(
+      "CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY,
+        email TEXT NOT NULL UNIQUE,
+        display_name TEXT,
+        password_hash TEXT NOT NULL,
+        sign_in_code_hash TEXT NOT NULL,
+        can_admin INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      )",
+      on: conn,
+    )
+  let assert Ok(Nil) =
+    sqlight.exec(
+      "INSERT OR IGNORE INTO users (email, display_name, password_hash, sign_in_code_hash, can_admin) VALUES "
+        <> "('admin@example.com', NULL, '$runtime-pbkdf2-sha256$v=1$i=600000$TLcZ1AIacSW2Y9Sx1n2quA$5BuKTg_PPcRyGNNFWAC-JWc4wHZyGhTfQfbiDtmS_Zo', '$runtime-sign-in-code-hmac-sha256$v=1$FY-UwgWkAUbUUAjKZIrySIhmkDwEniQHxhEw7QwbcGU', 1),"
+        <> "('fan@example.com', 'Fan', '$runtime-pbkdf2-sha256$v=1$i=600000$4JLcFedQMxkwHeAAxL_LjA$FOVkFBcXUNDrPTLYbFHMkqUGw8Bgnv9qdt_hC_bDQxA', '$runtime-sign-in-code-hmac-sha256$v=1$26QkhMJZyJsBDiH3ae0NfkdhN2ynV41mmuBmMphzqB8', 0)",
+      on: conn,
+    )
+  conn
 }
 
 fn read(path: String) -> String {

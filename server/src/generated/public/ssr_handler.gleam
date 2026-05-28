@@ -48,7 +48,12 @@ pub fn handle_request(
   let _ = session_id
   let _ = hostname
   ensure_atoms()
-  let context = client_context_loader.load(route:, authentication_context:)
+  let context =
+    client_context_loader.load(
+      db: server_context.db,
+      route:,
+      authentication_context:,
+    )
   let client_context_base64 = libero_wire.encode_flags(context)
   let #(page_html, shared_state_base64) =
     load_route_data(route, server_context, query)

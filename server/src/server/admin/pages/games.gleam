@@ -10,6 +10,7 @@ import generated/admin/request_context.{type RequestContext}
 import generated/runtime/effect.{type Effect}
 import generated/runtime/live_updates
 import generated/sql/server/games_sql
+import generated/sql/server/standings_sql
 import gleam/bool
 import gleam/list
 import server/admin/model.{type Model}
@@ -94,9 +95,7 @@ pub fn mark_final(
 ) -> #(Model, Effect(ToClient)) {
   let event = case current_score(db: context.db, game_id:) {
     Ok(#(home_score, away_score)) ->
-      case
-        final_admin_result(db: context.db, game_id:, home_score:, away_score:)
-      {
+      case final_admin_result(db: context.db, game_id:) {
         Ok(game) -> {
           live_updates.broadcast(
             to_client.GameScoreUpdated(update: admin_game.GameScoreUpdate(
@@ -131,21 +130,34 @@ pub fn correct_result(
   backend_model backend_model: Model,
 ) -> #(Model, Effect(ToClient)) {
   let event = case
-    final_admin_result(db: context.db, game_id:, home_score:, away_score:)
+    update_admin_score(
+      db: context.db,
+      game_id:,
+      home_score:,
+      away_score:,
+      period: "Final",
+    )
   {
-    Ok(game) -> {
-      live_updates.broadcast(
-        to_client.GameScoreUpdated(update: admin_game.GameScoreUpdate(
-          game_id:,
-          home_score:,
-          away_score:,
-          period: game.period,
-          status: game.status,
-        )),
-      )
-      broadcast_live_standings(context.db)
-      effect.send_to_client(to_client.ResultSaved(game:))
-    }
+    Ok(_score_result) ->
+      case final_admin_result(db: context.db, game_id:) {
+        Ok(game) -> {
+          live_updates.broadcast(
+            to_client.GameScoreUpdated(update: admin_game.GameScoreUpdate(
+              game_id:,
+              home_score:,
+              away_score:,
+              period: game.period,
+              status: game.status,
+            )),
+          )
+          broadcast_live_standings(context.db)
+          effect.send_to_client(to_client.ResultSaved(game:))
+        }
+        Error(reason) ->
+          effect.send_to_client(
+            to_client.AdminError(reason: db.to_string(reason)),
+          )
+      }
     Error(reason) ->
       effect.send_to_client(to_client.AdminError(reason: db.to_string(reason)))
   }
@@ -163,7 +175,7 @@ fn broadcast_live_standings(db: sqlight.Connection) -> Nil {
 fn live_standings(
   db: sqlight.Connection,
 ) -> Result(List(standing.StandingRow), db.QueryError) {
-  case games_sql.standings(db:) {
+  case standings_sql.list_standings(db:) {
     Ok(rows) -> Ok(list.map(rows, domain.standing_from_row))
     Error(err) -> Error(db.from_sqlight(err))
   }
@@ -172,7 +184,7 @@ fn live_standings(
 fn admin_games(
   db: sqlight.Connection,
 ) -> Result(List(admin_game.AdminGameSummary), db.QueryError) {
-  case games_sql.list_admin(db:) {
+  case games_sql.list_admin_games(db:) {
     Ok(rows) -> Ok(list.map(rows, admin_summary_from_row))
     Error(err) -> Error(db.from_sqlight(err))
   }
@@ -188,7 +200,7 @@ fn create_admin_game(
     return: Error(db.validation(message: "home and away teams must differ")),
   )
 
-  case games_sql.create(db:, home_code:, away_code:) {
+  case games_sql.create_game(db:, home_code:, away_code:) {
     Ok([row]) -> Ok(admin_detail_from_create(row))
     Ok([]) -> Error(db.not_found(message: "game not created"))
     Ok(_) -> Error(db.unexpected_rows(message: "expected one created game"))
@@ -204,7 +216,13 @@ fn update_admin_score(
   period period: String,
 ) -> Result(admin_game.AdminGameDetail, db.QueryError) {
   case
-    games_sql.update_score(db:, home_score:, away_score:, period:, game_id:)
+    games_sql.update_game_score(
+      db:,
+      home_score:,
+      away_score:,
+      period:,
+      game_id:,
+    )
   {
     Ok([row]) -> Ok(admin_detail_from_update_score(row))
     Ok([]) -> Error(db.not_found(message: "game not found"))
@@ -217,7 +235,7 @@ fn current_score(
   db db: sqlight.Connection,
   game_id game_id: Int,
 ) -> Result(#(Int, Int), db.QueryError) {
-  case games_sql.get(db:, game_id:) {
+  case games_sql.get_game(db:, game_id:) {
     Ok([row]) -> Ok(#(row.home_score, row.away_score))
     Ok([]) -> Error(db.not_found(message: "game not found"))
     Ok(_) -> Error(db.unexpected_rows(message: "expected one game"))
@@ -228,10 +246,8 @@ fn current_score(
 fn final_admin_result(
   db db: sqlight.Connection,
   game_id game_id: Int,
-  home_score home_score: Int,
-  away_score away_score: Int,
 ) -> Result(admin_game.AdminGameDetail, db.QueryError) {
-  case games_sql.final_result(db:, home_score:, away_score:, game_id:) {
+  case games_sql.update_game_final(db:, game_id:) {
     Ok([row]) -> Ok(admin_detail_from_final(row))
     Ok([]) -> Error(db.not_found(message: "game not found"))
     Ok(_) -> Error(db.unexpected_rows(message: "expected one updated game"))
@@ -240,7 +256,7 @@ fn final_admin_result(
 }
 
 fn admin_summary_from_row(
-  row: games_sql.ListAdminRow,
+  row: games_sql.ListAdminGamesRow,
 ) -> admin_game.AdminGameSummary {
   admin_game.AdminGameSummary(
     id: row.id,
@@ -254,7 +270,7 @@ fn admin_summary_from_row(
 }
 
 fn admin_detail_from_create(
-  row: games_sql.CreateRow,
+  row: games_sql.CreateGameRow,
 ) -> admin_game.AdminGameDetail {
   admin_game.AdminGameDetail(
     id: row.id,
@@ -268,7 +284,7 @@ fn admin_detail_from_create(
 }
 
 fn admin_detail_from_update_score(
-  row: games_sql.UpdateScoreRow,
+  row: games_sql.UpdateGameScoreRow,
 ) -> admin_game.AdminGameDetail {
   admin_game.AdminGameDetail(
     id: row.id,
@@ -282,7 +298,7 @@ fn admin_detail_from_update_score(
 }
 
 fn admin_detail_from_final(
-  row: games_sql.FinalResultRow,
+  row: games_sql.UpdateGameFinalRow,
 ) -> admin_game.AdminGameDetail {
   admin_game.AdminGameDetail(
     id: row.id,
@@ -298,7 +314,7 @@ fn admin_detail_from_final(
 pub fn load_admin_games_for_ssr(
   server_context: ServerContext,
 ) -> Result(List(admin_game.AdminGameSummary), db.QueryError) {
-  case games_sql.list_admin(db: server_context.db) {
+  case games_sql.list_admin_games(db: server_context.db) {
     Ok(rows) -> Ok(list.map(rows, admin_summary_from_row))
     Error(err) -> Error(db.from_sqlight(err))
   }

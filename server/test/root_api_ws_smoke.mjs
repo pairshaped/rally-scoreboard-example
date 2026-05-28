@@ -69,11 +69,7 @@ async function signIn() {
   updateCookies(res2);
 }
 
-run("gleam", ["run", "-m", "marmot", "migrate"], serverDir);
-run("sqlite3", [
-  "db/scoreboard.db",
-  ".read db/migrations/003_six_team_round_robin_seed.sql",
-], serverDir);
+run("gleam", ["run", "-m", "marmot", "reset"], serverDir);
 run("gleam", ["build"], clientDir);
 run("gleam", ["build"], serverDir);
 

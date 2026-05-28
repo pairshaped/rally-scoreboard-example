@@ -5,7 +5,7 @@
 
 import generated/public/request_context.{type RequestContext}
 import generated/runtime/effect.{type Effect}
-import generated/sql/server/games_sql
+import generated/sql/server/standings_sql
 import gleam/list
 import server/helpers/db
 import server/helpers/domain
@@ -31,7 +31,7 @@ pub fn load_standings(
 fn standings(
   db: sqlight.Connection,
 ) -> Result(List(standing.StandingRow), db.QueryError) {
-  case games_sql.standings(db:) {
+  case standings_sql.list_standings(db:) {
     Ok(rows) -> Ok(list.map(rows, domain.standing_from_row))
     Error(err) -> Error(db.from_sqlight(err))
   }
@@ -40,7 +40,7 @@ fn standings(
 pub fn load_standings_for_ssr(
   server_context: ServerContext,
 ) -> Result(List(standing.StandingRow), db.QueryError) {
-  case games_sql.standings(db: server_context.db) {
+  case standings_sql.list_standings(db: server_context.db) {
     Ok(rows) -> Ok(list.map(rows, domain.standing_from_row))
     Error(err) -> Error(db.from_sqlight(err))
   }

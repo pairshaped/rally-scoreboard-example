@@ -1,22 +1,9 @@
--- Reset local demo seed data to a six-team round robin.
+-- Demo games for local development and smoke tests.
 --
--- This is intentionally destructive for the demo database. The app uses the
--- seeded league as a repeatable fixture for public pages, admin flows, and
--- websocket fanout checks.
+-- Includes a mix of scheduled, live, and final games so all views have
+-- data to render.
 
-DELETE FROM games;
-DELETE FROM teams;
-
-INSERT INTO teams (code, name, slug)
-VALUES
-    ('TOR', 'Toronto Towers', 'toronto-towers'),
-    ('MTL', 'Montreal Meteors', 'montréal-meteors'),
-    ('VAN', 'Vancouver Voyagers', 'vancouver-voyagers'),
-    ('NYC', 'New York Comets', 'new-york-comets'),
-    ('BOS', 'Boston Blizzards', 'boston-blizzards'),
-    ('LAK', 'Los Angeles Knights', 'los-angeles-knights');
-
-INSERT INTO games (
+INSERT OR IGNORE INTO games (
     id,
     home_code,
     away_code,

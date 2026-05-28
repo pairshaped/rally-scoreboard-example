@@ -6,6 +6,7 @@
 import generated/public/request_context.{type RequestContext}
 import generated/runtime/effect.{type Effect}
 import generated/sql/server/games_sql
+import generated/sql/server/teams_sql
 import gleam/list
 import gleam/option
 import server/helpers/db
@@ -34,7 +35,7 @@ fn team_detail(
   db: sqlight.Connection,
   slug slug: String,
 ) -> Result(TeamDetail, db.QueryError) {
-  case games_sql.team_by_slug(db:, slug:) {
+  case teams_sql.get_team_by_slug(db:, slug:) {
     Ok([row, ..]) -> {
       let code = option.unwrap(row.code, "")
       let recent = case recent_games(db, code:) {
@@ -61,7 +62,7 @@ fn recent_games(
   db: sqlight.Connection,
   code code: String,
 ) -> Result(List(PublicGameSummary), db.QueryError) {
-  case games_sql.list_public(db:, team_filter: code) {
+  case games_sql.list_public_games(db:, team_filter: code) {
     Ok(rows) -> Ok(list.map(rows, games_page.game_summary_from_row))
     Error(err) -> Error(db.from_sqlight(err))
   }
@@ -71,7 +72,7 @@ pub fn load_team_for_ssr(
   server_context: ServerContext,
   slug: String,
 ) -> Result(TeamDetail, db.QueryError) {
-  case games_sql.team_by_slug(db: server_context.db, slug:) {
+  case teams_sql.get_team_by_slug(db: server_context.db, slug:) {
     Ok([row, ..]) -> {
       let code = option.unwrap(row.code, "")
       let recent = case recent_games(server_context.db, code:) {
