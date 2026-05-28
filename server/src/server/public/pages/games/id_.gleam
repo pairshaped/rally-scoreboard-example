@@ -1,12 +1,11 @@
 //// Public server handlers for one game route.
 ////
-//// Generated public dispatch and SSR both call `load` to produce the page's
-//// ToClient result. Route params are extracted from request_context.route.
+//// The generated dispatch calls `load_game` — the snake_case form of the
+//// LoadGame ToServer constructor. The handler receives constructor fields
+//// as labeled args so it does not need to parse request_context.route.
 
 import generated/public/request_context.{type RequestContext}
-import generated/public/route
 import generated/sql/server/games_sql
-import gleam/int
 import server/helpers/db
 import server/helpers/domain
 import server/server_context.{type ServerContext}
@@ -14,22 +13,14 @@ import shared/api/domain/game
 import shared/api/to_client.{type ToClient}
 import sqlight
 
-pub fn load(
-  request_context request_context: RequestContext,
+pub fn load_game(
+  game_id game_id: Int,
+  request_context _request_context: RequestContext,
   server_context context: ServerContext,
 ) -> ToClient {
-  case request_context.route {
-    route.GamesId(id_str) ->
-      case int.parse(id_str) {
-        Ok(game_id) ->
-          case public_game(db: context.db, game_id:) {
-            Ok(game) -> to_client.GameLoaded(game:)
-            Error(reason) ->
-              to_client.GamesLoadFailed(reason: db.to_string(reason))
-          }
-        Error(_) -> to_client.GamesLoadFailed(reason: "invalid game id")
-      }
-    _ -> to_client.GamesLoadFailed(reason: "unexpected route for game detail")
+  case public_game(db: context.db, game_id:) {
+    Ok(game) -> to_client.GameLoaded(game:)
+    Error(reason) -> to_client.GamesLoadFailed(reason: db.to_string(reason))
   }
 }
 

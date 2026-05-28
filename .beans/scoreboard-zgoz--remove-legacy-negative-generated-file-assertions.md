@@ -7,9 +7,6 @@ priority: low
 created_at: 2026-05-28T15:36:51Z
 updated_at: 2026-05-28T15:36:51Z
 parent: scoreboard-v94b
-blocked_by:
-    - scoreboard-jw3x
-    - scoreboard-74zk
 ---
 
 ## What to build

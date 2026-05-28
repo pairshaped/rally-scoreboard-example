@@ -19,7 +19,7 @@ fn on_navigate_game(_id: Int) -> Nil {
 }
 
 fn render_view(m: option.Option(team_page.Model)) -> String {
-  team_page.view_team_page(m, on_navigate_team, on_navigate_game)
+  team_page.view(m, on_navigate_team, on_navigate_game)
   |> element.to_readable_string
 }
 

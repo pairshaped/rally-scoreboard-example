@@ -17,7 +17,7 @@ fn on_navigate_game(_id: Int) -> Nil {
 }
 
 fn render_view(games_list: List(PublicGameSummary)) -> String {
-  games.view_games_page(games_list, on_navigate_team, on_navigate_game)
+  games.view(games_list, on_navigate_team, on_navigate_game)
   |> element.to_readable_string
 }
 

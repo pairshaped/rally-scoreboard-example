@@ -8,15 +8,17 @@ title: src__generated__public__ssr_handler_gleam
 //// Derived from server/public/pages load/view functions, generated/public/route.gleam,
 //// server/public/shell.html, and server/server_context.gleam.
 ////
-//// Each SSR branch calls the same unified page `load` function that the
-//// WebSocket dispatch uses, renders the shared page view from the returned
-//// ToClient, and embeds the same ToClient value as base64 ETF for browser init.
+//// Each SSR branch calls the shared page's init_requests() to get the
+//// ToServer commands needed for this route, then executes them through the
+//// matching snake_case server handlers. The resulting ToClient values are
+//// embedded as base64 ETF for browser hydration.
 
 import generated/public/request_context.{type RequestContext, RequestContext}
 import generated/public/route.{type Route}
 import generated/runtime/ssr
 import gleam/dict
 import gleam/http/response
+import gleam/int
 import gleam/io
 import gleam/option.{type Option}
 import libero/wire as libero_wire
@@ -29,9 +31,10 @@ import server/public/pages/standings as public_standings_handler
 import server/public/pages/teams/slug_ as public_team_handler
 import server/server_context.{type ServerContext}
 import shared/api/to_client
+import shared/api/to_server
 import shared/authentication_context.{type AuthenticationContext}
-import shared/public/pages/games/id_ as public_game_detail_page
 import shared/public/pages/games as public_games_page
+import shared/public/pages/games/id_ as public_game_detail_page
 import shared/public/pages/standings as public_standings_page
 import shared/public/pages/teams/slug_ as public_team_page
 
@@ -82,19 +85,27 @@ fn load_route_data(
   let nil_on_navigate = fn(_) { Nil }
   let nil_on_game = fn(_) { Nil }
 
+  // init_requests() on the shared page declares the boot wiring needed
+  // for this route. Generated SSR executes those commands locally through
+  // the matching handlers, and generated client init sends them over
+  // WebSocket when hydration has not already populated the model.
   case request_context.route {
     route.Games -> {
-      let result = public_games_handler.load(request_context:, server_context:)
+      let result = case public_games_page.init_requests() {
+        [to_server.LoadGames, ..] ->
+          public_games_handler.load_games(request_context:, server_context:)
+        _ -> to_client.GamesLoadFailed(reason: "init_requests mismatch")
+      }
       case result {
         to_client.GamesLoaded(games:) -> #(
-          public_games_page.view_games_page(games, nil_on_navigate, nil_on_game)
+          public_games_page.view(games, nil_on_navigate, nil_on_game)
             |> element.to_string,
           libero_wire.encode_flags(result),
         )
         to_client.GamesLoadFailed(reason:) -> {
           let _ = io.println_error("SSR public/games load failed: " <> reason)
           #(
-            public_games_page.view_games_page([], nil_on_navigate, nil_on_game)
+            public_games_page.view([], nil_on_navigate, nil_on_game)
               |> element.to_string,
             "",
           )
@@ -102,14 +113,23 @@ fn load_route_data(
         _ -> #("", "")
       }
     }
-    route.GamesId(_) -> {
-      let result = public_game_handler.load(request_context:, server_context:)
+    route.GamesId(id_str) -> {
+      let result = case int.parse(id_str) {
+        Ok(game_id) ->
+          case public_game_detail_page.init_requests(game_id:) {
+            [to_server.LoadGame(game_id: gid), ..] ->
+              public_game_handler.load_game(
+                game_id: gid,
+                request_context:,
+                server_context:,
+              )
+            _ -> to_client.GamesLoadFailed(reason: "init_requests mismatch")
+          }
+        Error(_) -> to_client.GamesLoadFailed(reason: "invalid game id")
+      }
       case result {
         to_client.GameLoaded(game:) -> #(
-          public_game_detail_page.view_game_detail_page(
-            option.Some(game),
-            nil_on_navigate,
-          )
+          public_game_detail_page.view(option.Some(game), nil_on_navigate)
             |> element.to_string,
           libero_wire.encode_flags(result),
         )
@@ -117,10 +137,7 @@ fn load_route_data(
           let _ =
             io.println_error("SSR public/game-detail load failed: " <> reason)
           #(
-            public_game_detail_page.view_game_detail_page(
-              option.None,
-              nil_on_navigate,
-            )
+            public_game_detail_page.view(option.None, nil_on_navigate)
               |> element.to_string,
             "",
           )
@@ -129,11 +146,17 @@ fn load_route_data(
       }
     }
     route.Standings -> {
-      let result =
-        public_standings_handler.load(request_context:, server_context:)
+      let result = case public_standings_page.init_requests() {
+        [to_server.LoadStandings, ..] ->
+          public_standings_handler.load_standings(
+            request_context:,
+            server_context:,
+          )
+        _ -> to_client.GamesLoadFailed(reason: "init_requests mismatch")
+      }
       case result {
         to_client.StandingsLoaded(rows:) -> #(
-          public_standings_page.view_standings_page(rows, nil_on_navigate)
+          public_standings_page.view(rows, nil_on_navigate)
             |> element.to_string,
           libero_wire.encode_flags(result),
         )
@@ -141,7 +164,7 @@ fn load_route_data(
           let _ =
             io.println_error("SSR public/standings load failed: " <> reason)
           #(
-            public_standings_page.view_standings_page([], nil_on_navigate)
+            public_standings_page.view([], nil_on_navigate)
               |> element.to_string,
             "",
           )
@@ -149,11 +172,19 @@ fn load_route_data(
         _ -> #("", "")
       }
     }
-    route.Team(_) -> {
-      let result = public_team_handler.load(request_context:, server_context:)
+    route.Team(slug) -> {
+      let result = case public_team_page.init_requests(slug:) {
+        [to_server.LoadTeam(slug: s), ..] ->
+          public_team_handler.load_team(
+            slug: s,
+            request_context:,
+            server_context:,
+          )
+        _ -> to_client.GamesLoadFailed(reason: "init_requests mismatch")
+      }
       case result {
         to_client.TeamLoaded(team:) -> #(
-          public_team_page.view_team_page(
+          public_team_page.view(
             option.Some(public_team_page.Model(team:)),
             nil_on_navigate,
             nil_on_game,
@@ -164,11 +195,7 @@ fn load_route_data(
         to_client.GamesLoadFailed(reason:) -> {
           let _ = io.println_error("SSR public/team load failed: " <> reason)
           #(
-            public_team_page.view_team_page(
-              option.None,
-              nil_on_navigate,
-              nil_on_game,
-            )
+            public_team_page.view(option.None, nil_on_navigate, nil_on_game)
               |> element.to_string,
             "",
           )

@@ -3,10 +3,6 @@
 //// Owns the public Lustre application shell: route parsing, page model
 //// storage, ToClient fanout, navigation, and public view composition.
 
-import client/public/pages/games as public_games_client
-import client/public/pages/games/id_ as public_game_detail_client
-import client/public/pages/standings as public_standings_client
-import client/public/pages/teams/slug_ as public_team_client
 import generated/codec
 import generated/public/route as public_route
 import generated/public/router as public_router
@@ -16,7 +12,6 @@ import generated/setup
 import generated/transport
 import gleam/dict.{type Dict}
 import gleam/int
-import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/result
 import gleam/uri.{type Uri}
@@ -27,10 +22,7 @@ import lustre/element.{type Element}
 import lustre/element/html
 import lustre/event
 import modem
-import shared/api/domain/game as public_game
-import shared/api/domain/standing
 import shared/api/to_client as public_to_client
-import shared/api/to_server as public_to_server
 import shared/components/ui
 import shared/public/client_shared_state.{type PublicClientSharedState}
 import shared/public/pages/games as public_games_page
@@ -41,11 +33,7 @@ import shared/public/pages/teams/slug_ as public_team_page
 type Model {
   Model(
     route: public_route.Route,
-    games: List(public_game.PublicGameSummary),
-    selected_game: Option(public_game.GameDetail),
-    standings: List(standing.StandingRow),
-    team: Option(public_team_page.Model),
-    notice: String,
+    pages: public_to_client_dispatch.Models,
     dark_mode: Bool,
     // Route query params are stored so app code can react to query-driven
     // filters (e.g. ?team=TOR). The initial load and page-init paths both
@@ -56,7 +44,8 @@ type Model {
 }
 
 type Msg {
-  Received(public_to_client_dispatch.Msg)
+  ServerEvent(public_to_client.ToClient)
+  PageMsg(public_to_client_dispatch.Msg)
   Navigate(public_route.Route)
   UrlChanged(Uri)
   SetDarkMode(Bool)
@@ -99,29 +88,22 @@ fn init(
     Ok(uri) -> query_from_uri(uri)
     Error(Nil) -> dict.new()
   }
+  let pages = public_to_client_dispatch.init()
   let model =
     Model(
       route:,
-      games: [],
-      selected_game: None,
-      standings: [],
-      team: None,
-      notice: "",
+      pages:,
       dark_mode: public_effect.read_dark_mode(),
       query:,
       context:,
     )
-  let #(model, hydrated) = case ssr_event {
+  let #(model, hydrated, hydration_effect) = case ssr_event {
     option.Some(event) -> {
-      let msgs = public_to_client_dispatch.to_client(event)
-      let model =
-        list.fold(msgs, model, fn(m, msg) {
-          let #(new_m, _) = update(m, Received(msg))
-          new_m
-        })
-      #(model, !list.is_empty(msgs))
+      let #(pages, page_eff) =
+        public_to_client_dispatch.apply_to_client(model.pages, event)
+      #(Model(..model, pages:), True, effect.map(page_eff, PageMsg))
     }
-    option.None -> #(model, False)
+    option.None -> #(model, False, effect.none())
   }
   let load_effect = case hydrated {
     True -> effect.none()
@@ -139,24 +121,40 @@ fn init(
         UrlChanged,
       ),
       load_effect,
+      hydration_effect,
     ]),
   )
 }
 
+/// Sends init_requests() commands over WebSocket when SSR hydration is absent.
+/// init_requests() on the shared page is the source of truth for what commands
+/// are needed; generated client init sends the returned commands verbatim.
 fn initial_load(route: public_route.Route) -> Effect(Msg) {
   case route {
     public_route.Games ->
-      public_effect.send_to_server(public_to_server.LoadGames)
+      case public_games_page.init_requests() {
+        [req, ..] -> public_effect.send_to_server(req)
+        [] -> effect.none()
+      }
     public_route.GamesId(id) ->
       case int.parse(id) {
         Ok(game_id) ->
-          public_effect.send_to_server(public_to_server.LoadGame(game_id:))
+          case public_game_detail_page.init_requests(game_id:) {
+            [req, ..] -> public_effect.send_to_server(req)
+            [] -> effect.none()
+          }
         Error(Nil) -> effect.none()
       }
     public_route.Standings ->
-      public_effect.send_to_server(public_to_server.LoadStandings)
-    public_route.Team(slug:) ->
-      public_effect.send_to_server(public_to_server.LoadTeam(slug:))
+      case public_standings_page.init_requests() {
+        [req, ..] -> public_effect.send_to_server(req)
+        [] -> effect.none()
+      }
+    public_route.Team(slug) ->
+      case public_team_page.init_requests(slug:) {
+        [req, ..] -> public_effect.send_to_server(req)
+        [] -> effect.none()
+      }
     public_route.SignIn
     | public_route.SignInPassword
     | public_route.SignInCode
@@ -168,12 +166,14 @@ fn register_to_client_handlers() -> Effect(Msg) {
   effect.from(fn(dispatch) {
     transport.register_push_handler("to_client", fn(value) {
       let event: public_to_client.ToClient = transport.coerce(value)
-      public_to_client_dispatch.to_client(event)
-      |> list.each(fn(msg) { dispatch(Received(msg)) })
+      dispatch(ServerEvent(event))
     })
   })
 }
 
+/// Sends page_init plus init_requests() commands over WebSocket for SPA
+/// navigation. init_requests() on the shared page is the source of truth
+/// for what commands are needed; the returned command is sent verbatim.
 fn load_route(
   route: public_route.Route,
   query: Dict(String, String),
@@ -181,37 +181,53 @@ fn load_route(
   let #(module, params) = route_page_init(route)
   case route {
     public_route.Games ->
-      public_effect.send_page_init_and_command(
-        module:,
-        params:,
-        query:,
-        command: public_to_server.LoadGames,
-      )
-    public_route.GamesId(id) ->
-      case int.parse(id) {
-        Ok(game_id) ->
+      case public_games_page.init_requests() {
+        [req, ..] ->
           public_effect.send_page_init_and_command(
             module:,
             params:,
             query:,
-            command: public_to_server.LoadGame(game_id:),
+            command: req,
           )
+        [] -> effect.none()
+      }
+    public_route.GamesId(id) ->
+      case int.parse(id) {
+        Ok(game_id) ->
+          case public_game_detail_page.init_requests(game_id:) {
+            [req, ..] ->
+              public_effect.send_page_init_and_command(
+                module:,
+                params:,
+                query:,
+                command: req,
+              )
+            [] -> effect.none()
+          }
         Error(Nil) -> effect.none()
       }
     public_route.Standings ->
-      public_effect.send_page_init_and_command(
-        module:,
-        params:,
-        query:,
-        command: public_to_server.LoadStandings,
-      )
-    public_route.Team(slug:) ->
-      public_effect.send_page_init_and_command(
-        module:,
-        params:,
-        query:,
-        command: public_to_server.LoadTeam(slug:),
-      )
+      case public_standings_page.init_requests() {
+        [req, ..] ->
+          public_effect.send_page_init_and_command(
+            module:,
+            params:,
+            query:,
+            command: req,
+          )
+        [] -> effect.none()
+      }
+    public_route.Team(slug) ->
+      case public_team_page.init_requests(slug:) {
+        [req, ..] ->
+          public_effect.send_page_init_and_command(
+            module:,
+            params:,
+            query:,
+            command: req,
+          )
+        [] -> effect.none()
+      }
     public_route.SignIn
     | public_route.SignInPassword
     | public_route.SignInCode
@@ -253,101 +269,19 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
       let query = query_from_uri(uri)
       #(Model(..model, route:, query:), load_route(route, query))
     }
-    Received(public_to_client_dispatch.GamesPage(page_msg)) ->
-      handle_games(model, page_msg)
-    Received(public_to_client_dispatch.GameDetailPage(page_msg)) ->
-      handle_game_detail(model, page_msg)
-    Received(public_to_client_dispatch.StandingsPage(page_msg)) ->
-      handle_standings(model, page_msg)
-    Received(public_to_client_dispatch.TeamPage(page_msg)) ->
-      handle_team(model, page_msg)
+    ServerEvent(event) -> {
+      let #(pages, eff) =
+        public_to_client_dispatch.apply_to_client(model.pages, event)
+      #(Model(..model, pages:), effect.map(eff, PageMsg))
+    }
+    PageMsg(msg) -> {
+      let #(pages, eff) =
+        public_to_client_dispatch.update_page(model.pages, msg)
+      #(Model(..model, pages:), effect.map(eff, PageMsg))
+    }
     SetDarkMode(enabled) -> #(
       Model(..model, dark_mode: enabled),
       public_effect.set_dark_mode(enabled),
-    )
-  }
-}
-
-fn handle_games(
-  model: Model,
-  msg: public_games_client.Msg,
-) -> #(Model, Effect(Msg)) {
-  case msg {
-    public_games_client.LoadedGames(games) -> #(
-      Model(..model, games:, notice: ""),
-      effect.none(),
-    )
-    public_games_client.UpdatedScore(update) -> #(
-      Model(..model, games: update_games(model.games, update)),
-      effect.none(),
-    )
-    public_games_client.LoadFailed(reason) -> #(
-      Model(..model, notice: reason),
-      effect.none(),
-    )
-  }
-}
-
-fn handle_game_detail(
-  model: Model,
-  msg: public_game_detail_client.Msg,
-) -> #(Model, Effect(Msg)) {
-  case msg {
-    public_game_detail_client.LoadedGame(game) -> #(
-      Model(..model, selected_game: Some(game), notice: ""),
-      effect.none(),
-    )
-    public_game_detail_client.UpdatedScore(update) -> #(
-      Model(
-        ..model,
-        selected_game: update_selected_game(model.selected_game, update),
-      ),
-      effect.none(),
-    )
-    public_game_detail_client.LoadFailed(reason) -> #(
-      Model(..model, notice: reason),
-      effect.none(),
-    )
-  }
-}
-
-fn handle_standings(
-  model: Model,
-  msg: public_standings_client.Msg,
-) -> #(Model, Effect(Msg)) {
-  case msg {
-    public_standings_client.LoadedStandings(rows) -> #(
-      Model(..model, standings: rows, notice: ""),
-      effect.none(),
-    )
-    public_standings_client.LoadedPowerRankings(rows) -> #(
-      Model(..model, standings: power_rankings_to_standings(rows), notice: ""),
-      effect.none(),
-    )
-  }
-}
-
-fn handle_team(
-  model: Model,
-  msg: public_team_client.Msg,
-) -> #(Model, Effect(Msg)) {
-  case msg {
-    public_team_client.LoadedTeam(team) -> #(
-      Model(..model, team: Some(public_team_page.Model(team:)), notice: ""),
-      effect.none(),
-    )
-    public_team_client.UpdatedScore(update) -> #(
-      Model(
-        ..model,
-        team: option.map(model.team, fn(team_model) {
-          public_team_page.apply_score_update(team_model, update)
-        }),
-      ),
-      effect.none(),
-    )
-    public_team_client.LoadFailed(reason) -> #(
-      Model(..model, notice: reason),
-      effect.none(),
     )
   }
 }
@@ -369,24 +303,24 @@ fn view(model: Model) -> Element(Msg) {
     explainer(route: model.route),
     case model.route {
       public_route.Games ->
-        public_games_page.view_games_page(
-          model.games,
+        public_games_page.view(
+          model.pages.games_page.games,
           on_navigate_team,
           on_navigate_game,
         )
       public_route.GamesId(_) ->
-        public_game_detail_page.view_game_detail_page(
-          model.selected_game,
+        public_game_detail_page.view(
+          model.pages.game_detail_page.game,
           on_navigate_team,
         )
       public_route.Standings ->
-        public_standings_page.view_standings_page(
-          model.standings,
+        public_standings_page.view(
+          model.pages.standings_page.rows,
           on_navigate_team,
         )
       public_route.Team(_) ->
-        public_team_page.view_team_page(
-          model.team,
+        public_team_page.view(
+          model.pages.team_page.team,
           on_navigate_team,
           on_navigate_game,
         )
@@ -684,56 +618,4 @@ fn is_games(route: public_route.Route) -> Bool {
     public_route.Games | public_route.GamesId(_) -> True
     _ -> False
   }
-}
-
-fn update_games(
-  games: List(public_game.PublicGameSummary),
-  update: public_game.GameScoreUpdate,
-) -> List(public_game.PublicGameSummary) {
-  list.map(games, fn(game) {
-    case game.id == update.game_id {
-      True ->
-        public_game.PublicGameSummary(
-          ..game,
-          home_score: update.home_score,
-          away_score: update.away_score,
-          status: update.status,
-        )
-      False -> game
-    }
-  })
-}
-
-fn update_selected_game(
-  game: Option(public_game.GameDetail),
-  update: public_game.GameScoreUpdate,
-) -> Option(public_game.GameDetail) {
-  case game {
-    Some(game) if game.id == update.game_id ->
-      Some(
-        public_game.GameDetail(
-          ..game,
-          home_score: update.home_score,
-          away_score: update.away_score,
-          status: update.status,
-        ),
-      )
-    _ -> game
-  }
-}
-
-fn power_rankings_to_standings(
-  rows: List(standing.PowerRankingRow),
-) -> List(standing.StandingRow) {
-  list.map(rows, fn(row) {
-    standing.StandingRow(
-      team_code: row.team_code,
-      team_name: row.team_name,
-      slug: row.slug,
-      wins: row.wins,
-      losses: row.losses,
-      points_for: row.points_for,
-      points_against: row.points_against,
-    )
-  })
 }

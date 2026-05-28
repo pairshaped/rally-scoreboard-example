@@ -1,14 +1,12 @@
 ---
 # scoreboard-qaqh
 title: Adopt page init and init_requests convention
-status: todo
+status: completed
 type: task
 priority: high
 created_at: 2026-05-28T17:31:16Z
-updated_at: 2026-05-28T17:31:16Z
+updated_at: 2026-05-28T18:05:53Z
 parent: scoreboard-v94b
-blocked_by:
-    - scoreboard-74zk
 ---
 
 ## What to build

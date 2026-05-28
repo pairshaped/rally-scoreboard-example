@@ -10,7 +10,30 @@ import lustre/element.{type Element}
 import lustre/element/html
 import lustre/event
 import shared/api/domain/standing.{type StandingRow}
+import shared/api/to_server.{type ToServer}
 import shared/components/ui
+
+/// Returns the ToServer commands needed to load standings data.
+///
+/// Generated SSR executes these commands locally and embeds the resulting
+/// ToClient values for hydration. Generated client init sends these same
+/// requests over WebSocket only when hydration has not already populated
+/// the page model.
+pub fn init_requests() -> List(ToServer) {
+  [to_server.LoadStandings]
+}
+
+pub fn view(
+  rows: List(StandingRow),
+  on_navigate_team: fn(String) -> msg,
+) -> Element(msg) {
+  html.main([], [
+    html.section([attribute.class("panel")], [
+      ui.section_head("League table", ""),
+      view_standings(rows, on_navigate_team),
+    ]),
+  ])
+}
 
 pub fn view_standings(
   rows: List(StandingRow),
@@ -60,17 +83,5 @@ fn view_standing_row(
     html.td([], [html.text(int.to_string(row.losses))]),
     html.td([], [html.text(int.to_string(row.points_for))]),
     html.td([], [html.text(int.to_string(row.points_against))]),
-  ])
-}
-
-pub fn view_standings_page(
-  rows: List(StandingRow),
-  on_navigate_team: fn(String) -> msg,
-) -> Element(msg) {
-  html.main([], [
-    html.section([attribute.class("panel")], [
-      ui.section_head("League table", ""),
-      view_standings(rows, on_navigate_team),
-    ]),
   ])
 }

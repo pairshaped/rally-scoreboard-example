@@ -10,9 +10,20 @@ import lustre/element.{type Element}
 import lustre/element/html
 import lustre/event
 import shared/api/domain/game.{type AdminGameSummary, Final}
+import shared/api/to_server.{type ToServer}
 import shared/components/ui
 
-pub fn view_games(
+/// Returns the ToServer commands needed to load admin games data.
+///
+/// Generated SSR executes these commands locally and embeds the resulting
+/// ToClient values for hydration. Generated client init sends these same
+/// requests over WebSocket only when hydration has not already populated
+/// the page model.
+pub fn init_requests() -> List(ToServer) {
+  [to_server.LoadAdminGames]
+}
+
+pub fn view(
   games: List(AdminGameSummary),
   on_adjust_away: fn(Int, Int, Int, Int) -> msg,
   on_adjust_home: fn(Int, Int, Int, Int) -> msg,

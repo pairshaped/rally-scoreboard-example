@@ -1,7 +1,9 @@
 //// Public server handlers for standings.
 ////
-//// Generated public dispatch and SSR both call `load` to produce the page's
-//// ToClient result.
+//// The generated dispatch calls `load_standings` — the snake_case form of the
+//// LoadStandings ToServer constructor. Page-data handlers like this return
+//// ToClient directly so the dispatch can wrap the result without changing
+//// backend model.
 
 import generated/public/request_context.{type RequestContext}
 import generated/sql/server/standings_sql
@@ -13,7 +15,7 @@ import shared/api/domain/standing
 import shared/api/to_client.{type ToClient}
 import sqlight
 
-pub fn load(
+pub fn load_standings(
   request_context _request_context: RequestContext,
   server_context context: ServerContext,
 ) -> ToClient {

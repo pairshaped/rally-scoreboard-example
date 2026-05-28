@@ -11,7 +11,7 @@ fn on_navigate_team(_slug: String) -> Nil {
 }
 
 fn render_view(rows: List(StandingRow)) -> String {
-  standings.view_standings_page(rows, on_navigate_team)
+  standings.view(rows, on_navigate_team)
   |> element.to_readable_string
 }
 

@@ -21,7 +21,7 @@ fn on_mark_final(_id) -> Nil {
 }
 
 fn render_view(admin_games: List(AdminGameSummary)) -> String {
-  games.view_games(admin_games, on_adjust_away, on_adjust_home, on_mark_final)
+  games.view(admin_games, on_adjust_away, on_adjust_home, on_mark_final)
   |> element.to_readable_string
 }
 

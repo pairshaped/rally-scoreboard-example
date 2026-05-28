@@ -10,7 +10,31 @@ import lustre/element.{type Element}
 import lustre/element/html
 import lustre/event
 import shared/api/domain/game.{type PublicGameSummary}
+import shared/api/to_server.{type ToServer}
 import shared/components/ui
+
+/// Returns the ToServer commands needed to load games-list data.
+///
+/// Generated SSR executes these commands locally and embeds the resulting
+/// ToClient values for hydration. Generated client init sends these same
+/// requests over WebSocket only when hydration has not already populated
+/// the page model.
+pub fn init_requests() -> List(ToServer) {
+  [to_server.LoadGames]
+}
+
+pub fn view(
+  games: List(PublicGameSummary),
+  on_navigate_team: fn(String) -> msg,
+  on_navigate_game: fn(Int) -> msg,
+) -> Element(msg) {
+  html.main([], [
+    html.section([attribute.class("panel")], [
+      ui.section_head("Today", ""),
+      view_game_grid(games, on_navigate_team, on_navigate_game),
+    ]),
+  ])
+}
 
 pub fn view_game_grid(
   games: List(PublicGameSummary),
@@ -72,19 +96,6 @@ pub fn view_game_card(
         ],
         [html.text("Details")],
       ),
-    ]),
-  ])
-}
-
-pub fn view_games_page(
-  games: List(PublicGameSummary),
-  on_navigate_team: fn(String) -> msg,
-  on_navigate_game: fn(Int) -> msg,
-) -> Element(msg) {
-  html.main([], [
-    html.section([attribute.class("panel")], [
-      ui.section_head("Today", ""),
-      view_game_grid(games, on_navigate_team, on_navigate_game),
     ]),
   ])
 }

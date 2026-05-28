@@ -108,11 +108,11 @@ Pages own local UI concerns:
 
 ```text
 Model
-Msg
+Msg for browser-originated events
 form state
 view helpers
 browser-only UI data
-local mapping functions
+client effects and JS FFI callbacks
 ```
 
 Pages are a three-target concept. A route may have matching page modules in shared, client, and server targets:
@@ -123,15 +123,15 @@ client/src/client/{mount}/pages/**/*.gleam
 server/src/server/{mount}/pages/**/*.gleam
 ```
 
-The shared page module owns target-neutral page model, view, pure helpers, and mapping code that compiles for both JavaScript and Erlang. When a page has normal first-render data needs, the shared page module declares them with `init_requests() -> List(to_server.ToServer)`.
+The shared page module owns the route's target-neutral view, view input helpers, pure data helpers, and boot request declaration. Its main view function is named `view`, and it is the first function after `init_requests` when `init_requests` exists. When a page has normal first-render data needs, the shared page module declares them with `init_requests() -> List(to_server.ToServer)`.
 
-The client page module owns browser-only behavior such as DOM effects, JS FFI, drag and drop, subscriptions, browser event handling, optional client-side `init`, update glue, and client `ToClient` handlers.
+The client page module owns the browser page model, local `Msg`, browser-only behavior such as DOM effects, JS FFI, drag and drop, subscriptions, browser event handling, optional client-side `init`, local `update`, and client `ToClient` handlers.
 
 The server page module owns server-only behavior such as page data loading, database access, authorization checks, provider/server API calls, optional server-side `init`, and command handlers.
 
 The Generator Framework wires matching target modules together by route. It does not ask app authors to put all page code in one file and split that file into target-specific generated output.
 
-Local page `Msg` values do not cross the wire. Server results and pushed events cross the wire as `ToClient` values, then page, layout, or shared-state client handlers map them into local messages.
+Local page `Msg` values do not cross the wire. They are reserved for browser-originated page events such as clicks, input changes, timers, subscriptions, and JS FFI callbacks. Server results and pushed events cross the wire as `ToClient` values. Client `ToClient` handlers apply those values directly to page models; they do not mirror `ToClient` constructors into local `Msg` values.
 
 Page modules may import `shared/api` domain and protocol types. They do not define wire-visible `ToServer`, `ToClient`, or wire domain types.
 
@@ -398,21 +398,48 @@ pub fn add_article_comment(
 
 The Generator Framework fails generation when a `ToServer` constructor has no handler or more than one matching handler. Handler signature mismatches fail during generation when the Generator Framework can explain them, or during compilation when the generated dispatch calls the handler.
 
-## Client ToClient Handlers
+## Client Page Model And ToClient Handlers
 
 `ToClient` is the server emission vocabulary. Pages, layouts, and shared client state handle `ToClient` values through generated `to_client` dispatch and constructor-named client handlers. Generated `to_client` dispatch owns the exhaustive `ToClient` case for active handlers.
 
-Client `ToClient` handlers live with the client code that owns the local `Msg` they produce. Page-owned handlers live in client page modules. Layout or shared-state handlers live with those client modules.
+Page-owned client `ToClient` handlers live in client page modules. Layout or shared-state handlers live with those client modules.
 
-A client `ToClient` handler maps constructor fields into local messages. Its function name is the snake_case form of the `ToClient` constructor name:
+A client page module has a normal TEA shape:
 
 ```gleam
-pub fn article_comment_added(comment comment: article.Comment) -> Msg {
-  ReceivedArticleCommentAdded(comment)
+pub type Model {
+  Model(articles: List(article.Article), draft_title: String)
+}
+
+pub type Msg {
+  DraftTitleChanged(String)
+  SubmitClicked
+  BrowserMeasuredHeight(Int)
+}
+
+pub fn init() -> Model {
+  Model(articles: [], draft_title: "")
+}
+
+pub fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
+  todo
 }
 ```
 
-Handlers receive constructor fields as named arguments. They do not receive the whole `ToClient` value. The return type is the local `Msg` owned by the page, layout, or shared-state module.
+Local `Msg` constructors describe client-originated page events. They do not repeat or rename `ToClient` constructors.
+
+A client `ToClient` handler is a mini-update over the page model. Its function name is the snake_case form of the `ToClient` constructor name:
+
+```gleam
+pub fn article_comment_added(
+  model model: Model,
+  comment comment: article.Comment,
+) -> #(Model, Effect(Msg)) {
+  #(Model(..model, articles: [comment.article, ..model.articles]), effect.none())
+}
+```
+
+Handlers receive the page model as the first argument, then constructor fields as named arguments. They do not receive the whole `ToClient` value. They return the updated page model plus an effect whose message type is the page's local `Msg`. The effect lets a server event start client-only follow-up work such as browser measurement, JS FFI, or a subscription callback without inventing a local message that only repeats the server event.
 
 This mirrors server `ToServer` handler naming:
 
@@ -427,6 +454,21 @@ ToClient.GameScoreUpdated -> client handler game_score_updated
 The Generator Framework recognizes only the constructor-derived snake_case handler name for this convention. A generic `receive` function is not a `ToClient` handler. The Generator Framework fails generation when a discovered client `ToClient` handler has a signature that does not match the constructor fields. It also fails when a module declares interest in a `ToClient` constructor but the matching snake_case handler is missing. Constructors with no active handler follow the app's configured no-handler policy.
 
 A `ToClient` constructor can be handled by more than one active client module. The Generator Framework fans the value out to every active handler for that constructor.
+
+Generated Mount `to_client` dispatch owns the page-model plumbing for server events. It keeps a generated bundle of page models for the Mount, applies each `ToClient` value to the active page handlers, stores the returned page models back into that bundle, and batches any returned page effects. The hand-written Mount root stores that generated page-model bundle and delegates server events to generated `to_client` dispatch.
+
+The hand-written Mount root owns route parsing, navigation, WebSocket registration, hydration boot flags, `ClientSharedState`, shell state such as dark mode, and shell view composition. It does not duplicate server event handling in a parallel local `Msg` vocabulary.
+
+For client-originated page events, generated Mount `to_client` dispatch also exposes a page-message update entry point. The Mount root wraps page-local messages only when a browser event originates from the page view or from a page effect. Those wrappers are not used for server-emitted `ToClient` values.
+
+The Generator Framework must flag inconsistencies:
+
+- a client page declares a `ToClient` interest but the constructor-derived handler is missing
+- a client `ToClient` handler omits the page model argument
+- a client `ToClient` handler takes the whole `ToClient` value instead of constructor fields
+- a client `ToClient` handler returns a local `Msg` instead of `#(Model, Effect(Msg))`
+- a local page `Msg` constructor mirrors a `ToClient` constructor only to enter `update`
+- generated `to_client` dispatch returns local page `Msg` values for server-emitted events
 
 ## Client Shared State
 
@@ -485,7 +527,7 @@ pub type ToClient {
 }
 ```
 
-The browser routes every server-originated `ToClient` through the same generated `to_client` dispatch. Constructor-named client handlers signal client-side interest. If multiple active handlers handle the constructor, the Generator Framework fans the value out to all of them. If no active handler handles the constructor, the configured no-handler policy applies.
+The browser routes every server-originated `ToClient` through the same generated `to_client` dispatch. Constructor-named client handlers signal client-side interest and apply the server event directly to page models. If multiple active handlers handle the constructor, the Generator Framework fans the value out to all of them. If no active handler handles the constructor, the configured no-handler policy applies.
 
 The Generator Framework does not generate separate live-update topic or payload contract types.
 
@@ -496,10 +538,10 @@ SSR handlers serve the first HTTP request for a route. Instead of returning an e
 The SSR contract:
 
 - SSR handlers execute the route's shared `init_requests` on HTTP request. If custom server `init` exists, SSR executes the requests returned by that function instead. Both paths produce the same `ToClient` values the client would receive over WebSocket after sending those requests.
-- The server applies the `ToClient` values to the shared page model and renders the shared Lustre view to an HTML string with `lustre/element.to_string`.
+- The server applies the `ToClient` values to route render data and renders the shared Lustre view to an HTML string with `lustre/element.to_string`.
 - The HTML response embeds the loaded page data as base64-encoded ETF `ToClient` values in a dedicated SSR page-data slot such as `__RUNTIME_SSR_TO_CLIENT__`. Route, params, and query are not embedded; the client derives them from `window.location` via `modem.initial_uri()`.
 - The HTML response separately embeds the Mount `ClientSharedState` payload in `__RUNTIME_CLIENT_SHARED_STATE__`.
-- Client init reads the embedded `ToClient` values as Lustre init flags. When hydration data exists, the client seeds its model through the generated `to_client` dispatch path and can skip requests from `init_requests`. When hydration data is absent, client `init` can send `init_requests` over WebSocket.
+- Client init reads the embedded `ToClient` values as Lustre init flags. When hydration data exists, the client seeds its generated page-model bundle through the generated `to_client` dispatch path and can skip requests from `init_requests`. When hydration data is absent, client `init` can send `init_requests` over WebSocket.
 - Client init reads the embedded `ClientSharedState` separately and passes it to the Mount shell/root app. Reading one boot payload must not delete or overwrite the other.
 - After hydration, SPA navigation still runs client page `init` and sends needed `ToServer` requests through the WebSocket connection.
 - Live fanout (`ToClient` broadcast via `pg`) continues as the post-boot update path.
@@ -698,14 +740,14 @@ Type aliases are transparent on the wire, as they are in Gleam. Domain identitie
 12. `ToServer` constructors carry command data only.
 13. Route, query, session, and user facts come from `RequestContext`.
 14. Server handlers may use `ServerContext` for app resources and I/O.
-15. `ToClient` values are mapped into local page, layout, or shared-state messages by constructor-named client handlers.
-16. Local page `Msg` values do not cross the wire.
+15. `ToClient` values are applied to page, layout, or shared-state models by constructor-named client handlers.
+16. Local page `Msg` values are for browser-originated events and do not cross the wire.
 17. Each Mount has a user-owned `backend.gleam` with `Msg`, `init`, and `update`; the `Model` type lives in sibling `model.gleam` so generated dispatch can import it without a cyclic dependency on `backend.gleam`.
 18. `backend.Msg` includes a client-message branch carrying `ToServer` and `RequestContext`.
 19. `backend.update` may intercept `ToServer` messages or delegate to generated dispatch. The generated dispatch module is emitted at `generated/{mount_namespace}/dispatch.gleam` and imported as `generated_dispatch`.
 20. Generated dispatch exhaustively matches the global `ToServer` type for each Mount. Constructors owned by the current Mount call server page handlers with constructor fields. Constructors owned by other Mounts are invalid for the current Mount and use a generated rejection path instead of silently returning `effect.none()`. The dispatch entry point is `generated_dispatch.to_server(msg, request_context, server_context, backend_model) -> #(Model, Effect(ToClient))`.
 21. The Generator Framework never fans out or forwards `ToServer` values across Mounts. A `ToServer` command is handled only by the Mount connection that received it.
-22. Generated `to_client` dispatch exhaustively matches `ToClient` and routes constructor fields to active client handlers. All server-originated `ToClient` values use the same `to_client` dispatch path.
+22. Generated `to_client` dispatch exhaustively matches `ToClient`, routes constructor fields to active client handlers, stores returned page models, and batches returned page effects. All server-originated `ToClient` values use the same `to_client` dispatch path.
 23. `ToClient` delivery is global and handler-driven. Any active client handler in any Mount may opt into any `ToClient` constructor.
 24. `ClientSharedState` is per Mount by default.
 25. `backend.Model` is per live SPA root connection.
@@ -721,6 +763,6 @@ Type aliases are transparent on the wire, as they are in Gleam. Domain identitie
 35. Mount logging is explicit. `user_logging` and `issue_logging` default to `false` when omitted; the framework initializer writes both as `true` in each Mount block. User logging only writes for authenticated users and stores user id plus email. Issue logging writes runtime issues for the Mount with or without authentication, including user id and email when known.
 36. Generated sign-in codes use uppercase `0-9A-Z`; verification trims and normalizes the lookup scope and submitted code to uppercase before hashing.
 37. SSR handlers execute the route's boot requests on HTTP request, render the same shared Lustre view the client uses, and embed the loaded page data as base64 ETF `ToClient` values in a dedicated SSR page-data slot. Route, params, and query are derived from the current browser URL rather than embedded as SSR flags.
-38. Client init hydration means consuming server-embedded SSR `ToClient` page data to start populated, skipping requests from shared `init_requests` when hydration data exists. It does not mean DOM reconciliation.
+38. Client init hydration means consuming server-embedded SSR `ToClient` page data through generated `to_client` dispatch so the generated page-model bundle starts populated, skipping requests from shared `init_requests` when hydration data exists. It does not mean DOM reconciliation.
 39. Shared page views are intentionally pure so they can be rendered by SSR, reused by the client, and tested directly without browser transport or WebSocket setup. Shared views accept data and action callbacks but must not import transport, generated client effects, modem, browser setup, or route modules.
 40. SPA navigation after initial hydration still runs client page `init` and sends needed `ToServer` requests through the WebSocket connection. Live fanout (`ToClient` broadcast via `pg`) continues as the post-boot update path.

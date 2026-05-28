@@ -11,7 +11,30 @@ import lustre/element.{type Element}
 import lustre/element/html
 import lustre/event
 import shared/api/domain/game.{type GameDetail}
+import shared/api/to_server.{type ToServer}
 import shared/components/ui
+
+/// Returns the ToServer commands needed to load game-detail data.
+///
+/// Generated SSR executes these commands locally and embeds the resulting
+/// ToClient values for hydration. Generated client init sends these same
+/// requests over WebSocket only when hydration has not already populated
+/// the page model.
+pub fn init_requests(game_id game_id: Int) -> List(ToServer) {
+  [to_server.LoadGame(game_id:)]
+}
+
+pub fn view(
+  game: Option(GameDetail),
+  on_navigate_team: fn(String) -> msg,
+) -> Element(msg) {
+  html.main([], [
+    html.section([attribute.class("panel")], [
+      ui.section_head("Game detail", ""),
+      view_game_detail(game, on_navigate_team),
+    ]),
+  ])
+}
 
 pub fn view_game_detail(
   game: Option(GameDetail),
@@ -59,16 +82,4 @@ pub fn view_game_detail(
         ),
       ])
   }
-}
-
-pub fn view_game_detail_page(
-  game: Option(GameDetail),
-  on_navigate_team: fn(String) -> msg,
-) -> Element(msg) {
-  html.main([], [
-    html.section([attribute.class("panel")], [
-      ui.section_head("Game detail", ""),
-      view_game_detail(game, on_navigate_team),
-    ]),
-  ])
 }

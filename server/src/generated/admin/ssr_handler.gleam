@@ -4,9 +4,10 @@
 //// Derived from server/admin/pages load/view functions, generated/admin/route.gleam,
 //// server/admin/shell.html, and server/server_context.gleam.
 ////
-//// Each SSR branch calls the same unified page `load` function that the
-//// WebSocket dispatch uses, renders the shared page view from the returned
-//// ToClient, and embeds the same ToClient value as base64 ETF for browser init.
+//// Each SSR branch calls the shared page's init_requests() to get the
+//// ToServer commands needed for this route, then executes them through the
+//// matching snake_case server handlers. The resulting ToClient values are
+//// embedded as base64 ETF for browser hydration.
 
 import generated/admin/request_context.{type RequestContext, RequestContext}
 import generated/admin/route.{type Route}
@@ -23,6 +24,7 @@ import server/admin/pages/games as admin_games_handler
 import server/server_context.{type ServerContext}
 import shared/admin/pages/games as admin_games_page
 import shared/api/to_client
+import shared/api/to_server
 import shared/authentication_context.{type AuthenticationContext}
 
 @external(erlang, "server_generated_protocol_atoms_ffi", "ensure")
@@ -71,13 +73,20 @@ fn load_route_data(
 ) -> #(String, String) {
   case request_context.route {
     route.AdminGames -> {
-      let result = admin_games_handler.load(request_context:, server_context:)
+      let result = case admin_games_page.init_requests() {
+        [to_server.LoadAdminGames, ..] ->
+          admin_games_handler.load_admin_games(
+            request_context:,
+            server_context:,
+          )
+        _ -> to_client.AdminError(reason: "init_requests mismatch")
+      }
       case result {
         to_client.AdminGamesLoaded(games:) -> {
           let nil_on_adjust = fn(_, _, _, _) { Nil }
           let nil_on_final = fn(_) { Nil }
           #(
-            admin_games_page.view_games(
+            admin_games_page.view(
               games,
               nil_on_adjust,
               nil_on_adjust,
@@ -90,7 +99,7 @@ fn load_route_data(
         to_client.AdminError(reason:) -> {
           let _ = io.println_error("SSR admin/games load failed: " <> reason)
           #(
-            admin_games_page.view_games(
+            admin_games_page.view(
               [],
               nil_on_adjust,
               nil_on_adjust,

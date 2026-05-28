@@ -18,8 +18,10 @@ Constructor-named client `ToClient` handlers are the client-side interest signal
 Every server-originated value shares the same client update path after transport decode:
 
 ```text
-ToClient -> active client ToClient handlers -> local Msg values -> update
+ToClient -> generated to_client dispatch -> active client ToClient handlers -> page models
 ```
+
+Client `ToClient` handlers are page mini-updates. They receive the page model plus constructor fields and return the updated page model plus any client effect. Local page `Msg` values are for browser-originated events and do not mirror server-emitted `ToClient` constructors.
 
 App-wide string notices use the Generator Framework's built-in layout/client-shell lane. Rich app-wide payloads use `ToClient` values.
 

@@ -14,12 +14,9 @@ import generated/codec
 import generated/runtime/effect as admin_effect
 import generated/setup
 import generated/transport
-import gleam/bool
 import gleam/dict
-import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/result
-import gleam/string
 import gleam/uri.{type Uri}
 import lustre
 import lustre/attribute
@@ -30,7 +27,6 @@ import lustre/event
 import modem
 import shared/admin/client_shared_state.{type AdminClientSharedState}
 import shared/admin/pages/games as admin_games_page
-import shared/api/domain/game as admin_game
 import shared/api/to_client as admin_to_client
 import shared/api/to_server as admin_to_server
 import shared/authentication_context
@@ -39,25 +35,17 @@ import shared/components/ui
 type Model {
   Model(
     route: admin_route.Route,
-    games: List(admin_game.AdminGameSummary),
-    notice: String,
-    home_code: String,
-    away_code: String,
+    pages: admin_to_client_dispatch.Models,
     dark_mode: Bool,
     context: Option(AdminClientSharedState),
   )
 }
 
 type Msg {
-  Received(admin_to_client_dispatch.Msg)
+  ServerEvent(admin_to_client.ToClient)
+  PageMsg(admin_to_client_dispatch.Msg)
   Navigate(admin_route.Route)
   UrlChanged(Uri)
-  CreateGame
-  UpdateHomeCode(String)
-  UpdateAwayCode(String)
-  AdjustHome(Int, Int, Int, Int)
-  AdjustAway(Int, Int, Int, Int)
-  MarkFinal(Int)
   SetDarkMode(Bool)
 }
 
@@ -93,27 +81,21 @@ fn init(
     modem.initial_uri()
     |> result.map(admin_router.parse_uri)
     |> result.unwrap(admin_route.NotFound)
+  let pages = admin_to_client_dispatch.init()
   let model =
     Model(
       route:,
-      games: [],
-      notice: "",
-      home_code: "TOR",
-      away_code: "NYC",
+      pages:,
       dark_mode: admin_effect.read_dark_mode(),
       context:,
     )
-  let #(model, hydrated) = case ssr_event {
+  let #(model, hydrated, hydration_effect) = case ssr_event {
     option.Some(event) -> {
-      let msgs = admin_to_client_dispatch.to_client(event)
-      let model =
-        list.fold(msgs, model, fn(m, msg) {
-          let #(new_m, _) = update(m, Received(msg))
-          new_m
-        })
-      #(model, !list.is_empty(msgs))
+      let #(pages, page_eff) =
+        admin_to_client_dispatch.apply_to_client(model.pages, event)
+      #(Model(..model, pages:), True, effect.map(page_eff, PageMsg))
     }
-    option.None -> #(model, False)
+    option.None -> #(model, False, effect.none())
   }
   let load_effect = case hydrated {
     True -> init_admin_games(route)
@@ -131,6 +113,7 @@ fn init(
         UrlChanged,
       ),
       load_effect,
+      hydration_effect,
     ]),
   )
 }
@@ -139,16 +122,20 @@ fn register_to_client_handlers() -> Effect(Msg) {
   effect.from(fn(dispatch) {
     transport.register_push_handler("to_client", fn(value) {
       let event: admin_to_client.ToClient = transport.coerce(value)
-      admin_to_client_dispatch.to_client(event)
-      |> list.each(fn(msg) { dispatch(Received(msg)) })
+      dispatch(ServerEvent(event))
     })
   })
 }
 
+/// Sends init_requests() commands over WebSocket for admin SPA navigation.
+/// init_requests() on the shared page is the source of truth.
 fn load_route(route: admin_route.Route) -> Effect(Msg) {
   case route {
     admin_route.AdminGames ->
-      send_admin_games_command(admin_to_server.LoadAdminGames)
+      case admin_games_page.init_requests() {
+        [req, ..] -> send_admin_games_command(req)
+        [] -> effect.none()
+      }
     admin_route.NotFound -> effect.none()
   }
 }
@@ -184,84 +171,19 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
       let route = admin_router.parse_uri(uri)
       #(Model(..model, route:), load_route(route))
     }
-    Received(admin_to_client_dispatch.GamesPage(page_msg)) ->
-      handle_games(model, page_msg)
-    UpdateHomeCode(value) -> #(
-      Model(..model, home_code: string.uppercase(string.trim(value))),
-      effect.none(),
-    )
-    UpdateAwayCode(value) -> #(
-      Model(..model, away_code: string.uppercase(string.trim(value))),
-      effect.none(),
-    )
-    CreateGame -> #(
-      Model(..model, notice: "Creating game..."),
-      send_admin_games_command(admin_to_server.CreateGame(
-        home_code: model.home_code,
-        away_code: model.away_code,
-      )),
-    )
-    AdjustHome(game_id, home_score, away_score, delta) -> #(
-      Model(..model, notice: "Saving score..."),
-      send_admin_games_command(admin_to_server.UpdateScore(
-        game_id:,
-        home_score: clamp_score(home_score + delta),
-        away_score:,
-        period: "4th",
-      )),
-    )
-    AdjustAway(game_id, home_score, away_score, delta) -> #(
-      Model(..model, notice: "Saving score..."),
-      send_admin_games_command(admin_to_server.UpdateScore(
-        game_id:,
-        home_score:,
-        away_score: clamp_score(away_score + delta),
-        period: "4th",
-      )),
-    )
-    MarkFinal(game_id) -> #(
-      Model(..model, notice: "Marking final..."),
-      send_admin_games_command(admin_to_server.MarkFinal(game_id:)),
-    )
+    ServerEvent(event) -> {
+      let #(pages, eff) =
+        admin_to_client_dispatch.apply_to_client(model.pages, event)
+      #(Model(..model, pages:), effect.map(eff, PageMsg))
+    }
+    PageMsg(msg) -> {
+      let #(pages, eff) =
+        admin_to_client_dispatch.update_page(model.pages, msg)
+      #(Model(..model, pages:), effect.map(eff, PageMsg))
+    }
     SetDarkMode(enabled) -> #(
       Model(..model, dark_mode: enabled),
       admin_effect.set_dark_mode(enabled),
-    )
-  }
-}
-
-fn handle_games(
-  model: Model,
-  msg: admin_games_client.Msg,
-) -> #(Model, Effect(Msg)) {
-  case msg {
-    admin_games_client.LoadedGames(games) -> #(
-      Model(..model, games:, notice: ""),
-      effect.none(),
-    )
-    admin_games_client.CreatedGame(game) -> #(
-      Model(
-        ..model,
-        games: upsert_game(games: model.games, detail: game),
-        notice: "Game created.",
-      ),
-      effect.none(),
-    )
-    admin_games_client.SavedGame(game) -> #(
-      Model(
-        ..model,
-        games: upsert_game(games: model.games, detail: game),
-        notice: "Saved.",
-      ),
-      effect.none(),
-    )
-    admin_games_client.ScoreUpdated(update) -> #(
-      Model(..model, games: apply_score_update(model.games, update)),
-      effect.none(),
-    )
-    admin_games_client.Failed(reason) -> #(
-      Model(..model, notice: reason),
-      effect.none(),
     )
   }
 }
@@ -279,29 +201,68 @@ fn view(model: Model) -> Element(Msg) {
         html.main([attribute.class("layout")], [
           html.section([attribute.class("panel")], [
             ui.section_head("Score desk", ""),
-            admin_games_page.view_games(
-              model.games,
-              AdjustAway,
-              AdjustHome,
-              MarkFinal,
+            admin_games_page.view(
+              model.pages.games_page.games,
+              fn(game_id, home_score, away_score, delta) {
+                PageMsg(admin_to_client_dispatch.GamesPage(
+                  admin_games_client.AdjustAway(
+                    game_id,
+                    home_score,
+                    away_score,
+                    delta,
+                  ),
+                ))
+              },
+              fn(game_id, home_score, away_score, delta) {
+                PageMsg(admin_to_client_dispatch.GamesPage(
+                  admin_games_client.AdjustHome(
+                    game_id,
+                    home_score,
+                    away_score,
+                    delta,
+                  ),
+                ))
+              },
+              fn(game_id) {
+                PageMsg(admin_to_client_dispatch.GamesPage(
+                  admin_games_client.MarkFinal(game_id),
+                ))
+              },
             ),
           ]),
           html.aside([attribute.class("panel admin-tools")], [
             html.h2([], [html.text("Create game")]),
             html.div([attribute.class("toolbar")], [
               html.input([
-                attribute.value(model.home_code),
+                attribute.value(model.pages.games_page.home_code),
                 attribute.placeholder("Home"),
-                event.on_input(UpdateHomeCode),
+                event.on_input(fn(value) {
+                  PageMsg(admin_to_client_dispatch.GamesPage(
+                    admin_games_client.UpdateHomeCode(value),
+                  ))
+                }),
               ]),
               html.input([
-                attribute.value(model.away_code),
+                attribute.value(model.pages.games_page.away_code),
                 attribute.placeholder("Away"),
-                event.on_input(UpdateAwayCode),
+                event.on_input(fn(value) {
+                  PageMsg(admin_to_client_dispatch.GamesPage(
+                    admin_games_client.UpdateAwayCode(value),
+                  ))
+                }),
               ]),
-              html.button([event.on_click(CreateGame)], [html.text("Create")]),
+              html.button(
+                [event.on_click(
+                  PageMsg(admin_to_client_dispatch.GamesPage(
+                    admin_games_client.CreateGame,
+                  )),
+                )],
+                [html.text("Create")],
+              ),
             ]),
-            html.p([attribute.class("muted")], [html.text(model.notice)]),
+            html.p([attribute.class("muted")], [
+              html.text(model.pages.games_page.notice),
+            ]),
           ]),
         ])
       admin_route.NotFound -> ui.not_found_view()
@@ -390,77 +351,5 @@ fn nav_link(
       event.on_click(Navigate(route)) |> event.prevent_default,
     ],
     [html.text(label)],
-  )
-}
-
-fn clamp_score(score: Int) -> Int {
-  use <- bool.guard(when: score < 0, return: 0)
-  score
-}
-
-fn upsert_game(
-  games games: List(admin_game.AdminGameSummary),
-  detail detail: admin_game.AdminGameDetail,
-) -> List(admin_game.AdminGameSummary) {
-  upsert_game_summary(
-    games:,
-    summary: admin_detail_to_summary(detail),
-    seen: False,
-  )
-}
-
-fn upsert_game_summary(
-  games games: List(admin_game.AdminGameSummary),
-  summary summary: admin_game.AdminGameSummary,
-  seen seen: Bool,
-) -> List(admin_game.AdminGameSummary) {
-  case games {
-    [] -> {
-      case seen {
-        True -> []
-        False -> [summary]
-      }
-    }
-    [game, ..rest] -> {
-      case game.id == summary.id {
-        True -> [
-          summary,
-          ..upsert_game_summary(games: rest, summary:, seen: True)
-        ]
-        False -> [game, ..upsert_game_summary(games: rest, summary:, seen:)]
-      }
-    }
-  }
-}
-
-fn apply_score_update(
-  games games: List(admin_game.AdminGameSummary),
-  update update: admin_game.GameScoreUpdate,
-) -> List(admin_game.AdminGameSummary) {
-  list.map(games, fn(game) {
-    case game.id == update.game_id {
-      True ->
-        admin_game.AdminGameSummary(
-          ..game,
-          home_score: update.home_score,
-          away_score: update.away_score,
-          status: update.status,
-        )
-      False -> game
-    }
-  })
-}
-
-fn admin_detail_to_summary(
-  game: admin_game.AdminGameDetail,
-) -> admin_game.AdminGameSummary {
-  admin_game.AdminGameSummary(
-    id: game.id,
-    home_code: game.home_code,
-    away_code: game.away_code,
-    home_score: game.home_score,
-    away_score: game.away_score,
-    status: game.status,
-    needs_attention: False,
   )
 }

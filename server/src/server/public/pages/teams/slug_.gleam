@@ -3,11 +3,11 @@
 //// Looks up a team by its URL slug, computes its record from final games,
 //// and loads the team's recent games.
 ////
-//// Generated public dispatch and SSR both call `load` to produce the page's
-//// ToClient result. Route params are extracted from request_context.route.
+//// The generated dispatch calls `load_team` — the snake_case form of the
+//// LoadTeam ToServer constructor. The handler receives constructor fields
+//// as labeled args so it does not need to parse request_context.route.
 
 import generated/public/request_context.{type RequestContext}
-import generated/public/route
 import generated/sql/server/games_sql
 import generated/sql/server/teams_sql
 import gleam/list
@@ -20,17 +20,14 @@ import shared/api/domain/team.{type TeamDetail, TeamDetail}
 import shared/api/to_client.{type ToClient}
 import sqlight
 
-pub fn load(
-  request_context request_context: RequestContext,
+pub fn load_team(
+  slug slug: String,
+  request_context _request_context: RequestContext,
   server_context context: ServerContext,
 ) -> ToClient {
-  case request_context.route {
-    route.Team(slug) ->
-      case team_detail(context.db, slug:) {
-        Ok(detail) -> to_client.TeamLoaded(team: detail)
-        Error(reason) -> to_client.GamesLoadFailed(reason: db.to_string(reason))
-      }
-    _ -> to_client.GamesLoadFailed(reason: "unexpected route for team")
+  case team_detail(context.db, slug:) {
+    Ok(detail) -> to_client.TeamLoaded(team: detail)
+    Error(reason) -> to_client.GamesLoadFailed(reason: db.to_string(reason))
   }
 }
 

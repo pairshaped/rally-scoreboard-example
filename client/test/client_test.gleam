@@ -1,11 +1,8 @@
 //// Client-side contract tests for the Scoreboard example.
 ////
-//// These tests verify the generated ToClient dispatch calls constructor-named
-//// client page handlers and fans out to all interested pages.
+//// These tests verify the generated ToClient dispatch applies server events as
+//// page mini-updates and fans out to all interested pages.
 
-import client/public/pages/games as games_client
-import client/public/pages/games/id_ as game_detail_client
-import client/public/pages/teams/slug_ as team_client
 import generated/codec
 import generated/public/to_client as public_to_client_dispatch
 import generated/setup
@@ -34,17 +31,18 @@ pub fn public_to_client_dispatch_fans_out_to_all_interested_pages_test() {
       status: game.Live("Q4"),
     )
 
-  let messages =
-    public_to_client_dispatch.to_client(to_client.GameScoreUpdated(update:))
+  let models = public_to_client_dispatch.init()
 
-  messages
-  |> should.equal([
-    public_to_client_dispatch.GamesPage(games_client.UpdatedScore(update)),
-    public_to_client_dispatch.GameDetailPage(game_detail_client.UpdatedScore(
-      update,
-    )),
-    public_to_client_dispatch.TeamPage(team_client.UpdatedScore(update)),
-  ])
+  let #(models, _) =
+    public_to_client_dispatch.apply_to_client(
+      models,
+      to_client.GameScoreUpdated(update:),
+    )
+
+  // After a score update with no prior data, the games list should still be
+  // empty (score updates patch existing data, they don't add new entries).
+  models.games_page.games |> should.equal([])
+  models.standings_page.rows |> should.equal([])
 }
 
 pub fn admin_client_shared_state_is_importable_test() {

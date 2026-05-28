@@ -1,24 +1,68 @@
 //// Client public standings page.
 ////
-//// Owns the page Msg type and constructor-named ToClient handlers for the
-//// public standings route. Shared page modules keep target-neutral model,
-//// view, and pure helpers.
+//// Owns the page model, Msg type, and constructor-named ToClient handlers
+//// for the public standings route. Shared page modules keep target-neutral view code.
 
-import shared/api/domain/standing.{type PowerRankingRow, type StandingRow}
+import gleam/list
+import lustre/effect.{type Effect}
+import shared/api/domain/standing.{
+  type PowerRankingRow, type StandingRow, StandingRow,
+}
+
+pub type Model {
+  Model(rows: List(StandingRow), notice: String)
+}
 
 pub type Msg {
-  LoadedStandings(List(StandingRow))
-  LoadedPowerRankings(List(PowerRankingRow))
+  NoOp
 }
 
-pub fn standings_loaded(rows rows: List(StandingRow)) -> Msg {
-  LoadedStandings(rows)
+pub fn init() -> Model {
+  Model(rows: [], notice: "")
 }
 
-pub fn power_rankings_loaded(rows rows: List(PowerRankingRow)) -> Msg {
-  LoadedPowerRankings(rows)
+pub fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
+  case msg {
+    NoOp -> #(model, effect.none())
+  }
 }
 
-pub fn standings_updated(rows rows: List(StandingRow)) -> Msg {
-  LoadedStandings(rows)
+pub fn standings_loaded(
+  model model: Model,
+  rows rows: List(StandingRow),
+) -> #(Model, Effect(Msg)) {
+  #(Model(..model, rows:), effect.none())
+}
+
+pub fn power_rankings_loaded(
+  model model: Model,
+  rows rows: List(PowerRankingRow),
+) -> #(Model, Effect(Msg)) {
+  #(
+    Model(..model, rows: power_rankings_to_standings(rows)),
+    effect.none(),
+  )
+}
+
+pub fn standings_updated(
+  model model: Model,
+  rows rows: List(StandingRow),
+) -> #(Model, Effect(Msg)) {
+  #(Model(..model, rows:), effect.none())
+}
+
+fn power_rankings_to_standings(
+  rows: List(PowerRankingRow),
+) -> List(StandingRow) {
+  list.map(rows, fn(row) {
+    StandingRow(
+      team_code: row.team_code,
+      team_name: row.team_name,
+      slug: row.slug,
+      wins: row.wins,
+      losses: row.losses,
+      points_for: row.points_for,
+      points_against: row.points_against,
+    )
+  })
 }

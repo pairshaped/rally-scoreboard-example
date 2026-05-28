@@ -1,7 +1,12 @@
 //// Root API messages emitted by the server to browser clients.
 ////
-//// Receivers on each Mount decide which page messages should be produced
-//// when these values arrive over the shared ToClient transport lane.
+//// ToClient is the server-event vocabulary. Each constructor is applied as a
+//// page mini-update: a constructor-named client handler receives the page
+//// model plus constructor fields and returns the updated page model plus any
+//// page effect. Local page Msg is for browser-originated events only.
+////
+//// A constructor with multiple active handlers fans out to every matching
+//// handler across Mounts.
 
 import shared/api/domain/game.{
   type AdminGameDetail, type AdminGameSummary, type GameDetail,

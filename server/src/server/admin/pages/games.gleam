@@ -6,8 +6,10 @@
 //// GameScoreUpdated and StandingsUpdated through the live-update pubsub
 //// so all connected public clients see changes without a page reload.
 ////
-//// Generated admin dispatch and SSR both call `load` to produce the page's
-//// ToClient result.
+//// The generated dispatch calls `load_admin_games` — the snake_case form of
+//// the LoadAdminGames ToServer constructor. Page-data handlers like this
+//// return ToClient directly so the dispatch can wrap the result without
+//// changing backend model.
 
 import generated/admin/request_context.{type RequestContext}
 import generated/runtime/effect.{type Effect}
@@ -25,7 +27,7 @@ import shared/api/domain/standing
 import shared/api/to_client.{type ToClient}
 import sqlight
 
-pub fn load(
+pub fn load_admin_games(
   request_context _request_context: RequestContext,
   server_context context: ServerContext,
 ) -> ToClient {

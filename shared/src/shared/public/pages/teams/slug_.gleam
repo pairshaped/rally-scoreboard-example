@@ -14,11 +14,30 @@ import shared/api/domain/game.{
   type GameScoreUpdate, type PublicGameSummary, Final, PublicGameSummary,
 }
 import shared/api/domain/team.{type TeamDetail, TeamDetail}
+import shared/api/to_server.{type ToServer}
 import shared/components/ui
 import shared/public/pages/games as public_games
 
+/// Returns the ToServer commands needed to load team detail data.
+///
+/// Generated SSR executes these commands locally and embeds the resulting
+/// ToClient values for hydration. Generated client init sends these same
+/// requests over WebSocket only when hydration has not already populated
+/// the page model.
+pub fn init_requests(slug slug: String) -> List(ToServer) {
+  [to_server.LoadTeam(slug:)]
+}
+
 pub type Model {
   Model(team: TeamDetail)
+}
+
+pub fn view(
+  team: Option(Model),
+  on_navigate_team: fn(String) -> msg,
+  on_navigate_game: fn(Int) -> msg,
+) -> Element(msg) {
+  html.main([], [view_team_detail(team, on_navigate_team, on_navigate_game)])
 }
 
 pub fn apply_score_update(model: Model, update: GameScoreUpdate) -> Model {
@@ -164,12 +183,4 @@ fn stat_item(label: String, value: String) -> Element(msg) {
     html.dt([], [html.text(label)]),
     html.dd([], [html.text(value)]),
   ])
-}
-
-pub fn view_team_page(
-  team: Option(Model),
-  on_navigate_team: fn(String) -> msg,
-  on_navigate_game: fn(Int) -> msg,
-) -> Element(msg) {
-  html.main([], [view_team_detail(team, on_navigate_team, on_navigate_game)])
 }

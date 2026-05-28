@@ -30,6 +30,7 @@ Normal pages use one first-render data convention across targets:
 
 - shared page modules may declare `init_requests() -> List(ToServer)`
 - client page modules may define `init(...)` for custom browser startup decisions
+- client page modules define constructor-named `ToClient` handlers as mini-updates over their page model
 - server page modules may define `init(...) -> List(ToServer)` for custom SSR request selection
 - server `ToServer` handlers still use constructor-derived snake_case names such as `load_games`
 
@@ -89,7 +90,7 @@ The Generator Framework emits the Mount boot contract:
 - server shell encodes the Mount `ClientSharedState`
 - client setup decodes the `ClientSharedState`
 - page init receives the `ClientSharedState`
-- page `ToClient` handlers can emit shell-level updates
+- page `ToClient` handlers can emit page-local effects or shell-level updates
 - the root Mount view can react to shell-level updates
 
 `ClientSharedState` is per Mount. Public and admin can shape their shared client state differently.

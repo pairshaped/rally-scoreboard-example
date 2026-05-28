@@ -1,7 +1,8 @@
 //// Public server handlers for the games list.
 ////
-//// Generated public dispatch and SSR both call `load` to produce the page's
-//// ToClient result.
+//// The generated dispatch calls `load_games` — the snake_case form of the
+//// LoadGames ToServer constructor. Page-data handlers like this return ToClient
+//// directly so the dispatch can wrap the result without changing backend model.
 
 import generated/public/request_context.{type RequestContext}
 import generated/sql/server/games_sql
@@ -15,7 +16,7 @@ import shared/api/domain/game
 import shared/api/to_client.{type ToClient}
 import sqlight
 
-pub fn load(
+pub fn load_games(
   request_context request_context: RequestContext,
   server_context context: ServerContext,
 ) -> ToClient {

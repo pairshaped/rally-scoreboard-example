@@ -583,7 +583,7 @@ pub fn mount_clients_use_generated_routers_and_effects_test() {
   |> contains("transport.register_push_handler(\"to_client\"")
   |> should.be_true
   public_client
-  |> contains("public_to_client_dispatch.to_client(event)")
+  |> contains("public_to_client_dispatch.apply_to_client(model.pages, event)")
   |> should.be_true
   public_client
   |> contains("public_effect.send_page_init_and_command(")
@@ -622,7 +622,7 @@ pub fn mount_clients_use_generated_routers_and_effects_test() {
   |> contains("transport.register_push_handler(\"to_client\"")
   |> should.be_true
   admin_client
-  |> contains("admin_to_client_dispatch.to_client(event)")
+  |> contains("admin_to_client_dispatch.apply_to_client(model.pages, event)")
   |> should.be_true
   admin_client
   |> contains("admin_effect.send_page_init_and_command(")
@@ -665,15 +665,20 @@ pub fn generated_browser_imports_stay_inside_static_build_prefix_test() {
 
 pub fn admin_save_updates_do_not_refetch_the_games_list_test() {
   let admin_client = read("../client/src/scoreboard_admin_client.gleam")
+  let admin_games_client = read("../client/src/client/admin/pages/games.gleam")
 
-  count(admin_client, "admin_to_server.LoadAdminGames") |> should.equal(1)
+  // Admin client calls init_requests() instead of hardcoding ToServer commands.
   admin_client
+  |> contains("admin_games_page.init_requests()")
+  |> should.be_true
+  admin_games_client
   |> contains("games: upsert_game(games: model.games, detail: game)")
   |> should.be_true
 }
 
 pub fn admin_final_games_do_not_show_final_action_test() {
   let admin_client = read("../client/src/scoreboard_admin_client.gleam")
+  let admin_games_client = read("../client/src/client/admin/pages/games.gleam")
   let admin_games_page = read("../shared/src/shared/admin/pages/games.gleam")
 
   admin_games_page
@@ -686,12 +691,16 @@ pub fn admin_final_games_do_not_show_final_action_test() {
   |> contains("[html.text(\"Finalize\")]")
   |> should.be_true
   admin_client
+  |> contains("admin_games_client.MarkFinal(game_id)")
+  |> should.be_true
+  admin_games_client
   |> contains("MarkFinal(game_id)")
   |> should.be_true
 }
 
 pub fn admin_score_controls_live_next_to_team_names_test() {
   let admin_client = read("../client/src/scoreboard_admin_client.gleam")
+  let admin_games_client = read("../client/src/client/admin/pages/games.gleam")
   let admin_games_page = read("../shared/src/shared/admin/pages/games.gleam")
   let admin_shell = read("src/server/admin/shell.html")
 
@@ -699,12 +708,18 @@ pub fn admin_score_controls_live_next_to_team_names_test() {
   |> contains("attribute.class(\"admin-score-row\")")
   |> should.be_true
   admin_client
+  |> contains("admin_games_client.AdjustAway(")
+  |> should.be_true
+  admin_client
+  |> contains("admin_games_client.AdjustHome(")
+  |> should.be_true
+  admin_games_client
   |> contains("AdjustAway(game_id, home_score, away_score, delta)")
   |> should.be_true
-  admin_client
+  admin_games_client
   |> contains("AdjustHome(game_id, home_score, away_score, delta)")
   |> should.be_true
-  admin_client
+  admin_games_client
   |> contains("clamp_score(home_score + delta)")
   |> should.be_true
   admin_shell
@@ -915,13 +930,16 @@ pub fn public_routes_have_matching_page_handlers_test() {
 
   let dispatch = read("src/generated/public/dispatch.gleam")
   dispatch
-  |> contains("server_public_pages_games.load(")
+  |> contains("server_public_pages_games.load_games(")
   |> should.be_true
   dispatch
-  |> contains("server_public_pages_games_id_.load(")
+  |> contains("server_public_pages_games_id_.load_game(")
   |> should.be_true
   dispatch
-  |> contains("server_public_pages_standings.load(")
+  |> contains("server_public_pages_standings.load_standings(")
+  |> should.be_true
+  dispatch
+  |> contains("server_public_pages_teams_slug_.load_team(")
   |> should.be_true
 }
 
@@ -1533,6 +1551,147 @@ fn test_users_db() -> sqlight.Connection {
   conn
 }
 
+// ---------------------------------------------------------------------------
+// ToClient mini-update convention enforcement
+// ---------------------------------------------------------------------------
+
+pub fn generated_to_client_dispatch_owns_models_bundle_test() {
+  let public_tc = read("../client/src/generated/public/to_client.gleam")
+  let admin_tc = read("../client/src/generated/admin/to_client.gleam")
+
+  // Generated dispatch owns a page-model bundle.
+  public_tc |> contains("pub type Models {") |> should.be_true
+  admin_tc |> contains("pub type Models {") |> should.be_true
+
+  // Generated dispatch initializes the bundle from page init functions.
+  public_tc |> contains("pub fn init() -> Models {") |> should.be_true
+  admin_tc |> contains("pub fn init() -> Models {") |> should.be_true
+
+  // Generated dispatch applies ToClient directly to page models.
+  public_tc |> contains("pub fn apply_to_client(") |> should.be_true
+  admin_tc |> contains("pub fn apply_to_client(") |> should.be_true
+
+  // Generated dispatch has a browser-event update path.
+  public_tc |> contains("pub fn update_page(") |> should.be_true
+  admin_tc |> contains("pub fn update_page(") |> should.be_true
+}
+
+pub fn generated_to_client_dispatch_does_not_return_list_msg_test() {
+  let public_tc = read("../client/src/generated/public/to_client.gleam")
+  let admin_tc = read("../client/src/generated/admin/to_client.gleam")
+
+  // Server-emitted ToClient values are applied directly; dispatch does not
+  // return List(Msg) for server events.
+  public_tc
+  |> contains("to_client(msg: ToClient) -> List(Msg)")
+  |> should.be_false
+  admin_tc
+  |> contains("to_client(msg: ToClient) -> List(Msg)")
+  |> should.be_false
+}
+
+pub fn generated_to_client_module_comments_describe_mini_update_convention_test() {
+  let public_tc = read("../client/src/generated/public/to_client.gleam")
+  let admin_tc = read("../client/src/generated/admin/to_client.gleam")
+
+  // Comments document the mini-update convention.
+  public_tc
+  |> contains("ToClient is the server-event vocabulary")
+  |> should.be_true
+  public_tc
+  |> contains("Server events are applied as page")
+  |> should.be_true
+  admin_tc
+  |> contains("ToClient is the server-event vocabulary")
+  |> should.be_true
+
+  // Comments document the local Msg boundary.
+  public_tc
+  |> contains("Local page Msg is for browser-originated events only")
+  |> should.be_true
+  admin_tc
+  |> contains("Local page Msg is for browser-originated events only")
+  |> should.be_true
+
+  // Comments document that generated dispatch owns plumbing and effect batching.
+  public_tc
+  |> contains("owns page-model bundle plumbing and effect batching")
+  |> should.be_true
+  admin_tc
+  |> contains("owns page-model bundle plumbing and effect batching")
+  |> should.be_true
+}
+
+pub fn client_toclient_handlers_return_model_effect_test() {
+  let pages = [
+    "../client/src/client/public/pages/games.gleam",
+    "../client/src/client/public/pages/games/id_.gleam",
+    "../client/src/client/public/pages/standings.gleam",
+    "../client/src/client/public/pages/teams/slug_.gleam",
+    "../client/src/client/admin/pages/games.gleam",
+  ]
+
+  list.each(pages, fn(path) {
+    let page = read(path)
+
+    // Each page has at least one mini-update handler that receives the
+    // page model as the first argument.
+    page
+    |> contains("model model: Model,")
+    |> should.be_true
+
+    // Mini-update handlers return #(Model, Effect(Msg)).
+    page
+    |> contains("#(Model(")
+    |> should.be_true
+  })
+}
+
+pub fn public_page_msg_does_not_mirror_toclient_constructors_test() {
+  let games = read("../client/src/client/public/pages/games.gleam")
+  let game_detail = read("../client/src/client/public/pages/games/id_.gleam")
+  let standings = read("../client/src/client/public/pages/standings.gleam")
+  let team = read("../client/src/client/public/pages/teams/slug_.gleam")
+
+  // Public page Msg types must not contain protocol-shaped constructors
+  // that only mirror ToClient values.
+  games |> contains("LoadedGames") |> should.be_false
+  games |> contains("UpdatedScore") |> should.be_false
+  games |> contains("LoadFailed") |> should.be_false
+  game_detail |> contains("LoadedGame") |> should.be_false
+  game_detail |> contains("UpdatedScore") |> should.be_false
+  game_detail |> contains("LoadFailed") |> should.be_false
+  standings |> contains("LoadedStandings") |> should.be_false
+  standings |> contains("LoadedPowerRankings") |> should.be_false
+  team |> contains("LoadedTeam") |> should.be_false
+  team |> contains("UpdatedScore") |> should.be_false
+  team |> contains("LoadFailed") |> should.be_false
+}
+
+pub fn admin_page_msg_keeps_browser_events_removes_protocol_constructors_test() {
+  let admin = read("../client/src/client/admin/pages/games.gleam")
+
+  // Admin page Msg keeps real browser-originated events.
+  admin |> contains("CreateGame") |> should.be_true
+  admin |> contains("UpdateHomeCode") |> should.be_true
+  admin |> contains("UpdateAwayCode") |> should.be_true
+  admin |> contains("AdjustHome") |> should.be_true
+  admin |> contains("AdjustAway") |> should.be_true
+  admin |> contains("MarkFinal") |> should.be_true
+
+  // Admin page Msg does not contain protocol-shaped constructors that
+  // only mirror ToClient values.
+  admin |> contains("LoadedGames") |> should.be_false
+  admin |> contains("CreatedGame") |> should.be_false
+  admin |> contains("SavedGame") |> should.be_false
+  admin |> contains("ScoreUpdated") |> should.be_false
+  admin |> contains("Failed") |> should.be_false
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
 fn read(path: String) -> String {
   let assert Ok(source) = simplifile.read(path)
   source
@@ -1604,12 +1763,18 @@ pub fn admin_to_client_dispatch_uses_snake_case_handler_names_test() {
 pub fn public_server_dispatch_uses_handler_conventions_test() {
   let dispatch = read("src/generated/public/dispatch.gleam")
 
-  // Page-load constructors call the page module's unified load function.
-  dispatch |> contains("server_public_pages_games.load(") |> should.be_true
-  dispatch |> contains("server_public_pages_games_id_.load(") |> should.be_true
-  dispatch |> contains("server_public_pages_standings.load(") |> should.be_true
+  // Each ToServer constructor maps to an explicit snake_case handler.
   dispatch
-  |> contains("server_public_pages_teams_slug_.load(")
+  |> contains("server_public_pages_games.load_games(")
+  |> should.be_true
+  dispatch
+  |> contains("server_public_pages_games_id_.load_game(")
+  |> should.be_true
+  dispatch
+  |> contains("server_public_pages_standings.load_standings(")
+  |> should.be_true
+  dispatch
+  |> contains("server_public_pages_teams_slug_.load_team(")
   |> should.be_true
 
   // Other-Mount constructors are rejected, not silently ignored.
@@ -1619,8 +1784,10 @@ pub fn public_server_dispatch_uses_handler_conventions_test() {
 pub fn admin_server_dispatch_uses_handler_conventions_test() {
   let dispatch = read("src/generated/admin/dispatch.gleam")
 
-  // Page-load constructors call the page module's unified load function.
-  dispatch |> contains("server_admin_pages_games.load(") |> should.be_true
+  // Each ToServer constructor maps to an explicit snake_case handler.
+  dispatch
+  |> contains("server_admin_pages_games.load_admin_games(")
+  |> should.be_true
 
   // Command constructors call snake_case handlers with labeled args.
   dispatch
@@ -1691,6 +1858,126 @@ pub fn to_client_handlers_receive_labeled_args_not_whole_message_test() {
   admin_games |> contains("game game: AdminGameDetail") |> should.be_true
   admin_games |> contains("update update: GameScoreUpdate") |> should.be_true
   admin_games |> contains("reason reason: String") |> should.be_true
+}
+
+pub fn client_pages_own_tea_model_and_update_test() {
+  let page_paths = [
+    "../client/src/client/public/pages/games.gleam",
+    "../client/src/client/public/pages/games/id_.gleam",
+    "../client/src/client/public/pages/standings.gleam",
+    "../client/src/client/public/pages/teams/slug_.gleam",
+    "../client/src/client/admin/pages/games.gleam",
+  ]
+
+  list.each(page_paths, fn(path) {
+    let page = read(path)
+    page |> contains("pub type Model") |> should.be_true
+    page |> contains("pub type Msg") |> should.be_true
+    page |> contains("pub fn init() -> Model") |> should.be_true
+    page
+    |> contains("pub fn update(model: Model, msg: Msg)")
+    |> should.be_true
+  })
+}
+
+pub fn generated_update_page_delegates_to_page_update_test() {
+  let public_tc = read("../client/src/generated/public/to_client.gleam")
+  let admin_tc = read("../client/src/generated/admin/to_client.gleam")
+
+  // Public update_page delegates each page message to the page's update.
+  public_tc |> contains("games.update(models.games_page, page_msg)") |> should.be_true
+  public_tc |> contains("game_detail.update(models.game_detail_page, page_msg)") |> should.be_true
+  public_tc |> contains("standings.update(models.standings_page, page_msg)") |> should.be_true
+  public_tc |> contains("team.update(models.team_page, page_msg)") |> should.be_true
+
+  // Admin update_page delegates to the page's update.
+  admin_tc |> contains("games.update(models.games_page, page_msg)") |> should.be_true
+}
+
+pub fn mount_clients_delegate_page_messages_through_update_page_test() {
+  let public_client = read("../client/src/scoreboard_public_client.gleam")
+  let admin_client = read("../client/src/scoreboard_admin_client.gleam")
+
+  public_client
+  |> contains("public_to_client_dispatch.update_page(model.pages, msg)")
+  |> should.be_true
+
+  admin_client
+  |> contains("admin_to_client_dispatch.update_page(model.pages, msg)")
+  |> should.be_true
+}
+
+pub fn shared_pages_expose_init_requests_with_function_comment_test() {
+  let games = read("../shared/src/shared/public/pages/games.gleam")
+  let game_detail = read("../shared/src/shared/public/pages/games/id_.gleam")
+  let standings = read("../shared/src/shared/public/pages/standings.gleam")
+  let team = read("../shared/src/shared/public/pages/teams/slug_.gleam")
+  let admin_games = read("../shared/src/shared/admin/pages/games.gleam")
+
+  // Each shared page exposes init_requests().
+  games |> contains("pub fn init_requests()") |> should.be_true
+  game_detail |> contains("pub fn init_requests(") |> should.be_true
+  standings |> contains("pub fn init_requests()") |> should.be_true
+  team |> contains("pub fn init_requests(") |> should.be_true
+  admin_games |> contains("pub fn init_requests()") |> should.be_true
+
+  // Each declared init_requests has the function-level comment
+  // documenting that generated SSR and client init consume it.
+  games |> contains("Generated SSR executes") |> should.be_true
+  games |> contains("Generated client init sends") |> should.be_true
+  game_detail |> contains("Generated SSR executes") |> should.be_true
+  standings |> contains("Generated SSR executes") |> should.be_true
+  team |> contains("Generated SSR executes") |> should.be_true
+  admin_games |> contains("Generated SSR executes") |> should.be_true
+}
+
+pub fn ssr_handler_documents_init_requests_consumption_test() {
+  let ssr = read("src/generated/public/ssr_handler.gleam")
+
+  // SSR handler documents the init_requests convention.
+  ssr |> contains("init_requests()") |> should.be_true
+  ssr |> contains("generated client init sends") |> should.be_true
+}
+
+pub fn dispatch_documents_init_requests_convention_test() {
+  let public_dispatch = read("src/generated/public/dispatch.gleam")
+  let admin_dispatch = read("src/generated/admin/dispatch.gleam")
+
+  public_dispatch
+  |> contains("init_requests() declares which constructors")
+  |> should.be_true
+  admin_dispatch
+  |> contains("init_requests() declares which constructors")
+  |> should.be_true
+}
+
+pub fn dispatch_maps_every_load_constructor_to_explicit_handler_test() {
+  let public_dispatch = read("src/generated/public/dispatch.gleam")
+  let admin_dispatch = read("src/generated/admin/dispatch.gleam")
+
+  // Every Load* ToServer constructor has an explicit snake_case handler.
+  public_dispatch |> contains("load_games(") |> should.be_true
+  public_dispatch |> contains("load_game(") |> should.be_true
+  public_dispatch |> contains("load_standings(") |> should.be_true
+  public_dispatch |> contains("load_team(") |> should.be_true
+  admin_dispatch |> contains("load_admin_games(") |> should.be_true
+
+  // No remaining generic load() calls in dispatch.
+  public_dispatch
+  |> contains("server_public_pages_games.load(")
+  |> should.be_false
+  admin_dispatch
+  |> contains("server_admin_pages_games.load(")
+  |> should.be_false
+}
+
+pub fn ssr_handler_calls_explicit_handler_names_not_generic_load_test() {
+  let ssr = read("src/generated/public/ssr_handler.gleam")
+
+  ssr |> contains("load_games(") |> should.be_true
+  ssr |> contains("load_game(") |> should.be_true
+  ssr |> contains("load_standings(") |> should.be_true
+  ssr |> contains("load_team(") |> should.be_true
 }
 
 fn authentication_policy_name(

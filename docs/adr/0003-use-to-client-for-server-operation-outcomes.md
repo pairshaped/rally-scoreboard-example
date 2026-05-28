@@ -8,6 +8,8 @@ Operation result constructors carry the data the client needs to update local st
 
 Client-originated commands enter the server through `backend.Msg.FromClient(ToServer, RequestContext)`. The backend update may emit one or more `ToClient` values itself, or delegate to generated dispatch so a colocated server handler can emit values.
 
-Pages map `ToClient` constructors into local `Msg` values through generated `to_client` dispatch and constructor-named client handlers. Local page `Msg` types remain client state-machine inputs for UI events, browser effects, and page update logic. They do not cross the wire.
+Generated `to_client` dispatch applies `ToClient` constructors to active client page models through constructor-named client handlers. These handlers are page mini-updates: they receive the page model plus constructor fields and return the updated page model plus any client effect.
+
+Local page `Msg` types are for browser-originated page events such as clicks, input changes, timers, subscriptions, and JS FFI callbacks. They do not mirror `ToClient` constructors and they do not cross the wire.
 
 `ToServer` uses a command lane, not the RPC response lane. The client sends the command and does not register a response callback or wait for a transport acknowledgement. If the user needs to see success, failure, or resulting state, the server emits a `ToClient` constructor. Rare true fire-and-forget commands emit no app-visible value.

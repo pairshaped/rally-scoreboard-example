@@ -8,42 +8,73 @@ title: client__src__generated__admin__to_client_gleam
 ////
 //// Derived from shared/api/to_client.gleam and client/admin/pages.
 ////
-//// Each ToClient constructor maps to client page handlers named by the
-//// snake_case of the constructor name (e.g. AdminGamesLoaded ->
-//// admin_games_loaded, GameScoreUpdated -> game_score_updated). Handlers
-//// receive constructor fields as labeled args and return the local page
-//// Msg. A constructor with multiple active handlers fans out to every
-//// matching handler. Constructors owned by another Mount fall through
-//// to the catch-all.
+//// ToClient is the server-event vocabulary. Server events are applied as page
+//// mini-updates: each handler receives the page model plus constructor fields
+//// and returns the updated page model plus any page effect.
+////
+//// Local page Msg is for browser-originated events only. Generated dispatch
+//// owns page-model bundle plumbing and effect batching.
 
 import client/admin/pages/games
+import lustre/effect.{type Effect}
 import shared/api/to_client.{type ToClient}
+
+pub type Models {
+  Models(games_page: games.Model)
+}
 
 pub type Msg {
   GamesPage(games.Msg)
 }
 
-pub fn to_client(msg: ToClient) -> List(Msg) {
+pub fn init() -> Models {
+  Models(games_page: games.init())
+}
+
+pub fn apply_to_client(
+  models models: Models,
+  msg msg: ToClient,
+) -> #(Models, Effect(Msg)) {
   case msg {
-    to_client.AdminGamesLoaded(games: games_list) -> [
-      GamesPage(games.admin_games_loaded(games: games_list)),
-    ]
-    to_client.GameCreated(game: game) -> [
-      GamesPage(games.game_created(game: game)),
-    ]
-    to_client.ScoreUpdateSaved(game: game) -> [
-      GamesPage(games.score_update_saved(game: game)),
-    ]
-    to_client.ResultSaved(game: game) -> [
-      GamesPage(games.result_saved(game: game)),
-    ]
-    to_client.GameScoreUpdated(update: update) -> [
-      GamesPage(games.game_score_updated(update: update)),
-    ]
-    to_client.AdminError(reason: reason) -> [
-      GamesPage(games.admin_error(reason: reason)),
-    ]
-    _ -> []
+    to_client.AdminGamesLoaded(games: games_list) -> {
+      let #(page, eff) =
+        games.admin_games_loaded(models.games_page, games: games_list)
+      #(Models(games_page: page), effect.map(eff, GamesPage))
+    }
+    to_client.GameCreated(game: game) -> {
+      let #(page, eff) = games.game_created(models.games_page, game:)
+      #(Models(games_page: page), effect.map(eff, GamesPage))
+    }
+    to_client.ScoreUpdateSaved(game: game) -> {
+      let #(page, eff) = games.score_update_saved(models.games_page, game:)
+      #(Models(games_page: page), effect.map(eff, GamesPage))
+    }
+    to_client.ResultSaved(game: game) -> {
+      let #(page, eff) = games.result_saved(models.games_page, game:)
+      #(Models(games_page: page), effect.map(eff, GamesPage))
+    }
+    to_client.GameScoreUpdated(update: update) -> {
+      let #(page, eff) =
+        games.game_score_updated(models.games_page, update:)
+      #(Models(games_page: page), effect.map(eff, GamesPage))
+    }
+    to_client.AdminError(reason: reason) -> {
+      let #(page, eff) = games.admin_error(models.games_page, reason:)
+      #(Models(games_page: page), effect.map(eff, GamesPage))
+    }
+    _ -> #(models, effect.none())
+  }
+}
+
+pub fn update_page(
+  models models: Models,
+  msg msg: Msg,
+) -> #(Models, Effect(Msg)) {
+  case msg {
+    GamesPage(page_msg) -> {
+      let #(page, eff) = games.update(models.games_page, page_msg)
+      #(Models(games_page: page), effect.map(eff, GamesPage))
+    }
   }
 }
 

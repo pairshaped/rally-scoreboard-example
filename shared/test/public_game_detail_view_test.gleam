@@ -12,7 +12,7 @@ fn on_navigate_team(_slug: String) -> Nil {
 }
 
 fn render_view(game: option.Option(GameDetail)) -> String {
-  game_detail.view_game_detail_page(game, on_navigate_team)
+  game_detail.view(game, on_navigate_team)
   |> element.to_readable_string
 }
 
