@@ -21,6 +21,9 @@ pub fn parse_uri(uri: Uri) -> Route {
     ["standings"] -> route.Standings
     ["teams", slug] ->
       route.Team(slug: result.unwrap(uri.percent_decode(slug), slug))
+    ["sign_in"] -> route.SignInPassword
+    ["sign_in", "password"] -> route.SignInPassword
+    ["sign_in", "code"] -> route.SignInCode
     _ -> route.NotFound
   }
 }
@@ -31,6 +34,9 @@ pub fn route_to_path(route route: Route) -> String {
     route.GamesId(id:) -> "/games/" <> uri.percent_encode(id)
     route.Standings -> "/standings"
     route.Team(slug:) -> "/teams/" <> uri.percent_encode(slug)
+    route.SignIn -> "/sign_in/password"
+    route.SignInPassword -> "/sign_in/password"
+    route.SignInCode -> "/sign_in/code"
     route.NotFound -> "/"
   }
 }

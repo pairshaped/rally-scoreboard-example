@@ -154,7 +154,10 @@ fn initial_load(route: public_route.Route) -> Effect(Msg) {
       public_effect.send_to_server(public_to_server.LoadStandings)
     public_route.Team(slug:) ->
       public_effect.send_to_server(public_to_server.LoadTeam(slug:))
-    public_route.NotFound -> effect.none()
+    public_route.SignIn
+    | public_route.SignInPassword
+    | public_route.SignInCode
+    | public_route.NotFound -> effect.none()
   }
 }
 
@@ -206,7 +209,10 @@ fn load_route(
         query:,
         command: public_to_server.LoadTeam(slug:),
       )
-    public_route.NotFound -> effect.none()
+    public_route.SignIn
+    | public_route.SignInPassword
+    | public_route.SignInCode
+    | public_route.NotFound -> effect.none()
   }
 }
 
@@ -216,7 +222,10 @@ fn route_page_init(route: public_route.Route) -> #(String, String) {
     public_route.GamesId(id) -> #("GamesId", id)
     public_route.Standings -> #("Standings", "null")
     public_route.Team(slug) -> #("Team", slug)
-    public_route.NotFound -> #("NotFound", "null")
+    public_route.SignIn
+    | public_route.SignInPassword
+    | public_route.SignInCode
+    | public_route.NotFound -> #("NotFound", "null")
   }
 }
 
@@ -378,9 +387,137 @@ fn view(model: Model) -> Element(Msg) {
           on_navigate_team,
           on_navigate_game,
         )
+      public_route.SignIn ->
+        sign_in_view(public_route.SignInPassword, model.query)
+      public_route.SignInPassword ->
+        sign_in_view(public_route.SignInPassword, model.query)
+      public_route.SignInCode ->
+        sign_in_view(public_route.SignInCode, model.query)
       public_route.NotFound -> ui.not_found_view()
     },
   ])
+}
+
+fn sign_in_view(
+  current: public_route.Route,
+  query: Dict(String, String),
+) -> Element(Msg) {
+  let return_to = dict.get(query, "return_to") |> result.unwrap("")
+  let return_to_query = case return_to {
+    "" -> ""
+    rt -> "?return_to=" <> uri.percent_encode(rt)
+  }
+
+  html.main([attribute.class("panel")], [
+    html.h1([], [html.text("Sign In")]),
+    html.nav([attribute.class("nav")], [
+      sign_in_tab(
+        path: "/sign_in/password" <> return_to_query,
+        label: "Password",
+        active: current == public_route.SignInPassword,
+      ),
+      sign_in_tab(
+        path: "/sign_in/code" <> return_to_query,
+        label: "Sign-in Code",
+        active: current == public_route.SignInCode,
+      ),
+    ]),
+    case current {
+      public_route.SignInCode -> sign_in_code_form(return_to)
+      _ -> password_form(return_to)
+    },
+  ])
+}
+
+fn password_form(return_to: String) -> Element(Msg) {
+  html.form(
+    [
+      attribute.method("post"),
+      attribute.action("/sign_in"),
+      attribute.attribute(
+        "style",
+        "display: grid; gap: 12px; margin-top: 16px;",
+      ),
+    ],
+    [
+      html.p([attribute.class("muted")], [
+        html.text("Demo account: admin@example.com / admin"),
+      ]),
+      html.input([
+        attribute.type_("hidden"),
+        attribute.name("return_to"),
+        attribute.value(return_to),
+      ]),
+      html.input([
+        attribute.type_("hidden"),
+        attribute.name("code"),
+        attribute.value(""),
+      ]),
+      html.label([], [
+        html.text("Email"),
+        html.input([
+          attribute.name("email"),
+          attribute.value("admin@example.com"),
+          attribute.autocomplete("email"),
+        ]),
+      ]),
+      html.label([], [
+        html.text("Password"),
+        html.input([
+          attribute.name("password"),
+          attribute.value("admin"),
+          attribute.type_("password"),
+          attribute.autocomplete("current-password"),
+        ]),
+      ]),
+      html.button([], [html.text("Sign In")]),
+    ],
+  )
+}
+
+fn sign_in_code_form(return_to: String) -> Element(Msg) {
+  html.form(
+    [
+      attribute.method("post"),
+      attribute.action("/sign_in"),
+      attribute.attribute(
+        "style",
+        "display: grid; gap: 12px; margin-top: 16px;",
+      ),
+    ],
+    [
+      html.p([attribute.class("muted")], [
+        html.text("Demo sign-in code: A1Z9Q"),
+      ]),
+      html.input([
+        attribute.type_("hidden"),
+        attribute.name("return_to"),
+        attribute.value(return_to),
+      ]),
+      html.input([
+        attribute.type_("hidden"),
+        attribute.name("password"),
+        attribute.value(""),
+      ]),
+      html.label([], [
+        html.text("Email"),
+        html.input([
+          attribute.name("email"),
+          attribute.value("admin@example.com"),
+          attribute.autocomplete("email"),
+        ]),
+      ]),
+      html.label([], [
+        html.text("Sign-in code"),
+        html.input([
+          attribute.name("code"),
+          attribute.value("A1Z9Q"),
+          attribute.autocomplete("one-time-code"),
+        ]),
+      ]),
+      html.button([], [html.text("Sign In")]),
+    ],
+  )
 }
 
 fn explainer(route route: public_route.Route) -> Element(Msg) {
@@ -415,6 +552,20 @@ fn explainer(route route: public_route.Route) -> Element(Msg) {
         "Fanout: the socket joins games involving this team, so score pushes only arrive for relevant games.",
         "Stats: final game updates patch recent games plus W-L, points for, and points against.",
       ])
+    public_route.SignIn | public_route.SignInPassword ->
+      ui.page_explainer("What this page exercises", [
+        "Route: public-owned sign-in page at /sign_in/password.",
+        "Load: renders the password authentication form without a WebSocket connection.",
+        "ToServer: form submits to /sign_in via HTTP POST.",
+        "ToClient: successful sign-in redirects to the return_to target or /admin/games.",
+      ])
+    public_route.SignInCode ->
+      ui.page_explainer("What this page exercises", [
+        "Route: public-owned sign-in page at /sign_in/code.",
+        "Load: renders the sign-in code form without a WebSocket connection.",
+        "ToServer: form submits to /sign_in via HTTP POST.",
+        "ToClient: successful sign-in redirects to the return_to target or /admin/games.",
+      ])
     public_route.NotFound ->
       ui.page_explainer("What this page exercises", [
         "Route: falls through the generated public router to NotFound.",
@@ -429,6 +580,15 @@ fn topbar(
   dark_mode dark_mode: Bool,
   context context: Option(PublicClientContext),
 ) -> Element(Msg) {
+  let signed_in = case context {
+    Some(ctx) ->
+      case ctx.authentication_context {
+        Some(_) -> True
+        None -> False
+      }
+    None -> False
+  }
+
   html.header([attribute.class("topbar")], [
     html.div([attribute.class("brand")], [
       html.span([attribute.class("brand-mark")], [html.text("S")]),
@@ -453,10 +613,49 @@ fn topbar(
         label: "Standings",
         active: route == public_route.Standings,
       ),
-      ui.nav_link_external(path: "/admin/games", label: "Admin", active: False),
+      case signed_in {
+        True ->
+          ui.nav_link_external(
+            path: "/admin/games",
+            label: "Admin",
+            active: False,
+          )
+        False -> html.text("")
+      },
+      case signed_in {
+        True -> html.a([attribute.href("/sign_out")], [html.text("Sign Out")])
+        False ->
+          nav_link(
+            route: public_route.SignInPassword,
+            label: "Sign In",
+            active: case route {
+              public_route.SignIn
+              | public_route.SignInPassword
+              | public_route.SignInCode -> True
+              _ -> False
+            },
+          )
+      },
       ui.theme_switch(dark_mode, SetDarkMode),
     ]),
   ])
+}
+
+fn sign_in_tab(
+  path path: String,
+  label label: String,
+  active active: Bool,
+) -> Element(Msg) {
+  html.a(
+    [
+      attribute.href(path),
+      attribute.class(case active {
+        True -> "active"
+        False -> ""
+      }),
+    ],
+    [html.text(label)],
+  )
 }
 
 fn nav_link(

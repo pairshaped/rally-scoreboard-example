@@ -28,7 +28,6 @@ pub fn load(
 fn active_section(route: Route) -> String {
   case route {
     route.AdminGames -> "games"
-    route.AdminSignInPassword | route.AdminSignInCode -> "sign_in"
     route.NotFound -> ""
   }
 }

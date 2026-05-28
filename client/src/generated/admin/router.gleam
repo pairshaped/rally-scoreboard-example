@@ -13,9 +13,6 @@ import lustre/attribute.{type Attribute}
 
 pub fn parse_uri(uri: Uri) -> Route {
   case uri.path_segments(uri.path) {
-    ["admin", "sign_in"] -> route.AdminSignInPassword
-    ["admin", "sign_in", "password"] -> route.AdminSignInPassword
-    ["admin", "sign_in", "code"] -> route.AdminSignInCode
     ["admin", "games"] -> route.AdminGames
     _ -> route.NotFound
   }
@@ -23,8 +20,6 @@ pub fn parse_uri(uri: Uri) -> Route {
 
 pub fn route_to_path(route route: Route) -> String {
   case route {
-    route.AdminSignInPassword -> "/admin/sign_in/password"
-    route.AdminSignInCode -> "/admin/sign_in/code"
     route.AdminGames -> "/admin/games"
     route.NotFound -> "/"
   }

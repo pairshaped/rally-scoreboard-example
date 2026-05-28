@@ -11,5 +11,8 @@ pub type Route {
   GamesId(id: String)
   Standings
   Team(slug: String)
+  SignIn
+  SignInPassword
+  SignInCode
   NotFound
 }

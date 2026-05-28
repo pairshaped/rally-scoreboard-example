@@ -14,7 +14,7 @@ import gleam/dict
 import gleam/http/response
 import gleam/int
 import gleam/io
-import gleam/option
+import gleam/option.{type Option}
 import libero/wire as libero_wire
 import lustre/element
 import mist.{type ResponseData}
@@ -26,6 +26,7 @@ import server/public/pages/standings as public_standings_handler
 import server/public/pages/teams/slug_ as public_team_handler
 import server/server_context.{type ServerContext}
 import shared/api/to_client
+import shared/authentication_context.{type AuthenticationContext}
 import shared/public/pages/game_detail as public_game_detail_page
 import shared/public/pages/games as public_games_page
 import shared/public/pages/standings as public_standings_page
@@ -42,11 +43,12 @@ pub fn handle_request(
   session_id session_id: String,
   hostname hostname: String,
   query query: dict.Dict(String, String),
+  authentication_context authentication_context: Option(AuthenticationContext),
 ) -> response.Response(ResponseData) {
   let _ = session_id
   let _ = hostname
   ensure_atoms()
-  let context = client_context_loader.load(route:)
+  let context = client_context_loader.load(route:, authentication_context:)
   let client_context_base64 = libero_wire.encode_flags(context)
   let #(page_html, shared_state_base64) =
     load_route_data(route, server_context, query)
@@ -176,6 +178,7 @@ fn load_route_data(
           )
         }
       }
+    route.SignIn | route.SignInPassword | route.SignInCode -> #("", "")
     route.NotFound -> #("", "")
   }
 }

@@ -72,6 +72,7 @@ pub fn public_client_context_is_importable_test() {
     public_client_context.PublicClientContext(
       league_name: "Rally Rec League",
       active_section: "games",
+      authentication_context: option.None,
     )
   ctx.league_name |> should.equal("Rally Rec League")
   ctx.active_section |> should.equal("games")

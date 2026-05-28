@@ -348,8 +348,8 @@ pub fn admin_mount_routes_through_authentication_test() {
   let entry = read("src/generated/entry.gleam")
   let admin_authentication = read("src/server/admin/authentication.gleam")
 
-  entry |> contains("\"/admin/sign_in/password\"") |> should.be_true
-  entry |> contains("\"/admin/sign_in/code\"") |> should.be_true
+  entry |> contains("\"/sign_in/password\"") |> should.be_true
+  entry |> contains("\"/sign_in/code\"") |> should.be_true
   entry |> contains("\"/admin/ws\"") |> should.be_true
   entry |> contains("admin_authenticated(req)") |> should.be_true
   entry
@@ -366,6 +366,10 @@ pub fn admin_mount_routes_through_authentication_test() {
   |> should.be_true
   entry |> contains("sign_in_html") |> should.be_false
   entry |> contains("response.prepend_header(") |> should.be_true
+  entry |> contains("is_safe_return_to") |> should.be_true
+  entry
+  |> contains("uri.percent_encode(target)")
+  |> should.be_true
 
   admin_authentication
   |> contains("authentication_runtime.hash(")
@@ -381,27 +385,23 @@ pub fn admin_mount_routes_through_authentication_test() {
   |> should.be_true
 }
 
-pub fn admin_sign_in_pages_are_client_routes_test() {
-  let client = read("../client/src/scoreboard_admin_client.gleam")
-  let route = read("../shared/src/generated/admin/route.gleam")
-  let router = read("../client/src/generated/admin/router.gleam")
-  let authentication_effect =
-    read("../client/src/generated/runtime/authentication.gleam")
-  let client_effect_ffi =
-    read("../client/src/generated/runtime/client_effect_ffi.mjs")
+pub fn public_sign_in_pages_are_client_routes_test() {
+  let client = read("../client/src/scoreboard_public_client.gleam")
+  let route = read("../shared/src/generated/public/route.gleam")
+  let router = read("../client/src/generated/public/router.gleam")
 
-  route |> contains("AdminSignInPassword") |> should.be_true
-  route |> contains("AdminSignInCode") |> should.be_true
+  route |> contains("SignInPassword") |> should.be_true
+  route |> contains("SignInCode") |> should.be_true
   router
-  |> contains("[\"admin\", \"sign_in\", \"password\"]")
+  |> contains("[\"sign_in\", \"password\"]")
   |> should.be_true
   router
-  |> contains("[\"admin\", \"sign_in\", \"code\"]")
+  |> contains("[\"sign_in\", \"code\"]")
   |> should.be_true
   client
-  |> contains("admin_route.AdminSignInPassword")
+  |> contains("public_route.SignInPassword")
   |> should.be_true
-  client |> contains("admin_route.AdminSignInCode") |> should.be_true
+  client |> contains("public_route.SignInCode") |> should.be_true
   client
   |> contains("Demo account: admin@example.com / admin")
   |> should.be_true
@@ -411,35 +411,7 @@ pub fn admin_sign_in_pages_are_client_routes_test() {
   |> should.be_true
   client |> contains("attribute.value(\"A1Z9Q\")") |> should.be_true
   client
-  |> contains("attribute.action(\"/admin/sign_in\")")
-  |> should.be_true
-  client
-  |> contains("|> event.prevent_default")
-  |> should.be_true
-  client
-  |> contains("authentication.sign_out(path: \"/admin/sign_out\")")
-  |> should.be_true
-  client |> contains("event.on_click(SignOut)") |> should.be_true
-  client
-  |> contains("authentication_link(route: route, signed_in: signed_in)")
-  |> should.be_true
-  client
-  |> contains("admin_link(route: route, signed_in: signed_in)")
-  |> should.be_true
-  client
-  |> contains("ui.nav_link_external(path: \"/admin/games\", label: \"Admin\"")
-  |> should.be_true
-  client |> contains("True -> sign_out_link()") |> should.be_true
-  client |> contains("False -> sign_in_link(route)") |> should.be_true
-  authentication_effect
-  |> contains("pub fn sign_out(path path: String)")
-  |> should.be_true
-  authentication_effect |> contains("@external(javascript") |> should.be_true
-  client_effect_ffi
-  |> contains("export function signOut(path)")
-  |> should.be_true
-  client_effect_ffi
-  |> contains("globalThis.location.assign(path)")
+  |> contains("attribute.action(\"/sign_in\")")
   |> should.be_true
 }
 
@@ -747,7 +719,7 @@ pub fn client_same_mount_links_use_spa_navigation_test() {
   { count(public_client, "|> event.prevent_default") >= 1 }
   |> should.be_true
   public_client
-  |> contains("ui.nav_link_external(path: \"/admin/games\", label: \"Admin\"")
+  |> contains("label: \"Admin\"")
   |> should.be_true
 
   admin_client
@@ -768,7 +740,7 @@ pub fn client_same_mount_links_use_spa_navigation_test() {
   |> contains("path: \"/standings\"")
   |> should.be_true
   admin_client
-  |> contains("authentication.sign_out(path: \"/admin/sign_out\")")
+  |> contains("attribute.href(\"/sign_out\")")
   |> should.be_true
 }
 
@@ -967,7 +939,7 @@ pub fn admin_and_public_client_contexts_are_different_types_test() {
   admin_ctx |> contains("dark_mode: Bool") |> should.be_true
   admin_ctx |> contains("toast: Option(String)") |> should.be_true
 
-  public_ctx |> contains("AuthenticationContext") |> should.be_false
+  public_ctx |> contains("AuthenticationContext") |> should.be_true
   public_ctx |> contains("dark_mode: Bool") |> should.be_false
   public_ctx |> contains("toast: Option(String)") |> should.be_false
 }
@@ -1050,7 +1022,7 @@ pub fn client_context_constructors_are_registered_for_etf_test() {
   |> contains("adminClientContext.AdminClientContext, 5")
   |> should.be_true
   codec
-  |> contains("publicClientContext.PublicClientContext, 2")
+  |> contains("publicClientContext.PublicClientContext, 3")
   |> should.be_true
   atoms |> contains("<<\"authentication_context\">>") |> should.be_true
   atoms |> contains("<<\"admin_client_context\">>") |> should.be_true
@@ -1205,27 +1177,40 @@ pub fn admin_context_loader_passes_authentication_context_through_test() {
   ctx.active_section |> should.equal("games")
 }
 
-pub fn admin_context_loader_returns_none_authentication_for_sign_in_routes_test() {
+pub fn admin_context_loader_preserves_authentication_context_test() {
+  let auth_ctx =
+    authentication_context.AuthenticationContext(
+      user_id: 1,
+      email: "admin@example.com",
+      display_name: option.None,
+    )
   let ctx =
     admin_client_context_loader.load(
-      route: admin_route.AdminSignInPassword,
-      authentication_context: option.None,
+      route: admin_route.AdminGames,
+      authentication_context: option.Some(auth_ctx),
       dark_mode: False,
     )
   case ctx.authentication_context {
-    option.Some(_) -> should.be_true(False)
-    option.None -> Nil
+    option.Some(ac) -> ac.email |> should.equal("admin@example.com")
+    option.None -> should.be_true(False)
   }
-  ctx.active_section |> should.equal("sign_in")
+  ctx.active_section |> should.equal("games")
 }
 
 pub fn public_context_loader_returns_expected_shape_test() {
-  let ctx = public_client_context_loader.load(route: public_route.Games)
+  let ctx =
+    public_client_context_loader.load(
+      route: public_route.Games,
+      authentication_context: option.None,
+    )
   ctx.league_name |> should.equal("Rally Rec League")
   ctx.active_section |> should.equal("games")
 
   let standings_ctx =
-    public_client_context_loader.load(route: public_route.Standings)
+    public_client_context_loader.load(
+      route: public_route.Standings,
+      authentication_context: option.None,
+    )
   standings_ctx.active_section |> should.equal("standings")
 }
 

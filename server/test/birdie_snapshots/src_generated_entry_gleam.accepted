@@ -77,18 +77,14 @@ fn matches_route_root(path: String, route_root: String) -> Bool {
   }
 }
 
+// ---------- Admin Mount ----------
+
 fn mount_admin_handle_request(
   req: Request(Connection),
   server_context: ServerContext,
 ) -> Response(ResponseData) {
   let Request(path: path, method: method, ..) = req
   case path, method {
-    "/admin/sign_in", Get -> redirect_to("/admin/sign_in/password")
-    "/admin/sign_in/password", Get ->
-      mount_admin_handle_ssr(req, server_context)
-    "/admin/sign_in/code", Get -> mount_admin_handle_ssr(req, server_context)
-    "/admin/sign_in", Post -> mount_admin_handle_sign_in(req)
-    "/admin/sign_out", Get -> mount_admin_sign_out(req)
     "/admin/ws", _ ->
       case admin_authenticated(req) {
         True -> mount_admin_handle_ws(req, server_context)
@@ -102,7 +98,10 @@ fn mount_admin_handle_request(
             Get ->
               case admin_authenticated(req) {
                 True -> mount_admin_handle_ssr(req, server_context)
-                False -> redirect_to("/admin/sign_in/password")
+                False ->
+                  redirect_to(
+                    "/sign_in/password?return_to=" <> uri.percent_encode(path),
+                  )
               }
             _ -> not_found()
           }
@@ -168,14 +167,21 @@ fn mount_admin_handle_ssr(
   |> set_session_cookie_if_missing(req: req, session_id:)
 }
 
+// ---------- Public Mount ----------
+
 fn mount_public_handle_request(
   req: Request(Connection),
   server_context: ServerContext,
 ) -> Response(ResponseData) {
   let Request(path: path, method: method, ..) = req
-  case path == "/ws" {
-    True -> mount_public_handle_ws(req, server_context)
-    False ->
+  case path, method {
+    "/sign_in", Get -> redirect_to("/sign_in/password")
+    "/sign_in/password", Get -> mount_public_handle_ssr(req, server_context)
+    "/sign_in/code", Get -> mount_public_handle_ssr(req, server_context)
+    "/sign_in", Post -> mount_public_handle_sign_in(req)
+    "/sign_out", Get -> mount_public_sign_out(req)
+    "/ws", _ -> mount_public_handle_ws(req, server_context)
+    _, _ ->
       case static_handler.try_serve(path) {
         option.Some(resp) -> resp
         option.None ->
@@ -223,15 +229,27 @@ fn mount_public_handle_ssr(
       |> dict.from_list
     option.None -> dict.new()
   }
+  let authentication_context = case
+    authentication.authenticated_user_id(
+      cookie_header: request.get_header(req, "cookie"),
+      session_id:,
+    )
+  {
+    option.Some(user_id) -> authentication_context_loader.from_user_id(user_id)
+    option.None -> option.None
+  }
   mount_public_ssr_handler.handle_request(
     route: route,
     server_context: server_context,
     session_id: session_id,
     hostname: hostname,
     query: query,
+    authentication_context: authentication_context,
   )
   |> set_session_cookie_if_missing(req: req, session_id:)
 }
+
+// ---------- Authentication ----------
 
 fn request_header(req: Request(Connection), name: String) -> String {
   request.get_header(req, name) |> result.unwrap("")
@@ -244,36 +262,59 @@ fn admin_authenticated(req: Request(Connection)) -> Bool {
   )
 }
 
-fn mount_admin_handle_sign_in(
+fn mount_public_handle_sign_in(
   req: Request(Connection),
 ) -> Response(ResponseData) {
   let session_id = get_session_id(req)
   case read_sign_in_form(req) {
     Ok(form) ->
       case accepts_sign_in(form) {
-        True ->
-          redirect_to("/admin/games")
+        True -> {
+          let return_to = case form.return_to {
+            "" -> "/admin/games"
+            target ->
+              case is_safe_return_to(target) {
+                True -> target
+                False -> "/admin/games"
+              }
+          }
+          redirect_to(return_to)
           |> set_cookie_header(authentication.issue_cookie(session_id:))
           |> set_session_cookie_if_missing(req: req, session_id:)
-        False ->
-          redirect_to("/admin/sign_in/password")
+        }
+        False -> {
+          let failure_path = case form.return_to {
+            "" -> "/sign_in/password"
+            target ->
+              case is_safe_return_to(target) {
+                True ->
+                  "/sign_in/password?return_to=" <> uri.percent_encode(target)
+                False -> "/sign_in/password"
+              }
+          }
+          redirect_to(failure_path)
           |> set_session_cookie_if_missing(req: req, session_id:)
+        }
       }
     Error(Nil) ->
-      redirect_to("/admin/sign_in/password")
+      redirect_to("/sign_in/password")
       |> set_session_cookie_if_missing(req: req, session_id:)
   }
 }
 
-fn mount_admin_sign_out(req: Request(Connection)) -> Response(ResponseData) {
+fn mount_public_sign_out(req: Request(Connection)) -> Response(ResponseData) {
   let session_id = get_session_id(req)
-  redirect_to("/admin/sign_in/password")
+  redirect_to("/games")
   |> set_cookie_header(authentication.clear_cookie())
   |> set_session_cookie_if_missing(req: req, session_id:)
 }
 
+fn is_safe_return_to(path: String) -> Bool {
+  string.starts_with(path, "/") && !string.starts_with(path, "//")
+}
+
 type SignInForm {
-  SignInForm(email: String, password: String, code: String)
+  SignInForm(email: String, password: String, code: String, return_to: String)
 }
 
 fn read_sign_in_form(req: Request(Connection)) -> Result(SignInForm, Nil) {
@@ -289,6 +330,7 @@ fn read_sign_in_form(req: Request(Connection)) -> Result(SignInForm, Nil) {
     email: form_value(pairs, "email"),
     password: form_value(pairs, "password"),
     code: form_value(pairs, "code"),
+    return_to: form_value(pairs, "return_to"),
   ))
 }
 
@@ -298,10 +340,13 @@ fn form_value(pairs: List(#(String, String)), name: String) -> String {
 }
 
 fn accepts_sign_in(form: SignInForm) -> Bool {
-  let SignInForm(email:, password:, code:) = form
+  let SignInForm(email:, password:, code:, return_to:) = form
+  let _ = return_to
   authentication.verify_password(email:, password:)
   || authentication.verify_sign_in_code(email:, code:)
 }
+
+// ---------- Helpers ----------
 
 fn redirect_to(path: String) -> Response(ResponseData) {
   response.new(303)
@@ -354,7 +399,7 @@ fn set_cookie_header(
         name
           <> "="
           <> value
-          <> "; Path=/admin; HttpOnly; SameSite=Lax; Max-Age="
+          <> "; Path=/; HttpOnly; SameSite=Lax; Max-Age="
           <> int_to_string(max_age)
           <> case env.secure_cookies() {
           True -> "; Secure"
@@ -365,7 +410,7 @@ fn set_cookie_header(
       response.prepend_header(
         resp,
         "set-cookie",
-        name <> "=; Path=/admin; HttpOnly; SameSite=Lax; Max-Age=0",
+        name <> "=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0",
       )
   }
 }

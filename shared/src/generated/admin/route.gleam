@@ -7,8 +7,6 @@
 //// Derived from the Mount pages discovered by the Generator Framework.
 
 pub type Route {
-  AdminSignInPassword
-  AdminSignInCode
   AdminGames
   NotFound
 }

@@ -2,13 +2,15 @@
 ////
 //// Owns the admin Lustre application shell: route parsing, page model
 //// storage, ToClient fanout, navigation, and admin-only view composition.
+////
+//// Admin pages are guarded by the server entry. This client only loads
+//// after authentication and admin access have been confirmed.
 
 import client/admin/receivers as admin_receivers
 import generated/admin/receiver_dispatch as admin_receiver_dispatch
 import generated/admin/route as admin_route
 import generated/admin/router as admin_router
 import generated/codec
-import generated/runtime/authentication
 import generated/runtime/effect as admin_effect
 import generated/setup
 import generated/transport
@@ -42,7 +44,6 @@ type Model {
     home_code: String,
     away_code: String,
     dark_mode: Bool,
-    signed_in: Bool,
     context: Option(AdminClientContext),
   )
 }
@@ -58,7 +59,6 @@ type Msg {
   AdjustAway(Int, Int, Int, Int)
   MarkFinal(Int)
   SetDarkMode(Bool)
-  SignOut
 }
 
 pub fn main() -> Nil {
@@ -101,14 +101,6 @@ fn init(
       home_code: "TOR",
       away_code: "NYC",
       dark_mode: admin_effect.read_dark_mode(),
-      signed_in: case context {
-        Some(ctx) ->
-          case ctx.authentication_context {
-            Some(_) -> True
-            None -> False
-          }
-        None -> False
-      },
       context:,
     )
   let #(model, hydrated) = case ssr_event {
@@ -155,8 +147,6 @@ fn register_receivers() -> Effect(Msg) {
 
 fn load_route(route: admin_route.Route) -> Effect(Msg) {
   case route {
-    admin_route.AdminSignInPassword | admin_route.AdminSignInCode ->
-      effect.none()
     admin_route.AdminGames ->
       send_admin_games_command(admin_to_server.LoadAdminGames)
     admin_route.NotFound -> effect.none()
@@ -237,7 +227,6 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
       Model(..model, dark_mode: enabled),
       admin_effect.set_dark_mode(enabled),
     )
-    SignOut -> #(model, authentication.sign_out(path: "/admin/sign_out"))
   }
 }
 
@@ -282,13 +271,10 @@ fn view(model: Model) -> Element(Msg) {
     topbar(
       route: model.route,
       dark_mode: model.dark_mode,
-      signed_in: model.signed_in,
       context: model.context,
     ),
     explainer(route: model.route),
     case model.route {
-      admin_route.AdminSignInPassword -> sign_in_view(route: model.route)
-      admin_route.AdminSignInCode -> sign_in_view(route: model.route)
       admin_route.AdminGames ->
         html.main([attribute.class("layout")], [
           html.section([attribute.class("panel")], [
@@ -333,8 +319,6 @@ fn explainer(route route: admin_route.Route) -> Element(Msg) {
         "ToClient: receives AdminGamesLoaded, GameCreated, ScoreUpdateSaved, ResultSaved, AdminError, and GameScoreUpdated.",
         "Fanout: joins the admin live update scope so another open admin tab patches the same score cards.",
       ])
-    admin_route.AdminSignInPassword -> sign_in_explainer("password")
-    admin_route.AdminSignInCode -> sign_in_explainer("code")
     admin_route.NotFound ->
       ui.page_explainer("What this page exercises", [
         "Route: falls through the generated admin router to NotFound.",
@@ -344,21 +328,9 @@ fn explainer(route route: admin_route.Route) -> Element(Msg) {
   }
 }
 
-fn sign_in_explainer(method: String) -> Element(Msg) {
-  ui.page_explainer("What this page exercises", [
-    "Route: generated from the admin Mount sign-in file path for /admin/sign_in/"
-      <> method
-      <> ".",
-    "Load: renders the auth form without a websocket page command.",
-    "ToServer: form submit posts to the server auth endpoint instead of the root API lane.",
-    "ToClient: successful sign-in redirects into the admin games route.",
-  ])
-}
-
 fn topbar(
   route route: admin_route.Route,
   dark_mode dark_mode: Bool,
-  signed_in signed_in: Bool,
   context context: Option(AdminClientContext),
 ) -> Element(Msg) {
   html.header([attribute.class("topbar")], [
@@ -381,7 +353,11 @@ fn topbar(
         label: "Standings",
         active: False,
       ),
-      admin_link(route: route, signed_in: signed_in),
+      nav_link(
+        route: admin_route.AdminGames,
+        label: "Admin",
+        active: route == admin_route.AdminGames,
+      ),
       case context {
         Some(ctx) ->
           case ctx.authentication_context {
@@ -393,55 +369,10 @@ fn topbar(
           }
         None -> html.text("")
       },
-      authentication_link(route: route, signed_in: signed_in),
+      html.a([attribute.href("/sign_out")], [html.text("Sign Out")]),
       ui.theme_switch(dark_mode, SetDarkMode),
     ]),
   ])
-}
-
-fn admin_link(
-  route route: admin_route.Route,
-  signed_in signed_in: Bool,
-) -> Element(Msg) {
-  case signed_in {
-    True ->
-      nav_link(
-        route: admin_route.AdminGames,
-        label: "Admin",
-        active: route == admin_route.AdminGames,
-      )
-    False ->
-      ui.nav_link_external(path: "/admin/games", label: "Admin", active: False)
-  }
-}
-
-fn authentication_link(
-  route route: admin_route.Route,
-  signed_in signed_in: Bool,
-) -> Element(Msg) {
-  case signed_in {
-    True -> sign_out_link()
-    False -> sign_in_link(route)
-  }
-}
-
-fn sign_in_link(route: admin_route.Route) -> Element(Msg) {
-  nav_link(
-    route: admin_route.AdminSignInPassword,
-    label: "Sign In",
-    active: route == admin_route.AdminSignInPassword
-      || route == admin_route.AdminSignInCode,
-  )
-}
-
-fn sign_out_link() -> Element(Msg) {
-  html.a(
-    [
-      attribute.href("/admin/sign_out"),
-      event.on_click(SignOut) |> event.prevent_default,
-    ],
-    [html.text("Sign Out")],
-  )
 }
 
 fn nav_link(
@@ -459,109 +390,6 @@ fn nav_link(
       event.on_click(Navigate(route)) |> event.prevent_default,
     ],
     [html.text(label)],
-  )
-}
-
-fn sign_in_view(route route: admin_route.Route) -> Element(Msg) {
-  html.main([attribute.class("panel")], [
-    html.h1([], [html.text("Admin Sign In")]),
-    html.nav([attribute.class("nav")], [
-      nav_link(
-        route: admin_route.AdminSignInPassword,
-        label: "Password",
-        active: route == admin_route.AdminSignInPassword,
-      ),
-      nav_link(
-        route: admin_route.AdminSignInCode,
-        label: "Sign-in Code",
-        active: route == admin_route.AdminSignInCode,
-      ),
-    ]),
-    case route {
-      admin_route.AdminSignInCode -> sign_in_code_form()
-      _ -> password_form()
-    },
-  ])
-}
-
-fn password_form() -> Element(Msg) {
-  html.form(
-    [
-      attribute.method("post"),
-      attribute.action("/admin/sign_in"),
-      attribute.attribute(
-        "style",
-        "display: grid; gap: 12px; margin-top: 16px;",
-      ),
-    ],
-    [
-      html.p([attribute.class("muted")], [
-        html.text("Demo account: admin@example.com / admin"),
-      ]),
-      html.input([
-        attribute.type_("hidden"),
-        attribute.name("code"),
-        attribute.value(""),
-      ]),
-      html.label([], [
-        html.text("Email"),
-        html.input([
-          attribute.name("email"),
-          attribute.value("admin@example.com"),
-          attribute.autocomplete("email"),
-        ]),
-      ]),
-      html.label([], [
-        html.text("Password"),
-        html.input([
-          attribute.name("password"),
-          attribute.value("admin"),
-          attribute.type_("password"),
-          attribute.autocomplete("current-password"),
-        ]),
-      ]),
-      html.button([], [html.text("Sign In")]),
-    ],
-  )
-}
-
-fn sign_in_code_form() -> Element(Msg) {
-  html.form(
-    [
-      attribute.method("post"),
-      attribute.action("/admin/sign_in"),
-      attribute.attribute(
-        "style",
-        "display: grid; gap: 12px; margin-top: 16px;",
-      ),
-    ],
-    [
-      html.p([attribute.class("muted")], [
-        html.text("Demo sign-in code: A1Z9Q"),
-      ]),
-      html.input([
-        attribute.type_("hidden"),
-        attribute.name("password"),
-        attribute.value(""),
-      ]),
-      html.label([], [
-        html.text("Email"),
-        html.input([
-          attribute.name("email"),
-          attribute.value("admin@example.com"),
-          attribute.autocomplete("email"),
-        ]),
-      ]),
-      html.label([], [
-        html.text("Sign-in code"),
-        html.input([
-          attribute.name("code"),
-          attribute.value("A1Z9Q"),
-          attribute.autocomplete("one-time-code"),
-        ]),
-      ]),
-      html.button([], [html.text("Sign In")]),
-    ],
   )
 }
 
