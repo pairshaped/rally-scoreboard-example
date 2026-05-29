@@ -1,8 +1,6 @@
 //// Demo authentication backed by the users table.
 ////
-//// Password sign-in accepts admin@example.com/admin and fan@example.com/fan
-//// after they have been seeded into the users table. Sign-in code
-//// authentication uses a fixed demo code per user.
+//// Sign-in code authentication uses a fixed demo code per user.
 ////
 //// The auth cookie value is a signed token: `session_id.hmac_signature`. The
 //// client cannot forge a valid token without the server secret, so checking
@@ -31,35 +29,6 @@ const cookie_name = "scoreboard_admin"
 const cookie_max_age = 3600
 
 // --- DB-backed verification ---
-
-pub fn verify_password(
-  db db: sqlight.Connection,
-  email email: String,
-  password password: String,
-) -> Option(Int) {
-  let normalized = authentication_context.normalize_email(email)
-  case
-    sqlight.query(
-      "SELECT id, password_hash FROM users WHERE email = ?1",
-      on: db,
-      with: [sqlight.text(normalized)],
-      expecting: {
-        use id <- decode.field(0, decode.int)
-        use hash <- decode.field(1, decode.string)
-        decode.success(#(id, hash))
-      },
-    )
-  {
-    Ok([#(user_id, stored_hash), ..]) ->
-      case
-        authentication_runtime.verify(stored: stored_hash, secret: password)
-      {
-        True -> Some(user_id)
-        False -> None
-      }
-    _ -> None
-  }
-}
 
 pub fn verify_sign_in_code(
   db db: sqlight.Connection,
@@ -100,10 +69,6 @@ pub fn verify_sign_in_code(
 
 pub fn email() -> String {
   "admin@example.com"
-}
-
-pub fn password() -> String {
-  "admin"
 }
 
 pub fn sign_in_code() -> String {

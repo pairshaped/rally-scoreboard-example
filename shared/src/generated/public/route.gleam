@@ -12,7 +12,5 @@ pub type Route {
   Standings
   Team(slug: String)
   SignIn
-  SignInPassword
-  SignInCode
   NotFound
 }

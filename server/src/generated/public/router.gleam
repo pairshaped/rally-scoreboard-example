@@ -20,9 +20,7 @@ pub fn parse_route(uri: Uri) -> Route {
     ["standings"] -> route.Standings
     ["teams", slug] ->
       route.Team(slug: result.unwrap(uri.percent_decode(slug), slug))
-    ["sign_in"] -> route.SignInPassword
-    ["sign_in", "password"] -> route.SignInPassword
-    ["sign_in", "code"] -> route.SignInCode
+    ["sign_in"] -> route.SignIn
     _ -> route.NotFound
   }
 }

@@ -36,8 +36,7 @@ Public pages can load games, filter by team query param, load one game, and rece
 
 ## Admin
 
-- `/admin/sign_in/password`
-- `/admin/sign_in/code`
+- `/sign_in`
 - `/admin/games`
 
 Admin pages require authentication. Admin users can create games, update scores, mark final results, and correct results from the games page.

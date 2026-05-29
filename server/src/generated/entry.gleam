@@ -99,9 +99,7 @@ fn mount_admin_handle_request(
             Get ->
               case admin_authenticated(req) {
                 False ->
-                  redirect_to(
-                    "/sign_in/password?return_to=" <> uri.percent_encode(path),
-                  )
+                  redirect_to("/sign_in?return_to=" <> uri.percent_encode(path))
                 True ->
                   case user_can_access_admin(req, server_context.db) {
                     True -> mount_admin_handle_ssr(req, server_context)
@@ -184,9 +182,7 @@ fn mount_public_handle_request(
 ) -> Response(ResponseData) {
   let Request(path: path, method: method, ..) = req
   case path, method {
-    "/sign_in", Get -> redirect_to("/sign_in/password")
-    "/sign_in/password", Get -> mount_public_handle_ssr(req, server_context)
-    "/sign_in/code", Get -> mount_public_handle_ssr(req, server_context)
+    "/sign_in", Get -> mount_public_handle_ssr(req, server_context)
     "/sign_in", Post -> mount_public_handle_sign_in(req, server_context)
     "/sign_out", Get -> mount_public_sign_out(req)
     "/ws", _ -> mount_public_handle_ws(req, server_context)
@@ -298,22 +294,13 @@ fn mount_public_handle_sign_in(
   let session_id = get_session_id(req)
   case read_sign_in_form(req) {
     Ok(form) -> {
-      let user_id = case
-        authentication.verify_password(
+      case
+        authentication.verify_sign_in_code(
           db: server_context.db,
           email: form.email,
-          password: form.password,
+          code: form.code,
         )
       {
-        option.Some(id) -> option.Some(id)
-        option.None ->
-          authentication.verify_sign_in_code(
-            db: server_context.db,
-            email: form.email,
-            code: form.code,
-          )
-      }
-      case user_id {
         option.Some(id) -> {
           let return_to = case form.return_to {
             "" -> "/admin/games"
@@ -332,12 +319,11 @@ fn mount_public_handle_sign_in(
         }
         option.None -> {
           let failure_path = case form.return_to {
-            "" -> "/sign_in/password"
+            "" -> "/sign_in"
             target ->
               case is_safe_return_to(target) {
-                True ->
-                  "/sign_in/password?return_to=" <> uri.percent_encode(target)
-                False -> "/sign_in/password"
+                True -> "/sign_in?return_to=" <> uri.percent_encode(target)
+                False -> "/sign_in"
               }
           }
           redirect_to(failure_path)
@@ -346,7 +332,7 @@ fn mount_public_handle_sign_in(
       }
     }
     Error(Nil) ->
-      redirect_to("/sign_in/password")
+      redirect_to("/sign_in")
       |> set_session_cookie_if_missing(req: req, session_id:)
   }
 }
@@ -363,7 +349,7 @@ fn is_safe_return_to(path: String) -> Bool {
 }
 
 type SignInForm {
-  SignInForm(email: String, password: String, code: String, return_to: String)
+  SignInForm(email: String, code: String, return_to: String)
 }
 
 fn read_sign_in_form(req: Request(Connection)) -> Result(SignInForm, Nil) {
@@ -377,7 +363,6 @@ fn read_sign_in_form(req: Request(Connection)) -> Result(SignInForm, Nil) {
     |> result.unwrap([])
   Ok(SignInForm(
     email: form_value(pairs, "email"),
-    password: form_value(pairs, "password"),
     code: form_value(pairs, "code"),
     return_to: form_value(pairs, "return_to"),
   ))

@@ -292,16 +292,12 @@ pub fn generated_sign_in_codes_use_uppercase_alphanumeric_text_test() {
 }
 
 pub fn generated_authentication_helpers_are_exercised_test() {
-  let password_hash = authentication_runtime.hash(secret: "scoreboard-secret")
-  let demo_password_hash = authentication_runtime.hash(secret: "admin")
   let demo_sign_in_code_hash =
     authentication_runtime.hash_sign_in_code(
       scope: "admin@example.com",
       code: "A1Z9Q",
       secret_key: "scoreboard-demo-secret",
     )
-  let assert Ok(try_password_hash) =
-    authentication_runtime.try_hash(secret: "scoreboard-secret")
   let assert Ok(sign_in_code_hash) =
     authentication_runtime.try_hash_sign_in_code(
       scope: "Dana@example.com",
@@ -309,21 +305,6 @@ pub fn generated_authentication_helpers_are_exercised_test() {
       secret_key: "test-secret",
     )
 
-  authentication_runtime.verify(
-    stored: password_hash,
-    secret: "scoreboard-secret",
-  )
-  |> should.be_true
-  authentication_runtime.verify(
-    stored: demo_password_hash,
-    secret: authentication.password(),
-  )
-  |> should.be_true
-  authentication_runtime.verify(
-    stored: try_password_hash,
-    secret: "scoreboard-secret",
-  )
-  |> should.be_true
   authentication_runtime.verify_sign_in_code(
     stored: sign_in_code_hash,
     scope: "dana@example.com",
@@ -363,13 +344,14 @@ pub fn admin_mount_routes_through_authentication_test() {
   let entry = read("src/generated/entry.gleam")
   let admin_authentication = read("src/server/admin/authentication.gleam")
 
-  entry |> contains("\"/sign_in/password\"") |> should.be_true
-  entry |> contains("\"/sign_in/code\"") |> should.be_true
+  entry |> contains("\"/sign_in\"") |> should.be_true
+  entry |> contains("\"/sign_in/password\"") |> should.be_false
+  entry |> contains("\"/sign_in/code\"") |> should.be_false
   entry |> contains("\"/admin/ws\"") |> should.be_true
   entry |> contains("admin_authenticated(req)") |> should.be_true
   entry
   |> contains("authentication.verify_password(")
-  |> should.be_true
+  |> should.be_false
   entry
   |> contains("authentication.verify_sign_in_code(")
   |> should.be_true
@@ -391,7 +373,7 @@ pub fn admin_mount_routes_through_authentication_test() {
 
   admin_authentication
   |> contains("authentication_runtime.verify(")
-  |> should.be_true
+  |> should.be_false
   admin_authentication
   |> contains("authentication_runtime.verify_sign_in_code(")
   |> should.be_true
@@ -407,12 +389,12 @@ pub fn fan_user_cannot_admin_test() {
   |> should.be_false
 }
 
-pub fn entry_passes_db_to_verify_password_test() {
+pub fn entry_passes_db_to_verify_sign_in_code_test() {
   let entry = read("src/generated/entry.gleam")
 
-  entry |> contains("authentication.verify_password(") |> should.be_true
   entry |> contains("db: server_context.db") |> should.be_true
   entry |> contains("authentication.verify_sign_in_code(") |> should.be_true
+  entry |> contains("password:") |> should.be_false
 }
 
 pub fn fan_signed_cookie_produces_non_admin_user_id_test() {
@@ -464,21 +446,19 @@ pub fn public_sign_in_pages_are_client_routes_test() {
   let route = read("../shared/src/generated/public/route.gleam")
   let router = read("../client/src/generated/public/router.gleam")
 
-  route |> contains("SignInPassword") |> should.be_true
-  route |> contains("SignInCode") |> should.be_true
+  route |> contains("SignIn") |> should.be_true
+  route |> contains("SignInPassword") |> should.be_false
+  route |> contains("SignInCode") |> should.be_false
+  router |> contains("[\"sign_in\"]") |> should.be_true
   router
   |> contains("[\"sign_in\", \"password\"]")
-  |> should.be_true
-  router
-  |> contains("[\"sign_in\", \"code\"]")
-  |> should.be_true
+  |> should.be_false
+  router |> contains("[\"sign_in\", \"code\"]") |> should.be_false
   client
   |> contains("public_route.SignInPassword")
-  |> should.be_true
-  client |> contains("public_route.SignInCode") |> should.be_true
-  client
-  |> contains("Demo account: admin@example.com / admin")
-  |> should.be_true
+  |> should.be_false
+  client |> contains("public_route.SignInCode") |> should.be_false
+  client |> contains("password") |> should.be_false
   client |> contains("Demo sign-in code: A1Z9Q") |> should.be_true
   client
   |> contains("attribute.value(\"admin@example.com\")")
@@ -1522,7 +1502,6 @@ fn test_users_db() -> sqlight.Connection {
         id INTEGER PRIMARY KEY,
         email TEXT NOT NULL UNIQUE,
         display_name TEXT,
-        password_hash TEXT NOT NULL,
         sign_in_code_hash TEXT NOT NULL,
         role TEXT NOT NULL DEFAULT 'fan' CHECK (role IN ('admin', 'fan')),
         created_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -1531,9 +1510,9 @@ fn test_users_db() -> sqlight.Connection {
     )
   let assert Ok(Nil) =
     sqlight.exec(
-      "INSERT OR IGNORE INTO users (email, display_name, password_hash, sign_in_code_hash, role) VALUES "
-        <> "('admin@example.com', NULL, '$runtime-pbkdf2-sha256$v=1$i=600000$TLcZ1AIacSW2Y9Sx1n2quA$5BuKTg_PPcRyGNNFWAC-JWc4wHZyGhTfQfbiDtmS_Zo', '$runtime-sign-in-code-hmac-sha256$v=1$FY-UwgWkAUbUUAjKZIrySIhmkDwEniQHxhEw7QwbcGU', 'admin'),"
-        <> "('fan@example.com', 'Fan', '$runtime-pbkdf2-sha256$v=1$i=600000$4JLcFedQMxkwHeAAxL_LjA$FOVkFBcXUNDrPTLYbFHMkqUGw8Bgnv9qdt_hC_bDQxA', '$runtime-sign-in-code-hmac-sha256$v=1$26QkhMJZyJsBDiH3ae0NfkdhN2ynV41mmuBmMphzqB8', 'fan')",
+      "INSERT OR IGNORE INTO users (email, display_name, sign_in_code_hash, role) VALUES "
+        <> "('admin@example.com', NULL, '$runtime-sign-in-code-hmac-sha256$v=1$FY-UwgWkAUbUUAjKZIrySIhmkDwEniQHxhEw7QwbcGU', 'admin'),"
+        <> "('fan@example.com', 'Fan', '$runtime-sign-in-code-hmac-sha256$v=1$26QkhMJZyJsBDiH3ae0NfkdhN2ynV41mmuBmMphzqB8', 'fan')",
       on: conn,
     )
   conn

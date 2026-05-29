@@ -199,7 +199,7 @@ fn load_route_data(
         _ -> #("", "")
       }
     }
-    route.SignIn | route.SignInPassword | route.SignInCode -> #("", "")
+    route.SignIn -> #("", "")
     route.NotFound -> #("", "")
   }
 }

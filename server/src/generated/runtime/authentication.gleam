@@ -2,38 +2,20 @@
 ////
 //// Server authentication helpers.
 //// Derived from the Generator Framework's server authentication runtime contract.
-//// Emits password/code hashing and authentication result types used by
+//// Emits sign-in code hashing and authentication result types used by
 //// generated SSR handlers.
 
 import gleam/bit_array
 import gleam/crypto
-import gleam/int
-import gleam/result
 import gleam/string
 
-const password_hash_prefix = "runtime-pbkdf2-sha256"
-
-const password_hash_version = "v=1"
-
-const pbkdf2_iterations = 600_000
-
-const password_salt_bytes = 16
-
-const password_hash_bytes = 32
+const hash_version = "v=1"
 
 const sign_in_code_hash_prefix = "runtime-sign-in-code-hmac-sha256"
 
 const sign_in_code_alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 const sign_in_code_length = 5
-
-@external(erlang, "server_generated_runtime_authentication_ffi", "pbkdf2_hmac_sha256")
-fn pbkdf2_hmac_sha256(
-  secret: BitArray,
-  salt: BitArray,
-  iterations: Int,
-  length: Int,
-) -> BitArray
 
 /// Per-page authentication policy, declared as `pub const page_authentication` in page modules.
 /// Required: the user must be authenticated to view the page.
@@ -60,60 +42,6 @@ pub type Cookie {
 /// Hashing can fail only if the Erlang crypto app is unavailable or broken.
 pub type HashError {
   CryptoUnavailable
-}
-
-/// Hash an authentication secret for storage.
-///
-/// This is intended for secrets that will be checked later, such as passwords
-/// or other submitted credentials. It uses PBKDF2-SHA256 with a fresh salt and
-/// stores the algorithm, version, iteration count, salt, and hash together.
-///
-/// Panics only if the Erlang crypto app is unavailable. Application code that
-/// wants to handle that case explicitly should use `try_hash` instead.
-pub fn hash(secret secret: String) -> String {
-  let salt = crypto.strong_random_bytes(password_salt_bytes)
-  let hashed =
-    pbkdf2_hmac_sha256(
-      <<secret:utf8>>,
-      salt,
-      pbkdf2_iterations,
-      password_hash_bytes,
-    )
-
-  encode_password_hash(salt:, hash: hashed)
-}
-
-/// Hash an authentication secret for storage, returning an error rather than panicking.
-/// Use this when the caller needs to log or react to a hashing failure.
-pub fn try_hash(secret secret: String) -> Result(String, HashError) {
-  let salt = crypto.strong_random_bytes(password_salt_bytes)
-  let hashed =
-    pbkdf2_hmac_sha256(
-      <<secret:utf8>>,
-      salt,
-      pbkdf2_iterations,
-      password_hash_bytes,
-    )
-
-  Ok(encode_password_hash(salt:, hash: hashed))
-}
-
-/// Check a submitted authentication secret against a stored hash.
-pub fn verify(stored stored: String, secret secret: String) -> Bool {
-  case parse_password_hash(stored) {
-    Ok(#(iterations, salt, expected)) -> {
-      let actual =
-        pbkdf2_hmac_sha256(
-          <<secret:utf8>>,
-          salt,
-          iterations,
-          bit_array.byte_size(expected),
-        )
-
-      crypto.secure_compare(actual, expected)
-    }
-    Error(Nil) -> False
-  }
 }
 
 /// Generate a short, human-friendly sign-in code.
@@ -150,8 +78,9 @@ pub fn hash_sign_in_code(
   encode_sign_in_code_hash(hash: digest)
 }
 
-/// Hash a scoped sign-in code, returning an error shape compatible with
-/// `try_hash`. HMAC hashing does not normally fail.
+/// Hash a scoped sign-in code, returning an error shape for callers that keep
+/// all authentication hashing on an explicit error path. HMAC hashing does not
+/// normally fail.
 pub fn try_hash_sign_in_code(
   scope scope: String,
   code code: String,
@@ -190,50 +119,12 @@ fn sign_in_code_digest(
   >>)
 }
 
-fn encode_password_hash(salt salt: BitArray, hash hash: BitArray) -> String {
-  string.concat([
-    "$",
-    password_hash_prefix,
-    "$",
-    password_hash_version,
-    "$i=",
-    int.to_string(pbkdf2_iterations),
-    "$",
-    bit_array.base64_url_encode(salt, False),
-    "$",
-    bit_array.base64_url_encode(hash, False),
-  ])
-}
-
-fn parse_password_hash(
-  stored: String,
-) -> Result(#(Int, BitArray, BitArray), Nil) {
-  case string.split(stored, on: "$") {
-    ["", prefix, version, iterations, salt, hash]
-      if prefix == password_hash_prefix && version == password_hash_version
-    -> {
-      use iterations <- result.try(parse_iterations(iterations))
-      use salt <- result.try(bit_array.base64_url_decode(salt))
-      use hash <- result.try(bit_array.base64_url_decode(hash))
-      Ok(#(iterations, salt, hash))
-    }
-    _ -> Error(Nil)
-  }
-}
-
-fn parse_iterations(value: String) -> Result(Int, Nil) {
-  case string.split_once(value, on: "=") {
-    Ok(#("i", raw)) -> int.parse(raw)
-    _ -> Error(Nil)
-  }
-}
-
 fn encode_sign_in_code_hash(hash hash: BitArray) -> String {
   string.concat([
     "$",
     sign_in_code_hash_prefix,
     "$",
-    password_hash_version,
+    hash_version,
     "$",
     bit_array.base64_url_encode(hash, False),
   ])
@@ -242,7 +133,7 @@ fn encode_sign_in_code_hash(hash hash: BitArray) -> String {
 fn parse_sign_in_code_hash(stored stored: String) -> Result(BitArray, Nil) {
   case string.split(stored, on: "$") {
     ["", prefix, version, hash]
-      if prefix == sign_in_code_hash_prefix && version == password_hash_version
+      if prefix == sign_in_code_hash_prefix && version == hash_version
     -> {
       bit_array.base64_url_decode(hash)
     }

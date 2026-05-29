@@ -1,7 +1,7 @@
 //// Authentication tests for the admin Mount.
 ////
-//// Exercises the DB-backed auth module's password verification, sign-in code
-//// verification, cookie issuance, and token verification paths.
+//// Exercises the DB-backed auth module's sign-in code verification, cookie
+//// issuance, and token verification paths.
 
 import generated/runtime/authentication as auth_runtime
 import generated/runtime/db
@@ -19,7 +19,6 @@ fn test_db() -> sqlight.Connection {
         id INTEGER PRIMARY KEY,
         email TEXT NOT NULL UNIQUE,
         display_name TEXT,
-        password_hash TEXT NOT NULL,
         sign_in_code_hash TEXT NOT NULL,
         role TEXT NOT NULL DEFAULT 'fan' CHECK (role IN ('admin', 'fan')),
         created_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -28,9 +27,9 @@ fn test_db() -> sqlight.Connection {
     )
   let assert Ok(Nil) =
     sqlight.exec(
-      "INSERT OR IGNORE INTO users (email, display_name, password_hash, sign_in_code_hash, role) VALUES "
-        <> "('admin@example.com', NULL, '$runtime-pbkdf2-sha256$v=1$i=600000$TLcZ1AIacSW2Y9Sx1n2quA$5BuKTg_PPcRyGNNFWAC-JWc4wHZyGhTfQfbiDtmS_Zo', '$runtime-sign-in-code-hmac-sha256$v=1$FY-UwgWkAUbUUAjKZIrySIhmkDwEniQHxhEw7QwbcGU', 'admin'),"
-        <> "('fan@example.com', 'Fan', '$runtime-pbkdf2-sha256$v=1$i=600000$4JLcFedQMxkwHeAAxL_LjA$FOVkFBcXUNDrPTLYbFHMkqUGw8Bgnv9qdt_hC_bDQxA', '$runtime-sign-in-code-hmac-sha256$v=1$26QkhMJZyJsBDiH3ae0NfkdhN2ynV41mmuBmMphzqB8', 'fan')",
+      "INSERT OR IGNORE INTO users (email, display_name, sign_in_code_hash, role) VALUES "
+        <> "('admin@example.com', NULL, '$runtime-sign-in-code-hmac-sha256$v=1$FY-UwgWkAUbUUAjKZIrySIhmkDwEniQHxhEw7QwbcGU', 'admin'),"
+        <> "('fan@example.com', 'Fan', '$runtime-sign-in-code-hmac-sha256$v=1$26QkhMJZyJsBDiH3ae0NfkdhN2ynV41mmuBmMphzqB8', 'fan')",
       on: conn,
     )
   conn
@@ -38,46 +37,6 @@ fn test_db() -> sqlight.Connection {
 
 pub fn main() {
   gleeunit.main()
-}
-
-pub fn verify_password_accepts_correct_credentials_test() {
-  let conn = test_db()
-  authentication.verify_password(
-    db: conn,
-    email: "admin@example.com",
-    password: "admin",
-  )
-  |> should.not_equal(option.None)
-}
-
-pub fn verify_password_rejects_wrong_password_test() {
-  let conn = test_db()
-  authentication.verify_password(
-    db: conn,
-    email: "admin@example.com",
-    password: "wrong",
-  )
-  |> should.equal(option.None)
-}
-
-pub fn verify_password_rejects_wrong_email_test() {
-  let conn = test_db()
-  authentication.verify_password(
-    db: conn,
-    email: "other@example.com",
-    password: "admin",
-  )
-  |> should.equal(option.None)
-}
-
-pub fn verify_password_normalizes_email_test() {
-  let conn = test_db()
-  authentication.verify_password(
-    db: conn,
-    email: "  Admin@Example.COM  ",
-    password: "admin",
-  )
-  |> should.not_equal(option.None)
 }
 
 pub fn verify_sign_in_code_accepts_correct_code_test() {
@@ -110,32 +69,32 @@ pub fn sign_in_code_normalizes_case_test() {
   |> should.not_equal(option.None)
 }
 
-pub fn fan_can_sign_in_with_password_test() {
+pub fn fan_can_sign_in_with_code_test() {
   let conn = test_db()
-  authentication.verify_password(
+  authentication.verify_sign_in_code(
     db: conn,
     email: "fan@example.com",
-    password: "fan",
+    code: "A1Z9Q",
   )
   |> should.not_equal(option.None)
 }
 
 pub fn fan_user_id_is_returned_on_sign_in_test() {
   let conn = test_db()
-  authentication.verify_password(
+  authentication.verify_sign_in_code(
     db: conn,
     email: "fan@example.com",
-    password: "fan",
+    code: "A1Z9Q",
   )
   |> should.equal(option.Some(2))
 }
 
 pub fn admin_user_id_is_returned_on_sign_in_test() {
   let conn = test_db()
-  authentication.verify_password(
+  authentication.verify_sign_in_code(
     db: conn,
     email: "admin@example.com",
-    password: "admin",
+    code: "A1Z9Q",
   )
   |> should.equal(option.Some(1))
 }

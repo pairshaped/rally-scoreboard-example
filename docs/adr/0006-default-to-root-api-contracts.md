@@ -510,6 +510,8 @@ Server-originated `ToClient` values never update `ClientSharedState` directly. P
 
 Generated authentication helpers may issue short-lived sign-in codes for app-owned sign-in flows. Sign-in codes use the uppercase `0-9A-Z` alphabet. The Generator Framework normalizes both the lookup scope and submitted code by trimming whitespace and converting to uppercase before hashing or verifying.
 
+Password sign-in is not part of the Scoreboard application contract. The sign-in page is `/sign_in`, and the supported sign-in mechanisms are emailed sign-in links, submitted sign-in codes, or SSO provider callbacks. There are no alternate password or code-specific sign-in routes.
+
 The Generator Framework does not use an ambiguity-reduced sign-in code alphabet. The generated UI uses a readable font and input normalization, rather than making the runtime alphabet smaller.
 
 The Generator Framework uses the full words `authentication` and `authorization` in generated paths, module names, comments, and docs. It does not use the abbreviation `auth`, because the abbreviation does not say whether code is proving identity or checking permission. Sign-in and sign-out routes use `sign_in` and `sign_out`; the Generator Framework does not use `login` or `logout` in generated route paths.
@@ -657,7 +659,6 @@ server/src/generated/runtime/system.gleam
 server/src/generated/runtime/system_db.gleam
 server/src/generated/runtime/trace.gleam
 
-server/src/generated/runtime/server_generated_runtime_authentication_ffi.erl
 server/src/generated/runtime/server_generated_runtime_effect_state_ffi.erl
 server/src/generated/runtime/server_generated_runtime_trace_ffi.erl
 
@@ -691,17 +692,16 @@ Good:
 ```text
 server/src/generated/server_generated_protocol_wire_ffi.erl
 server/src/generated/server_generated_protocol_atoms_ffi.erl
-server/src/generated/runtime/server_generated_runtime_authentication_ffi.erl
 server/src/generated/runtime/server_generated_runtime_db_ffi.erl
 ```
 
 Avoid:
 
 ```text
-server/src/generated/public/runtime/server_public_generated_runtime_authentication_ffi.erl
-server/src/generated/admin/runtime/server_admin_generated_runtime_authentication_ffi.erl
+server/src/generated/public/runtime/server_public_generated_runtime_db_ffi.erl
+server/src/generated/admin/runtime/server_admin_generated_runtime_db_ffi.erl
 server/src/server_public_generated_protocol_wire_ffi.erl
-server/src/server_public_generated_runtime_authentication_ffi.erl
+server/src/server_public_generated_runtime_db_ffi.erl
 server/src/server_generated_runtime_db_ffi.erl
 ```
 

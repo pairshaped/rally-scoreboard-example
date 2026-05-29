@@ -96,7 +96,7 @@ pub fn normalize_display_name(name: String) -> Option(String)
 pub fn display_label(context: AuthenticationContext) -> String
 ```
 
-Any built-in sign-in link, sign-in code, password, OAuth, or handoff helper must normalize email before lookup, storage, comparison, token creation, password verification, or session creation.
+Any built-in sign-in link, sign-in code, SSO, OAuth, or handoff helper must normalize email before lookup, storage, comparison, token creation, code verification, or session creation.
 
 When the framework provides a reference users table, its email column stores only normalized emails and has a unique index.
 

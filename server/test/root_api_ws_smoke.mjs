@@ -52,7 +52,7 @@ function updateCookies(response) {
 }
 
 async function signIn() {
-  const res1 = await fetch(`http://127.0.0.1:${port}/sign_in/password?return_to=/admin/games`, {
+  const res1 = await fetch(`http://127.0.0.1:${port}/sign_in?return_to=/admin/games`, {
     redirect: "manual",
   });
   updateCookies(res1);
@@ -63,7 +63,7 @@ async function signIn() {
       "Content-Type": "application/x-www-form-urlencoded",
       Cookie: cookies,
     },
-    body: "email=admin@example.com&password=admin&return_to=/admin/games",
+    body: "email=admin@example.com&code=A1Z9Q&return_to=/admin/games",
     redirect: "manual",
   });
   updateCookies(res2);

@@ -40,7 +40,7 @@ fn active_section(route: Route) -> String {
     route.Games | route.GamesId(_) -> "games"
     route.Standings -> "standings"
     route.Team(_) -> "teams"
-    route.SignIn | route.SignInPassword | route.SignInCode -> "sign_in"
+    route.SignIn -> "sign_in"
     route.NotFound -> ""
   }
 }
