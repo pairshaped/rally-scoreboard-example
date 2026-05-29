@@ -5,7 +5,7 @@ import gleam/string
 import gleeunit/should
 import lustre/element
 import shared/api/domain/game.{
-  Final, GameScoreUpdate, Live, PublicGameSummary, Team,
+  Final, GameSnapshot, Live, PublicGameSummary, Team,
 }
 import shared/api/domain/team.{type TeamDetail, TeamDetail}
 import shared/public/pages/teams/slug_ as team_page
@@ -104,13 +104,14 @@ pub fn score_update_changes_recent_game_test() {
       ),
     ])
   let updated =
-    team_page.apply_score_update(
+    team_page.apply_game_updated(
       team_page.Model(team: detail),
-      GameScoreUpdate(
-        game_id: 1,
+      GameSnapshot(
+        id: 1,
+        home: Team(code: "TOR", name: "Toronto", slug: "tor"),
+        away: Team(code: "NYC", name: "New York", slug: "nyc"),
         home_score: 3,
         away_score: 4,
-        period: "4th",
         status: Live("4th"),
       ),
     )
@@ -141,13 +142,14 @@ pub fn final_score_update_changes_record_and_points_test() {
       ],
     )
   let updated =
-    team_page.apply_score_update(
+    team_page.apply_game_updated(
       team_page.Model(team: detail),
-      GameScoreUpdate(
-        game_id: 1,
+      GameSnapshot(
+        id: 1,
+        home: Team(code: "TOR", name: "Toronto", slug: "tor"),
+        away: Team(code: "MTL", name: "Montreal", slug: "mtl"),
         home_score: 4,
         away_score: 5,
-        period: "Final",
         status: Final,
       ),
     )

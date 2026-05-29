@@ -6,7 +6,7 @@
 
 import gleam/option.{type Option, None, Some}
 import lustre/effect.{type Effect}
-import shared/api/domain/game.{type GameDetail, type GameScoreUpdate, GameDetail}
+import shared/api/domain/game.{type GameDetail, type GameSnapshot, GameDetail}
 
 pub type Model {
   Model(game: Option(GameDetail), notice: String)
@@ -34,14 +34,11 @@ pub fn game_loaded(
   #(Model(game: Some(game), notice: ""), effect.none())
 }
 
-pub fn game_score_updated(
+pub fn game_updated(
   model model: Model,
-  update update: GameScoreUpdate,
+  game game: GameSnapshot,
 ) -> #(Model, Effect(Msg)) {
-  #(
-    Model(..model, game: update_selected_game(model.game, update)),
-    effect.none(),
-  )
+  #(Model(..model, game: update_selected_game(model.game, game)), effect.none())
 }
 
 pub fn games_load_failed(
@@ -53,16 +50,16 @@ pub fn games_load_failed(
 
 fn update_selected_game(
   game: Option(GameDetail),
-  update: GameScoreUpdate,
+  snapshot: GameSnapshot,
 ) -> Option(GameDetail) {
   case game {
-    Some(game) if game.id == update.game_id ->
+    Some(game) if game.id == snapshot.id ->
       Some(
         GameDetail(
           ..game,
-          home_score: update.home_score,
-          away_score: update.away_score,
-          status: update.status,
+          home_score: snapshot.home_score,
+          away_score: snapshot.away_score,
+          status: snapshot.status,
         ),
       )
     _ -> game

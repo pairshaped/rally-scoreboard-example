@@ -22,12 +22,13 @@ pub fn main() {
 }
 
 pub fn public_to_client_dispatch_fans_out_to_all_interested_pages_test() {
-  let update =
-    game.GameScoreUpdate(
-      game_id: 2,
+  let game =
+    game.GameSnapshot(
+      id: 2,
+      home: game.Team(code: "TOR", name: "Toronto", slug: "tor"),
+      away: game.Team(code: "NYC", name: "New York", slug: "nyc"),
       home_score: 101,
       away_score: 99,
-      period: "Q4",
       status: game.Live("Q4"),
     )
 
@@ -36,11 +37,11 @@ pub fn public_to_client_dispatch_fans_out_to_all_interested_pages_test() {
   let #(models, _) =
     public_to_client_dispatch.apply_to_client(
       models,
-      to_client.GameScoreUpdated(update:),
+      to_client.GameUpdated(game:),
     )
 
-  // After a score update with no prior data, the games list should still be
-  // empty (score updates patch existing data, they don't add new entries).
+  // After a game update with no prior data, the games list should still be
+  // empty (updates patch existing data, they don't add new entries).
   models.games_page.games |> should.equal([])
   models.standings_page.rows |> should.equal([])
 }

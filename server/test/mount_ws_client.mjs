@@ -118,7 +118,7 @@ async function runAdmin() {
     )));
     const created = await waitForPush(protocol, ws);
     assert.equal(created.value.constructor.name, "GameCreated");
-    assert.equal(created.value.game.constructor.name, "AdminGameDetail");
+    assert.equal(created.value.game.constructor.name, "GameSnapshot");
 
     ws.send(toPayload(protocol.encode_request(
       "to_server",

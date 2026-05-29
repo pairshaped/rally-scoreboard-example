@@ -7,11 +7,10 @@
 import generated/runtime/effect as client_effect
 import gleam/bool
 import gleam/dict
-import gleam/list
 import gleam/string
 import lustre/effect.{type Effect}
 import shared/api/domain/game.{
-  type AdminGameDetail, type AdminGameSummary, type GameScoreUpdate,
+  type AdminGameDetail, type AdminGameSummary, type GameSnapshot,
   AdminGameSummary,
 }
 import shared/api/to_server
@@ -90,13 +89,34 @@ pub fn admin_games_loaded(
 
 pub fn game_created(
   model model: Model,
-  game game: AdminGameDetail,
+  game game: GameSnapshot,
 ) -> #(Model, Effect(Msg)) {
   #(
     Model(
       ..model,
-      games: upsert_game(games: model.games, detail: game),
+      games: upsert_game_summary(
+        games: model.games,
+        summary: snapshot_to_admin_summary(game),
+        seen: False,
+      ),
       notice: "Game created.",
+    ),
+    effect.none(),
+  )
+}
+
+pub fn game_updated(
+  model model: Model,
+  game game: GameSnapshot,
+) -> #(Model, Effect(Msg)) {
+  #(
+    Model(
+      ..model,
+      games: upsert_game_summary(
+        games: model.games,
+        summary: snapshot_to_admin_summary(game),
+        seen: False,
+      ),
     ),
     effect.none(),
   )
@@ -126,16 +146,6 @@ pub fn result_saved(
       games: upsert_game(games: model.games, detail: game),
       notice: "Result saved.",
     ),
-    effect.none(),
-  )
-}
-
-pub fn game_score_updated(
-  model model: Model,
-  update update: GameScoreUpdate,
-) -> #(Model, Effect(Msg)) {
-  #(
-    Model(..model, games: apply_score_update(games: model.games, update:)),
     effect.none(),
   )
 }
@@ -196,29 +206,23 @@ fn upsert_game_summary(
   }
 }
 
-fn apply_score_update(
-  games games: List(AdminGameSummary),
-  update update: GameScoreUpdate,
-) -> List(AdminGameSummary) {
-  list.map(games, fn(game) {
-    case game.id == update.game_id {
-      True ->
-        AdminGameSummary(
-          ..game,
-          home_score: update.home_score,
-          away_score: update.away_score,
-          status: update.status,
-        )
-      False -> game
-    }
-  })
-}
-
 fn admin_detail_to_summary(game: AdminGameDetail) -> AdminGameSummary {
   AdminGameSummary(
     id: game.id,
     home_code: game.home_code,
     away_code: game.away_code,
+    home_score: game.home_score,
+    away_score: game.away_score,
+    status: game.status,
+    needs_attention: False,
+  )
+}
+
+fn snapshot_to_admin_summary(game: GameSnapshot) -> AdminGameSummary {
+  AdminGameSummary(
+    id: game.id,
+    home_code: game.home.code,
+    away_code: game.away.code,
     home_score: game.home_score,
     away_score: game.away_score,
     status: game.status,

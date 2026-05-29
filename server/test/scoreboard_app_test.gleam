@@ -1726,14 +1726,14 @@ pub fn public_to_client_dispatch_uses_snake_case_handler_names_test() {
   let dispatch = read("../client/src/generated/public/to_client.gleam")
 
   dispatch |> contains("games.games_loaded(") |> should.be_true
-  dispatch |> contains("games.game_score_updated(") |> should.be_true
+  dispatch |> contains("games.game_created(") |> should.be_true
+  dispatch |> contains("games.game_updated(") |> should.be_true
   dispatch |> contains("games.games_load_failed(") |> should.be_true
   dispatch |> contains("team.team_loaded(") |> should.be_true
   dispatch |> contains("standings.standings_loaded(") |> should.be_true
   dispatch |> contains("standings.power_rankings_loaded(") |> should.be_true
-  dispatch |> contains("standings.standings_updated(") |> should.be_true
   dispatch |> contains("game_detail.game_loaded(") |> should.be_true
-  dispatch |> contains("game_detail.game_score_updated(") |> should.be_true
+  dispatch |> contains("game_detail.game_updated(") |> should.be_true
   dispatch |> contains("game_detail.games_load_failed(") |> should.be_true
 }
 
@@ -1742,9 +1742,9 @@ pub fn admin_to_client_dispatch_uses_snake_case_handler_names_test() {
 
   dispatch |> contains("games.admin_games_loaded(") |> should.be_true
   dispatch |> contains("games.game_created(") |> should.be_true
+  dispatch |> contains("games.game_updated(") |> should.be_true
   dispatch |> contains("games.score_update_saved(") |> should.be_true
   dispatch |> contains("games.result_saved(") |> should.be_true
-  dispatch |> contains("games.game_score_updated(") |> should.be_true
   dispatch |> contains("games.admin_error(") |> should.be_true
 }
 
@@ -1799,12 +1799,12 @@ pub fn to_client_dispatch_explicitly_handles_each_constructor_test() {
   // Verify each handled constructor has an explicit case branch,
   // not relying on the catch-all for constructors that have handlers.
   dispatch |> contains("to_client.GamesLoaded(") |> should.be_true
-  dispatch |> contains("to_client.GameScoreUpdated(") |> should.be_true
+  dispatch |> contains("to_client.GameCreated(") |> should.be_true
+  dispatch |> contains("to_client.GameUpdated(") |> should.be_true
   dispatch |> contains("to_client.GamesLoadFailed(") |> should.be_true
   dispatch |> contains("to_client.GameLoaded(") |> should.be_true
   dispatch |> contains("to_client.StandingsLoaded(") |> should.be_true
   dispatch |> contains("to_client.PowerRankingsLoaded(") |> should.be_true
-  dispatch |> contains("to_client.StandingsUpdated(") |> should.be_true
   dispatch |> contains("to_client.TeamLoaded(") |> should.be_true
 }
 
@@ -1814,12 +1814,12 @@ pub fn to_client_handlers_receive_labeled_args_not_whole_message_test() {
 
   let games = read("../client/src/client/public/pages/games.gleam")
   games |> contains("games games: List") |> should.be_true
-  games |> contains("update update: GameScoreUpdate") |> should.be_true
+  games |> contains("game game: GameSnapshot") |> should.be_true
   games |> contains("reason reason: String") |> should.be_true
 
   let game_detail = read("../client/src/client/public/pages/games/id_.gleam")
   game_detail |> contains("game game: GameDetail") |> should.be_true
-  game_detail |> contains("update update: GameScoreUpdate") |> should.be_true
+  game_detail |> contains("game game: GameSnapshot") |> should.be_true
   game_detail |> contains("reason reason: String") |> should.be_true
 
   let standings = read("../client/src/client/public/pages/standings.gleam")
@@ -1827,17 +1827,33 @@ pub fn to_client_handlers_receive_labeled_args_not_whole_message_test() {
   standings
   |> contains("rows rows: List(PowerRankingRow)")
   |> should.be_true
+  standings |> contains("game game: GameSnapshot") |> should.be_false
 
   let team = read("../client/src/client/public/pages/teams/slug_.gleam")
   team |> contains("team team: TeamDetail") |> should.be_true
-  team |> contains("update update: GameScoreUpdate") |> should.be_true
+  team |> contains("game game: GameSnapshot") |> should.be_true
   team |> contains("reason reason: String") |> should.be_true
 
   let admin_games = read("../client/src/client/admin/pages/games.gleam")
   admin_games |> contains("games games: List") |> should.be_true
+  admin_games |> contains("game game: GameSnapshot") |> should.be_true
   admin_games |> contains("game game: AdminGameDetail") |> should.be_true
-  admin_games |> contains("update update: GameScoreUpdate") |> should.be_true
   admin_games |> contains("reason reason: String") |> should.be_true
+}
+
+pub fn standings_refresh_is_gated_by_active_public_route_test() {
+  let public_tc = read("../client/src/generated/public/to_client.gleam")
+  let standings = read("../client/src/client/public/pages/standings.gleam")
+  let public_client = read("../client/src/scoreboard_public_client.gleam")
+
+  public_tc |> contains("standings.game_updated(") |> should.be_false
+  standings
+  |> contains("send_to_server(to_server.LoadStandings)")
+  |> should.be_false
+  public_client
+  |> contains("public_to_client.GameUpdated(_), public_route.Standings")
+  |> should.be_true
+  public_client |> contains("initial_load(route)") |> should.be_true
 }
 
 pub fn client_pages_own_tea_model_and_update_test() {

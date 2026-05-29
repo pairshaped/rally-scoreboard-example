@@ -4,6 +4,7 @@
 //// The server handler loads the team by slug; the client renders after
 //// the TeamLoaded ToClient push arrives.
 
+import gleam/bool
 import gleam/int
 import gleam/list
 import gleam/option.{type Option, None, Some}
@@ -11,7 +12,7 @@ import lustre/attribute
 import lustre/element.{type Element}
 import lustre/element/html
 import shared/api/domain/game.{
-  type GameScoreUpdate, type PublicGameSummary, Final, PublicGameSummary,
+  type GameSnapshot, type PublicGameSummary, Final, PublicGameSummary,
 }
 import shared/api/domain/team.{type TeamDetail, TeamDetail}
 import shared/api/to_server.{type ToServer}
@@ -40,29 +41,59 @@ pub fn view(
   html.main([], [view_team_detail(team, on_navigate_team, on_navigate_game)])
 }
 
-// nolint: label_possible -- 'model' and 'update' are self-evident from the function name, which already says "apply score update".
-pub fn apply_score_update(model: Model, update: GameScoreUpdate) -> Model {
-  Model(team: apply_team_score_update(model.team, update))
+// nolint: label_possible -- 'model' and 'update' are self-evident from the function name, which already says "apply game updated".
+pub fn apply_game_created(model: Model, snapshot: GameSnapshot) -> Model {
+  use <- bool.guard(
+    when: !game_belongs_to_team(model.team.code, snapshot),
+    return: model,
+  )
+  Model(team: add_game_to_team(model.team, snapshot))
 }
 
-fn apply_team_score_update(
+// nolint: label_possible -- 'model' and 'update' are self-evident from the function name, which already says "apply game updated".
+pub fn apply_game_updated(model: Model, snapshot: GameSnapshot) -> Model {
+  use <- bool.guard(
+    when: !game_belongs_to_team(model.team.code, snapshot),
+    return: model,
+  )
+  Model(team: apply_team_game_update(model.team, snapshot))
+}
+
+fn game_belongs_to_team(team_code: String, snapshot: GameSnapshot) -> Bool {
+  snapshot.home.code == team_code || snapshot.away.code == team_code
+}
+
+fn add_game_to_team(team: TeamDetail, snapshot: GameSnapshot) -> TeamDetail {
+  let summary =
+    PublicGameSummary(
+      id: snapshot.id,
+      home: snapshot.home,
+      away: snapshot.away,
+      home_score: snapshot.home_score,
+      away_score: snapshot.away_score,
+      status: snapshot.status,
+    )
+  TeamDetail(..team, recent_games: list.append(team.recent_games, [summary]))
+}
+
+fn apply_team_game_update(
   team: TeamDetail,
-  update: GameScoreUpdate,
+  snapshot: GameSnapshot,
 ) -> TeamDetail {
-  case list.find(team.recent_games, fn(game) { game.id == update.game_id }) {
+  case list.find(team.recent_games, fn(game) { game.id == snapshot.id }) {
     Error(Nil) -> team
     Ok(existing) -> {
       let updated_games =
         list.map(team.recent_games, fn(game) {
-          case game.id == update.game_id {
-            True -> update_game_summary(game, update)
+          case game.id == snapshot.id {
+            True -> update_game_summary(game, snapshot)
             False -> game
           }
         })
       let #(old_wins, old_losses, old_for, old_against) =
         record_contribution(team.code, existing)
       let #(new_wins, new_losses, new_for, new_against) =
-        record_contribution(team.code, update_game_summary(existing, update))
+        record_contribution(team.code, update_game_summary(existing, snapshot))
 
       TeamDetail(
         ..team,
@@ -78,13 +109,13 @@ fn apply_team_score_update(
 
 fn update_game_summary(
   game: PublicGameSummary,
-  update: GameScoreUpdate,
+  snapshot: GameSnapshot,
 ) -> PublicGameSummary {
   PublicGameSummary(
     ..game,
-    home_score: update.home_score,
-    away_score: update.away_score,
-    status: update.status,
+    home_score: snapshot.home_score,
+    away_score: snapshot.away_score,
+    status: snapshot.status,
   )
 }
 

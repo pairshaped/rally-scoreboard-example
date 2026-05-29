@@ -41,17 +41,16 @@ pub fn apply_to_client(
       let #(page, eff) = games.game_created(models.games_page, game:)
       #(Models(games_page: page), effect.map(eff, GamesPage))
     }
+    to_client.GameUpdated(game: game) -> {
+      let #(page, eff) = games.game_updated(models.games_page, game:)
+      #(Models(games_page: page), effect.map(eff, GamesPage))
+    }
     to_client.ScoreUpdateSaved(game: game) -> {
       let #(page, eff) = games.score_update_saved(models.games_page, game:)
       #(Models(games_page: page), effect.map(eff, GamesPage))
     }
     to_client.ResultSaved(game: game) -> {
       let #(page, eff) = games.result_saved(models.games_page, game:)
-      #(Models(games_page: page), effect.map(eff, GamesPage))
-    }
-    to_client.GameScoreUpdated(update: update) -> {
-      let #(page, eff) =
-        games.game_score_updated(models.games_page, update:)
       #(Models(games_page: page), effect.map(eff, GamesPage))
     }
     to_client.AdminError(reason: reason) -> {

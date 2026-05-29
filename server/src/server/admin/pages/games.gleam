@@ -3,7 +3,7 @@
 //// These functions are named after ToServer constructors. Generated admin
 //// dispatch calls them to mutate the database and emit ToClient messages.
 //// After writing to the database, admin handlers also broadcast
-//// GameScoreUpdated and StandingsUpdated through the live-update pubsub
+//// GameCreated and GameUpdated through the live-update pubsub
 //// so all connected public clients see changes without a page reload.
 ////
 //// The generated dispatch calls `load_admin_games` — the snake_case form of
@@ -15,7 +15,6 @@ import generated/admin/request_context.{type RequestContext}
 import generated/runtime/effect.{type Effect}
 import generated/runtime/live_updates
 import generated/sql/server/games_sql
-import generated/sql/server/standings_sql
 import gleam/bool
 import gleam/list
 import server/admin/model.{type Model}
@@ -23,7 +22,6 @@ import server/helpers/db
 import server/helpers/domain
 import server/server_context.{type ServerContext}
 import shared/api/domain/game as admin_game
-import shared/api/domain/standing
 import shared/api/to_client.{type ToClient}
 import sqlight
 
@@ -45,11 +43,23 @@ pub fn create_game(
   backend_model backend_model: Model,
 ) -> #(Model, Effect(ToClient)) {
   let event = case create_admin_game(db: context.db, home_code:, away_code:) {
-    Ok(game) -> to_client.GameCreated(game:)
-    Error(reason) -> to_client.AdminError(reason: db.to_string(reason))
+    Ok(game) ->
+      case games_sql.get_game(db: context.db, game_id: game.id) {
+        Ok([row]) -> {
+          let snapshot = game_snapshot_from_row(row)
+          live_updates.broadcast(to_client.GameCreated(game: snapshot))
+          effect.send_to_client(to_client.GameCreated(game: snapshot))
+        }
+        _ ->
+          effect.send_to_client(to_client.AdminError(
+            reason: "game created but failed to load",
+          ))
+      }
+    Error(reason) ->
+      effect.send_to_client(to_client.AdminError(reason: db.to_string(reason)))
   }
 
-  #(backend_model, effect.send_to_client(event))
+  #(backend_model, event)
 }
 
 pub fn update_score(
@@ -71,15 +81,13 @@ pub fn update_score(
     )
   {
     Ok(game) -> {
-      live_updates.broadcast(
-        to_client.GameScoreUpdated(update: admin_game.GameScoreUpdate(
-          game_id:,
-          home_score:,
-          away_score:,
-          period:,
-          status: game.status,
-        )),
-      )
+      case games_sql.get_game(db: context.db, game_id:) {
+        Ok([row]) ->
+          live_updates.broadcast(
+            to_client.GameUpdated(game: game_snapshot_from_row(row)),
+          )
+        _ -> Nil
+      }
       effect.send_to_client(to_client.ScoreUpdateSaved(game:))
     }
     Error(reason) ->
@@ -96,19 +104,16 @@ pub fn mark_final(
   backend_model backend_model: Model,
 ) -> #(Model, Effect(ToClient)) {
   let event = case current_score(db: context.db, game_id:) {
-    Ok(#(home_score, away_score)) ->
+    Ok(#(_home_score, _away_score)) ->
       case final_admin_result(db: context.db, game_id:) {
         Ok(game) -> {
-          live_updates.broadcast(
-            to_client.GameScoreUpdated(update: admin_game.GameScoreUpdate(
-              game_id:,
-              home_score:,
-              away_score:,
-              period: game.period,
-              status: game.status,
-            )),
-          )
-          broadcast_live_standings(context.db)
+          case games_sql.get_game(db: context.db, game_id:) {
+            Ok([row]) ->
+              live_updates.broadcast(
+                to_client.GameUpdated(game: game_snapshot_from_row(row)),
+              )
+            _ -> Nil
+          }
           effect.send_to_client(to_client.ResultSaved(game:))
         }
         Error(reason) ->
@@ -143,16 +148,13 @@ pub fn correct_result(
     Ok(_score_result) ->
       case final_admin_result(db: context.db, game_id:) {
         Ok(game) -> {
-          live_updates.broadcast(
-            to_client.GameScoreUpdated(update: admin_game.GameScoreUpdate(
-              game_id:,
-              home_score:,
-              away_score:,
-              period: game.period,
-              status: game.status,
-            )),
-          )
-          broadcast_live_standings(context.db)
+          case games_sql.get_game(db: context.db, game_id:) {
+            Ok([row]) ->
+              live_updates.broadcast(
+                to_client.GameUpdated(game: game_snapshot_from_row(row)),
+              )
+            _ -> Nil
+          }
           effect.send_to_client(to_client.ResultSaved(game:))
         }
         Error(reason) ->
@@ -167,22 +169,25 @@ pub fn correct_result(
   #(backend_model, event)
 }
 
-fn broadcast_live_standings(db: sqlight.Connection) -> Nil {
-  case live_standings(db) {
-    Ok(rows) -> live_updates.broadcast(to_client.StandingsUpdated(rows:))
-    // Broadcast is best-effort; failures are logged by the runtime.
-    // nolint: thrown_away_error
-    Error(_) -> Nil
-  }
-}
-
-fn live_standings(
-  db: sqlight.Connection,
-) -> Result(List(standing.StandingRow), db.QueryError) {
-  case standings_sql.list_standings(db:) {
-    Ok(rows) -> Ok(list.map(rows, domain.standing_from_row))
-    Error(err) -> Error(db.from_sqlight(err))
-  }
+fn game_snapshot_from_row(
+  row: games_sql.GetGameRow,
+) -> admin_game.GameSnapshot {
+  admin_game.GameSnapshot(
+    id: row.id,
+    home: admin_game.Team(
+      code: row.home_code,
+      name: row.home_name,
+      slug: row.home_slug,
+    ),
+    away: admin_game.Team(
+      code: row.away_code,
+      name: row.away_name,
+      slug: row.away_slug,
+    ),
+    home_score: row.home_score,
+    away_score: row.away_score,
+    status: domain.game_status(row.final, row.period),
+  )
 }
 
 fn admin_games(

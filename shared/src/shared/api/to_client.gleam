@@ -10,7 +10,7 @@
 
 import shared/api/domain/game.{
   type AdminGameDetail, type AdminGameSummary, type GameDetail,
-  type GameScoreUpdate, type PublicGameSummary,
+  type GameSnapshot, type PublicGameSummary,
 }
 import shared/api/domain/standing.{type PowerRankingRow, type StandingRow}
 import shared/api/domain/team.{type TeamDetail}
@@ -22,12 +22,11 @@ pub type ToClient {
   // Exercises same-shape different-constructor wire types alongside StandingsLoaded.
   // No server handler emits this yet; kept as a placeholder for the generator.
   PowerRankingsLoaded(rows: List(PowerRankingRow))
-  GameScoreUpdated(update: GameScoreUpdate)
-  StandingsUpdated(rows: List(StandingRow))
   GamesLoadFailed(reason: String)
   TeamLoaded(team: TeamDetail)
   AdminGamesLoaded(games: List(AdminGameSummary))
-  GameCreated(game: AdminGameDetail)
+  GameCreated(game: GameSnapshot)
+  GameUpdated(game: GameSnapshot)
   ScoreUpdateSaved(game: AdminGameDetail)
   ResultSaved(game: AdminGameDetail)
   AdminError(reason: String)

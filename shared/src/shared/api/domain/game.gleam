@@ -36,12 +36,13 @@ pub type GameDetail {
   )
 }
 
-pub type GameScoreUpdate {
-  GameScoreUpdate(
-    game_id: Int,
+pub type GameSnapshot {
+  GameSnapshot(
+    id: Int,
+    home: Team,
+    away: Team,
     home_score: Int,
     away_score: Int,
-    period: String,
     status: GameStatus,
   )
 }

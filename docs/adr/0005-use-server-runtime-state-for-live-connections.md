@@ -13,7 +13,7 @@ The live update flow is:
 5. The Generator Framework delivers each `ToClient` value to the intended client roots.
 6. Generated client `to_client` dispatch routes the value to every active handler for its constructor.
 
-Constructor-named client `ToClient` handlers are the client-side interest signal. A page, layout, or shared-state module with a `game_score_updated` handler is interested in `GameScoreUpdated` whenever that module is active. The Generator Framework does not require a separate live-update topic declaration for that interest.
+Constructor-named client `ToClient` handlers are the client-side interest signal. A page, layout, or shared-state module with a `game_updated` handler is interested in `GameUpdated` whenever that module is active. The Generator Framework does not require a separate live-update topic declaration for that interest.
 
 Every server-originated value shares the same client update path after transport decode:
 

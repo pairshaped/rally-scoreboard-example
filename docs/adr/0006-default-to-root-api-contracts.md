@@ -448,7 +448,7 @@ ToServer.LoadGames       -> server handler load_games
 ToServer.UpdateScore     -> server handler update_score
 
 ToClient.GamesLoaded     -> client handler games_loaded
-ToClient.GameScoreUpdated -> client handler game_score_updated
+ToClient.GameUpdated -> client handler game_updated
 ```
 
 The Generator Framework recognizes only the constructor-derived snake_case handler name for this convention. A generic `receive` function is not a `ToClient` handler. The Generator Framework fails generation when a discovered client `ToClient` handler has a signature that does not match the constructor fields. It also fails when a module declares interest in a `ToClient` constructor but the matching snake_case handler is missing. Constructors with no active handler follow the app's configured no-handler policy.
@@ -522,8 +522,8 @@ Live updates use `ToClient` values.
 
 ```gleam
 pub type ToClient {
-  GameScoreUpdated(update: GameScoreUpdate)
-  StandingsUpdated(rows: List(StandingRow))
+  GameCreated(game: GameSnapshot)
+  GameUpdated(game: GameSnapshot)
 }
 ```
 
@@ -722,7 +722,7 @@ Type aliases are transparent on the wire, as they are in Gleam. Domain identitie
 
 `ToServer` frames are fire-and-forget commands. The client does not register a response callback for them and the server does not send a transport acknowledgement. Server operation outcomes travel as `ToClient` pushes. Root API transport does not expose an RPC lane.
 
-`ToClient` values are global server emissions. They may be delivered to any active client handler in any Mount that handles the constructor. This is intentionally different from `ToServer`: commands are current-Mount input, while server emissions are handler-driven app events and results. For example, an admin score command may emit `GameScoreUpdated`, and public pages may handle that `ToClient` value through their active `game_score_updated` handlers.
+`ToClient` values are global server emissions. They may be delivered to any active client handler in any Mount that handles the constructor. This is intentionally different from `ToServer`: commands are current-Mount input, while server emissions are handler-driven app events and results. For example, an admin score command may emit `GameUpdated`, and public pages may handle that `ToClient` value through their active `game_updated` handlers.
 
 ## Rules
 

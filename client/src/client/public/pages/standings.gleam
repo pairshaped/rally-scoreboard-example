@@ -39,17 +39,7 @@ pub fn power_rankings_loaded(
   model model: Model,
   rows rows: List(PowerRankingRow),
 ) -> #(Model, Effect(Msg)) {
-  #(
-    Model(..model, rows: power_rankings_to_standings(rows)),
-    effect.none(),
-  )
-}
-
-pub fn standings_updated(
-  model model: Model,
-  rows rows: List(StandingRow),
-) -> #(Model, Effect(Msg)) {
-  #(Model(..model, rows:), effect.none())
+  #(Model(..model, rows: power_rankings_to_standings(rows)), effect.none())
 }
 
 fn power_rankings_to_standings(

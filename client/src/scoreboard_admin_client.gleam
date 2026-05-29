@@ -83,12 +83,7 @@ fn init(
     |> result.unwrap(admin_route.NotFound)
   let pages = admin_to_client_dispatch.init()
   let model =
-    Model(
-      route:,
-      pages:,
-      dark_mode: admin_effect.read_dark_mode(),
-      context:,
-    )
+    Model(route:, pages:, dark_mode: admin_effect.read_dark_mode(), context:)
   let #(model, hydrated, hydration_effect) = case ssr_event {
     option.Some(event) -> {
       let #(pages, page_eff) =
@@ -177,8 +172,7 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
       #(Model(..model, pages:), effect.map(eff, PageMsg))
     }
     PageMsg(msg) -> {
-      let #(pages, eff) =
-        admin_to_client_dispatch.update_page(model.pages, msg)
+      let #(pages, eff) = admin_to_client_dispatch.update_page(model.pages, msg)
       #(Model(..model, pages:), effect.map(eff, PageMsg))
     }
     SetDarkMode(enabled) -> #(
@@ -204,29 +198,35 @@ fn view(model: Model) -> Element(Msg) {
             admin_games_page.view(
               model.pages.games_page.games,
               fn(game_id, home_score, away_score, delta) {
-                PageMsg(admin_to_client_dispatch.GamesPage(
-                  admin_games_client.AdjustAway(
-                    game_id,
-                    home_score,
-                    away_score,
-                    delta,
+                PageMsg(
+                  admin_to_client_dispatch.GamesPage(
+                    admin_games_client.AdjustAway(
+                      game_id,
+                      home_score,
+                      away_score,
+                      delta,
+                    ),
                   ),
-                ))
+                )
               },
               fn(game_id, home_score, away_score, delta) {
-                PageMsg(admin_to_client_dispatch.GamesPage(
-                  admin_games_client.AdjustHome(
-                    game_id,
-                    home_score,
-                    away_score,
-                    delta,
+                PageMsg(
+                  admin_to_client_dispatch.GamesPage(
+                    admin_games_client.AdjustHome(
+                      game_id,
+                      home_score,
+                      away_score,
+                      delta,
+                    ),
                   ),
-                ))
+                )
               },
               fn(game_id) {
-                PageMsg(admin_to_client_dispatch.GamesPage(
-                  admin_games_client.MarkFinal(game_id),
-                ))
+                PageMsg(
+                  admin_to_client_dispatch.GamesPage(
+                    admin_games_client.MarkFinal(game_id),
+                  ),
+                )
               },
             ),
           ]),
@@ -237,26 +237,32 @@ fn view(model: Model) -> Element(Msg) {
                 attribute.value(model.pages.games_page.home_code),
                 attribute.placeholder("Home"),
                 event.on_input(fn(value) {
-                  PageMsg(admin_to_client_dispatch.GamesPage(
-                    admin_games_client.UpdateHomeCode(value),
-                  ))
+                  PageMsg(
+                    admin_to_client_dispatch.GamesPage(
+                      admin_games_client.UpdateHomeCode(value),
+                    ),
+                  )
                 }),
               ]),
               html.input([
                 attribute.value(model.pages.games_page.away_code),
                 attribute.placeholder("Away"),
                 event.on_input(fn(value) {
-                  PageMsg(admin_to_client_dispatch.GamesPage(
-                    admin_games_client.UpdateAwayCode(value),
-                  ))
+                  PageMsg(
+                    admin_to_client_dispatch.GamesPage(
+                      admin_games_client.UpdateAwayCode(value),
+                    ),
+                  )
                 }),
               ]),
               html.button(
-                [event.on_click(
-                  PageMsg(admin_to_client_dispatch.GamesPage(
-                    admin_games_client.CreateGame,
-                  )),
-                )],
+                [
+                  event.on_click(
+                    PageMsg(admin_to_client_dispatch.GamesPage(
+                      admin_games_client.CreateGame,
+                    )),
+                  ),
+                ],
                 [html.text("Create")],
               ),
             ]),
@@ -277,7 +283,7 @@ fn explainer(route route: admin_route.Route) -> Element(Msg) {
         "Route: generated from the admin Mount file path for /admin/games.",
         "Load: sends LoadAdminGames during page init after the socket has request context.",
         "ToServer: sends CreateGame, UpdateScore, and MarkFinal from the score desk controls.",
-        "ToClient: receives AdminGamesLoaded, GameCreated, ScoreUpdateSaved, ResultSaved, AdminError, and GameScoreUpdated.",
+        "ToClient: receives AdminGamesLoaded, GameCreated, GameUpdated, ScoreUpdateSaved, ResultSaved, and AdminError.",
         "Fanout: joins the admin live update scope so another open admin tab patches the same score cards.",
       ])
     admin_route.NotFound ->

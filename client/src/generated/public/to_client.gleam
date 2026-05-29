@@ -49,15 +49,20 @@ pub fn apply_to_client(
 ) -> #(Models, Effect(Msg)) {
   case msg {
     to_client.GamesLoaded(games: games_list) -> {
-      let #(page, eff) = games.games_loaded(models.games_page, games: games_list)
+      let #(page, eff) =
+        games.games_loaded(models.games_page, games: games_list)
       #(Models(..models, games_page: page), effect.map(eff, GamesPage))
     }
     to_client.GameLoaded(game: game) -> {
       let #(page, eff) = game_detail.game_loaded(models.game_detail_page, game:)
-      #(Models(..models, game_detail_page: page), effect.map(eff, GameDetailPage))
+      #(
+        Models(..models, game_detail_page: page),
+        effect.map(eff, GameDetailPage),
+      )
     }
     to_client.StandingsLoaded(rows: rows) -> {
-      let #(page, eff) = standings.standings_loaded(models.standings_page, rows:)
+      let #(page, eff) =
+        standings.standings_loaded(models.standings_page, rows:)
       #(Models(..models, standings_page: page), effect.map(eff, StandingsPage))
     }
     to_client.PowerRankingsLoaded(rows: rows) -> {
@@ -65,13 +70,24 @@ pub fn apply_to_client(
         standings.power_rankings_loaded(models.standings_page, rows:)
       #(Models(..models, standings_page: page), effect.map(eff, StandingsPage))
     }
-    to_client.GameScoreUpdated(update: update) -> {
+    to_client.GameCreated(game: game) -> {
       let #(games_page, games_eff) =
-        games.game_score_updated(models.games_page, update:)
+        games.game_created(models.games_page, game:)
+      let #(team_page, team_eff) = team.game_created(models.team_page, game:)
+      #(
+        Models(..models, games_page:, team_page:),
+        effect.batch([
+          effect.map(games_eff, GamesPage),
+          effect.map(team_eff, TeamPage),
+        ]),
+      )
+    }
+    to_client.GameUpdated(game: game) -> {
+      let #(games_page, games_eff) =
+        games.game_updated(models.games_page, game:)
       let #(game_detail_page, detail_eff) =
-        game_detail.game_score_updated(models.game_detail_page, update:)
-      let #(team_page, team_eff) =
-        team.game_score_updated(models.team_page, update:)
+        game_detail.game_updated(models.game_detail_page, game:)
+      let #(team_page, team_eff) = team.game_updated(models.team_page, game:)
       #(
         Models(..models, games_page:, game_detail_page:, team_page:),
         effect.batch([
@@ -97,10 +113,6 @@ pub fn apply_to_client(
         ]),
       )
     }
-    to_client.StandingsUpdated(rows: rows) -> {
-      let #(page, eff) = standings.standings_updated(models.standings_page, rows:)
-      #(Models(..models, standings_page: page), effect.map(eff, StandingsPage))
-    }
     to_client.TeamLoaded(team: team_detail) -> {
       let #(page, eff) = team.team_loaded(models.team_page, team: team_detail)
       #(Models(..models, team_page: page), effect.map(eff, TeamPage))
@@ -120,7 +132,10 @@ pub fn update_page(
     }
     GameDetailPage(page_msg) -> {
       let #(page, eff) = game_detail.update(models.game_detail_page, page_msg)
-      #(Models(..models, game_detail_page: page), effect.map(eff, GameDetailPage))
+      #(
+        Models(..models, game_detail_page: page),
+        effect.map(eff, GameDetailPage),
+      )
     }
     StandingsPage(page_msg) -> {
       let #(page, eff) = standings.update(models.standings_page, page_msg)

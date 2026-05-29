@@ -267,10 +267,10 @@ try {
       assert.equal(push.value.game.away_score, 7);
 
       const liveUpdate = await waitForPush(publicProtocol, publicWs);
-      assert.equal(liveUpdate.value.constructor.name, "GameScoreUpdated");
-      assert.equal(liveUpdate.value.update.game_id, 1);
-      assert.equal(liveUpdate.value.update.home_score, 11);
-      assert.equal(liveUpdate.value.update.away_score, 7);
+      assert.equal(liveUpdate.value.constructor.name, "GameUpdated");
+      assert.equal(liveUpdate.value.game.id, 1);
+      assert.equal(liveUpdate.value.game.home_score, 11);
+      assert.equal(liveUpdate.value.game.away_score, 7);
     } finally {
       publicWs.close();
       adminWs.close();
@@ -308,11 +308,11 @@ try {
       const observerPush = await waitForPushMatching(
         adminProtocol,
         observerWs,
-        "GameScoreUpdated",
+        "GameUpdated",
       );
-      assert.equal(observerPush.value.update.game_id, 1);
-      assert.equal(observerPush.value.update.home_score, 16);
-      assert.equal(observerPush.value.update.away_score, 11);
+      assert.equal(observerPush.value.game.id, 1);
+      assert.equal(observerPush.value.game.home_score, 16);
+      assert.equal(observerPush.value.game.away_score, 11);
     } finally {
       senderWs.close();
       observerWs.close();
@@ -382,7 +382,7 @@ try {
     }
   });
 
-  await check("admin final broadcasts GameScoreUpdated to public sockets", async () => {
+  await check("admin final broadcasts GameUpdated to public sockets", async () => {
     const publicProtocol = protocol;
     const adminProtocol = protocol;
     const adminToServer = await import(
@@ -406,7 +406,7 @@ try {
       const standingsPushPromise = waitForPushMatching(
         publicProtocol,
         standingsWs,
-        "GameScoreUpdated",
+        "GameUpdated",
       );
       adminWs.send(toPayload(adminProtocol.encode_request(
         "to_server",
@@ -433,22 +433,21 @@ try {
       assert.equal(unfinalized.value.constructor.name, "ScoreUpdateSaved");
       assert.equal(unfinalized.value.game.id, 1);
 
-      // MarkFinal also broadcasts StandingsUpdated through the same
-      // live_updates.broadcast path. Both push types share the identical
-      // pg fanout, so GameScoreUpdated arrival proves the transport.
+      // MarkFinal broadcasts GameUpdated through the live_updates.broadcast
+      // path. GameUpdated arrival proves the transport.
       const markFinalPush = await standingsPushPromise;
       assert.equal(
         markFinalPush.value.constructor.name,
-        "GameScoreUpdated",
+        "GameUpdated",
       );
-      assert.equal(markFinalPush.value.update.game_id, 1);
+      assert.equal(markFinalPush.value.game.game_id, 1);
     } finally {
       standingsWs.close();
       adminWs.close();
     }
   });
 
-  await check("game detail receives live GameScoreUpdated from admin score changes", async () => {
+  await check("game detail receives live GameUpdated from admin score changes", async () => {
     const publicProtocol = protocol;
     const adminProtocol = protocol;
     const adminToServer = await import(
@@ -473,8 +472,8 @@ try {
         adminToServer.ToServer$UpdateScore(1, 13, 7, "4th"),
       )));
       const live1 = await waitForPush(publicProtocol, detailWs);
-      assert.equal(live1.value.constructor.name, "GameScoreUpdated");
-      assert.equal(live1.value.update.game_id, 1);
+      assert.equal(live1.value.constructor.name, "GameUpdated");
+      assert.equal(live1.value.game.game_id, 1);
 
       adminWs.send(toPayload(adminProtocol.encode_request(
         "to_server",
@@ -488,8 +487,8 @@ try {
       );
       assert.equal(adminPush.value.constructor.name, "ScoreUpdateSaved");
       const live2 = await waitForPush(publicProtocol, detailWs);
-      assert.equal(live2.value.constructor.name, "GameScoreUpdated");
-      assert.equal(live2.value.update.game_id, 2);
+      assert.equal(live2.value.constructor.name, "GameUpdated");
+      assert.equal(live2.value.game.game_id, 2);
 
       detailWs.send(toPayload(publicProtocol.encode_request(
         "to_server",
@@ -534,11 +533,11 @@ try {
       const teamPush = await waitForPushMatching(
         publicProtocol,
         teamWs,
-        "GameScoreUpdated",
+        "GameUpdated",
       );
-      assert.equal(teamPush.value.update.game_id, 1);
-      assert.equal(teamPush.value.update.home_score, 17);
-      assert.equal(teamPush.value.update.away_score, 12);
+      assert.equal(teamPush.value.game.game_id, 1);
+      assert.equal(teamPush.value.game.home_score, 17);
+      assert.equal(teamPush.value.game.away_score, 12);
     } finally {
       teamWs.close();
       adminWs.close();

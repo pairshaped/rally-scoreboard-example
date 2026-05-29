@@ -4,10 +4,12 @@ The Generator Framework's live updates use `ToClient` values.
 
 ```gleam
 pub type ToClient {
-  GameScoreUpdated(update: GameScoreUpdate)
-  StandingsUpdated(rows: List(StandingRow))
+  GameCreated(game: GameSnapshot)
+  GameUpdated(game: GameSnapshot)
 }
 ```
+
+Live broadcast constructors carry public-safe domain event payloads. `GameSnapshot` includes teams (with code, name, slug) so public and admin clients can derive whatever they need without receiving admin-only row shapes.
 
 A server handler may emit one or more `ToClient` values. Those values use the same transport and client `to_client` dispatch path whether they came from the current client's command or another server-side update:
 

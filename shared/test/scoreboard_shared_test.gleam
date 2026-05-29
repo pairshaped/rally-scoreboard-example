@@ -21,12 +21,13 @@ pub fn public_to_server_contract_compiles_test() {
 
 pub fn to_client_constructors_exist_and_can_be_constructed_test() {
   let _games_loaded = to_client.GamesLoaded(games: [])
-  let _score_update =
-    to_client.GameScoreUpdated(update: game.GameScoreUpdate(
-      game_id: 1,
+  let _game_updated =
+    to_client.GameUpdated(game: game.GameSnapshot(
+      id: 1,
+      home: game.Team(code: "TOR", name: "Toronto", slug: "tor"),
+      away: game.Team(code: "NYC", name: "New York", slug: "nyc"),
       home_score: 10,
       away_score: 5,
-      period: "Q1",
       status: game.Live("Q1"),
     ))
   let _standings = to_client.StandingsLoaded(rows: [])

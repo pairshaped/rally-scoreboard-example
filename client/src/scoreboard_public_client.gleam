@@ -272,7 +272,13 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
     ServerEvent(event) -> {
       let #(pages, eff) =
         public_to_client_dispatch.apply_to_client(model.pages, event)
-      #(Model(..model, pages:), effect.map(eff, PageMsg))
+      #(
+        Model(..model, pages:),
+        effect.batch([
+          effect.map(eff, PageMsg),
+          active_route_refresh(route: model.route, event:),
+        ]),
+      )
     }
     PageMsg(msg) -> {
       let #(pages, eff) =
@@ -283,6 +289,17 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
       Model(..model, dark_mode: enabled),
       public_effect.set_dark_mode(enabled),
     )
+  }
+}
+
+fn active_route_refresh(
+  route route: public_route.Route,
+  event event: public_to_client.ToClient,
+) -> Effect(Msg) {
+  case event, route {
+    public_to_client.GameUpdated(_), public_route.Standings ->
+      initial_load(route)
+    _, _ -> effect.none()
   }
 }
 
@@ -463,7 +480,7 @@ fn explainer(route route: public_route.Route) -> Element(Msg) {
       ui.page_explainer("What this page exercises", [
         "Route: generated from the public Mount file path for /games.",
         "Load: sends LoadGames during page init and renders GamesLoaded data.",
-        "ToClient: receives GamesLoaded, GameScoreUpdated, and GamesLoadFailed.",
+        "ToClient: receives GamesLoaded, GameCreated, GameUpdated, and GamesLoadFailed.",
         "Fanout: score updates patch visible game cards without a reload.",
         "Navigation: team and detail links use the generated public router.",
       ])
@@ -471,21 +488,21 @@ fn explainer(route route: public_route.Route) -> Element(Msg) {
       ui.page_explainer("What this page exercises", [
         "Route: generated from the public Mount file path for /games/:id.",
         "Load: parses " <> id <> " and sends LoadGame with that game id.",
-        "ToClient: receives GameLoaded, GameScoreUpdated, and GamesLoadFailed.",
+        "ToClient: receives GameLoaded, GameUpdated, and GamesLoadFailed.",
         "Fanout: score updates for this game patch the detail view score and status.",
       ])
     public_route.Standings ->
       ui.page_explainer("What this page exercises", [
         "Route: generated from the public Mount file path for /standings.",
         "Load: sends LoadStandings during page init.",
-        "ToClient: receives StandingsLoaded, StandingsUpdated, and PowerRankingsLoaded.",
+        "ToClient: receives StandingsLoaded, GameUpdated, and PowerRankingsLoaded.",
         "Fanout: finalized game results publish fresh standings rows.",
       ])
     public_route.Team(slug) ->
       ui.page_explainer("What this page exercises", [
         "Route: generated from the public Mount file path for /teams/:slug.",
         "Load: sends LoadTeam with the slug " <> slug <> ".",
-        "ToClient: receives TeamLoaded, GameScoreUpdated, and GamesLoadFailed.",
+        "ToClient: receives TeamLoaded, GameCreated, GameUpdated, and GamesLoadFailed.",
         "Fanout: the socket joins games involving this team, so score pushes only arrive for relevant games.",
         "Stats: final game updates patch recent games plus W-L, points for, and points against.",
       ])
