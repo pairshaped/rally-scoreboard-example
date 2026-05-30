@@ -1,0 +1,7 @@
+---
+version: 2.0.0
+title: ssr_public_game_detail_html
+file: ./test/ssr_render_snapshot_test.gleam
+test_name: public_game_detail_ssr_html_matches_snapshot_test
+---
+<div id="app"><main><section class="panel"><div class="section-head"><div><h1>Game detail</h1><span></span></div></div><div><div class="game-card"><div class="team-row"><a href="/teams/montréal-meteors"><strong>Montreal Meteors</strong></a><span class="score">2</span></div><div class="team-row"><a href="/teams/toronto-towers"><strong>Toronto Towers</strong></a><span class="score">4</span></div><span class="badge live">3rd</span></div><h2>Scoring summary</h2><ul><li>TOR opened the scoring</li><li>MTL answered late</li></ul></div></section></main></div>

@@ -1,0 +1,7 @@
+---
+version: 2.0.0
+title: ssr_public_standings_html
+file: ./test/ssr_render_snapshot_test.gleam
+test_name: public_standings_ssr_html_matches_snapshot_test
+---
+<div id="app"><main><section class="panel"><div class="section-head"><div><h1>League table</h1><span></span></div></div><table class="standings-table"><thead><tr><th>Team</th><th>W</th><th>L</th><th>PF</th><th>PA</th></tr></thead><tbody><tr><td><a href="/teams/new-york-comets"><strong>NYC</strong> New York Comets</a></td><td>2</td><td>0</td><td>11</td><td>5</td></tr><tr><td><a href="/teams/toronto-towers"><strong>TOR</strong> Toronto Towers</a></td><td>2</td><td>0</td><td>11</td><td>7</td></tr><tr><td><a href="/teams/los-angeles-knights"><strong>LAK</strong> Los Angeles Knights</a></td><td>1</td><td>2</td><td>12</td><td>15</td></tr><tr><td><a href="/teams/vancouver-voyagers"><strong>VAN</strong> Vancouver Voyagers</a></td><td>1</td><td>1</td><td>11</td><td>12</td></tr><tr><td><a href="/teams/montréal-meteors"><strong>MTL</strong> Montreal Meteors</a></td><td>0</td><td>2</td><td>5</td><td>9</td></tr><tr><td><a href="/teams/boston-blizzards"><strong>BOS</strong> Boston Blizzards</a></td><td>0</td><td>1</td><td>4</td><td>6</td></tr></tbody></table></section></main></div>
