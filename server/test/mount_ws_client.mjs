@@ -114,18 +114,18 @@ async function runAdmin() {
     ws.send(toPayload(protocol.encode_request(
       "to_server",
       1,
-      toServer.ToServer$CreateGame("TOR", "NYC"),
+      toServer.ToServer$UpdateScore(1, 4, 3, "4th"),
     )));
-    const created = await waitForPush(protocol, ws);
-    assert.equal(created.value.constructor.name, "GameCreated");
-    assert.equal(created.value.game.constructor.name, "GameSnapshot");
+    const saved = await waitForPushMatching(protocol, ws, "ScoreUpdateSaved");
+    assert.equal(saved.value.constructor.name, "ScoreUpdateSaved");
+    assert.equal(saved.value.game.constructor.name, "AdminGameDetail");
 
     ws.send(toPayload(protocol.encode_request(
       "to_server",
       2,
       toServer.ToServer$LoadAdminGames(),
     )));
-    const loaded = await waitForPush(protocol, ws);
+    const loaded = await waitForPushMatching(protocol, ws, "AdminGamesLoaded");
     assert.equal(loaded.value.constructor.name, "AdminGamesLoaded");
 
     const summary = first(loaded.value.games);
@@ -158,6 +158,18 @@ async function waitForPush(protocol, ws) {
   assert.equal(frame.kind, "push");
   assert.equal(frame.module, "to_client");
   return frame;
+}
+
+async function waitForPushMatching(protocol, ws, constructorName) {
+  const deadline = Date.now() + 4000;
+  while (Date.now() < deadline) {
+    const remaining = Math.max(1, deadline - Date.now());
+    const frame = decodeFrame(protocol, (await nextMessage(ws, remaining)).data);
+    assert.equal(frame.kind, "push");
+    assert.equal(frame.module, "to_client");
+    if (frame.value.constructor.name === constructorName) return frame;
+  }
+  throw new Error(`Timed out waiting for ${constructorName}`);
 }
 
 function decodeFrame(protocol, data) {

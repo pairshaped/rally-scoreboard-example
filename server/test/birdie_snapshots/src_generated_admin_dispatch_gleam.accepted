@@ -12,7 +12,7 @@ title: src__generated__admin__dispatch_gleam
 //// model and emit zero or more ToClient messages.
 ////
 //// Each ToServer constructor maps to an explicit snake_case server handler
-//// (LoadAdminGames -> load_admin_games, CreateGame -> create_game, etc.).
+//// (LoadAdminGames -> load_admin_games, UpdateScore -> update_score, etc.).
 //// The shared page module's init_requests() declares which constructors
 //// are needed for first render; generated SSR executes those requests
 //// locally and generated client init sends them over WebSocket when
@@ -94,14 +94,6 @@ pub fn to_server(
         )
       #(backend_model, server_effect.send_to_client(result))
     }
-    to_server.CreateGame(home_code:, away_code:) ->
-      server_admin_pages_games.create_game(
-        home_code:,
-        away_code:,
-        request_context:,
-        server_context:,
-        backend_model:,
-      )
     to_server.UpdateScore(game_id:, home_score:, away_score:, period:) ->
       server_admin_pages_games.update_score(
         game_id:,

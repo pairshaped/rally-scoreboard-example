@@ -41,10 +41,6 @@ pub fn apply_to_client(
         games.admin_games_loaded(models.games_page, games: games_list)
       #(Models(games_page: page), effect.map(eff, GamesPage))
     }
-    to_client.GameCreated(game: game) -> {
-      let #(page, eff) = games.game_created(models.games_page, game:)
-      #(Models(games_page: page), effect.map(eff, GamesPage))
-    }
     to_client.GameUpdated(game: game) -> {
       let #(page, eff) = games.game_updated(models.games_page, game:)
       #(Models(games_page: page), effect.map(eff, GamesPage))

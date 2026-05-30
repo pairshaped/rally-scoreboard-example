@@ -4,7 +4,6 @@
 //// The server handler loads the team by slug; the client renders after
 //// the TeamLoaded ToClient push arrives.
 
-import gleam/bool
 import gleam/int
 import gleam/list
 import gleam/option.{type Option, None, Some}
@@ -42,38 +41,15 @@ pub fn view(
 }
 
 // nolint: label_possible -- 'model' and 'update' are self-evident from the function name, which already says "apply game updated".
-pub fn apply_game_created(model: Model, snapshot: GameSnapshot) -> Model {
-  use <- bool.guard(
-    when: !game_belongs_to_team(model.team.code, snapshot),
-    return: model,
-  )
-  Model(team: add_game_to_team(model.team, snapshot))
-}
-
-// nolint: label_possible -- 'model' and 'update' are self-evident from the function name, which already says "apply game updated".
 pub fn apply_game_updated(model: Model, snapshot: GameSnapshot) -> Model {
-  use <- bool.guard(
-    when: !game_belongs_to_team(model.team.code, snapshot),
-    return: model,
-  )
-  Model(team: apply_team_game_update(model.team, snapshot))
+  case game_belongs_to_team(model.team.code, snapshot) {
+    False -> model
+    True -> Model(team: apply_team_game_update(model.team, snapshot))
+  }
 }
 
 fn game_belongs_to_team(team_code: String, snapshot: GameSnapshot) -> Bool {
   snapshot.home.code == team_code || snapshot.away.code == team_code
-}
-
-fn add_game_to_team(team: TeamDetail, snapshot: GameSnapshot) -> TeamDetail {
-  let summary =
-    PublicGameSummary(
-      id: snapshot.id,
-      home: snapshot.home,
-      away: snapshot.away,
-      home_score: snapshot.home_score,
-      away_score: snapshot.away_score,
-      status: snapshot.status,
-    )
-  TeamDetail(..team, recent_games: list.append(team.recent_games, [summary]))
 }
 
 fn apply_team_game_update(

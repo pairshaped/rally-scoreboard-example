@@ -1,7 +1,7 @@
 //// Shared admin games page state and rendering.
 ////
-//// The admin client uses this page to create games, edit live scores, mark
-//// finals, and reflect server-confirmed updates.
+//// The admin client uses this page to edit live scores, mark finals, and
+//// reflect server-confirmed updates.
 
 import gleam/int
 import gleam/list

@@ -36,21 +36,6 @@ pub fn team_loaded(
   #(Model(team: Some(shared_team_page.Model(team:)), notice: ""), effect.none())
 }
 
-pub fn game_created(
-  model model: Model,
-  game game: GameSnapshot,
-) -> #(Model, Effect(Msg)) {
-  #(
-    Model(
-      ..model,
-      team: option.map(model.team, fn(team_model) {
-        shared_team_page.apply_game_created(team_model, game)
-      }),
-    ),
-    effect.none(),
-  )
-}
-
 pub fn game_updated(
   model model: Model,
   game game: GameSnapshot,

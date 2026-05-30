@@ -7,7 +7,6 @@
 import generated/runtime/effect as client_effect
 import gleam/bool
 import gleam/dict
-import gleam/string
 import lustre/effect.{type Effect}
 import shared/api/domain/game.{
   type AdminGameDetail, type AdminGameSummary, type GameSnapshot,
@@ -16,44 +15,21 @@ import shared/api/domain/game.{
 import shared/api/to_server
 
 pub type Model {
-  Model(
-    games: List(AdminGameSummary),
-    notice: String,
-    home_code: String,
-    away_code: String,
-  )
+  Model(games: List(AdminGameSummary), notice: String)
 }
 
 pub type Msg {
-  CreateGame
-  UpdateHomeCode(String)
-  UpdateAwayCode(String)
   AdjustHome(Int, Int, Int, Int)
   AdjustAway(Int, Int, Int, Int)
   MarkFinal(Int)
 }
 
 pub fn init() -> Model {
-  Model(games: [], notice: "", home_code: "TOR", away_code: "NYC")
+  Model(games: [], notice: "")
 }
 
 pub fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
   case msg {
-    UpdateHomeCode(value) -> #(
-      Model(..model, home_code: string.uppercase(string.trim(value))),
-      effect.none(),
-    )
-    UpdateAwayCode(value) -> #(
-      Model(..model, away_code: string.uppercase(string.trim(value))),
-      effect.none(),
-    )
-    CreateGame -> #(
-      Model(..model, notice: "Creating game..."),
-      send_admin_games_command(to_server.CreateGame(
-        home_code: model.home_code,
-        away_code: model.away_code,
-      )),
-    )
     AdjustHome(game_id, home_score, away_score, delta) -> #(
       Model(..model, notice: "Saving score..."),
       send_admin_games_command(to_server.UpdateScore(
@@ -80,28 +56,10 @@ pub fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
 }
 
 pub fn admin_games_loaded(
-  model model: Model,
+  model _model: Model,
   games games: List(AdminGameSummary),
 ) -> #(Model, Effect(Msg)) {
-  #(Model(..model, games:, notice: ""), effect.none())
-}
-
-pub fn game_created(
-  model model: Model,
-  game game: GameSnapshot,
-) -> #(Model, Effect(Msg)) {
-  #(
-    Model(
-      ..model,
-      games: upsert_game_summary(
-        games: model.games,
-        summary: snapshot_to_admin_summary(game),
-        seen: False,
-      ),
-      notice: "Game created.",
-    ),
-    effect.none(),
-  )
+  #(Model(games:, notice: ""), effect.none())
 }
 
 pub fn game_updated(
@@ -127,7 +85,6 @@ pub fn score_update_saved(
 ) -> #(Model, Effect(Msg)) {
   #(
     Model(
-      ..model,
       games: upsert_game(games: model.games, detail: game),
       notice: "Saved.",
     ),
@@ -141,7 +98,6 @@ pub fn result_saved(
 ) -> #(Model, Effect(Msg)) {
   #(
     Model(
-      ..model,
       games: upsert_game(games: model.games, detail: game),
       notice: "Result saved.",
     ),

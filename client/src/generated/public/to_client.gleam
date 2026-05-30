@@ -70,18 +70,6 @@ pub fn apply_to_client(
         standings.power_rankings_loaded(models.standings_page, rows:)
       #(Models(..models, standings_page: page), effect.map(eff, StandingsPage))
     }
-    to_client.GameCreated(game: game) -> {
-      let #(games_page, games_eff) =
-        games.game_created(models.games_page, game:)
-      let #(team_page, team_eff) = team.game_created(models.team_page, game:)
-      #(
-        Models(..models, games_page:, team_page:),
-        effect.batch([
-          effect.map(games_eff, GamesPage),
-          effect.map(team_eff, TeamPage),
-        ]),
-      )
-    }
     to_client.GameUpdated(game: game) -> {
       let #(games_page, games_eff) =
         games.game_updated(models.games_page, game:)

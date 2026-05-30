@@ -524,7 +524,6 @@ Live updates use `ToClient` values.
 
 ```gleam
 pub type ToClient {
-  GameCreated(game: GameSnapshot)
   GameUpdated(game: GameSnapshot)
 }
 ```

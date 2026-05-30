@@ -1639,9 +1639,9 @@ pub fn admin_page_msg_keeps_browser_events_removes_protocol_constructors_test() 
   let admin = read("../client/src/client/admin/pages/games.gleam")
 
   // Admin page Msg keeps real browser-originated events.
-  admin |> contains("CreateGame") |> should.be_true
-  admin |> contains("UpdateHomeCode") |> should.be_true
-  admin |> contains("UpdateAwayCode") |> should.be_true
+  admin |> contains("CreateGame") |> should.be_false
+  admin |> contains("UpdateHomeCode") |> should.be_false
+  admin |> contains("UpdateAwayCode") |> should.be_false
   admin |> contains("AdjustHome") |> should.be_true
   admin |> contains("AdjustAway") |> should.be_true
   admin |> contains("MarkFinal") |> should.be_true
@@ -1705,7 +1705,7 @@ pub fn public_to_client_dispatch_uses_snake_case_handler_names_test() {
   let dispatch = read("../client/src/generated/public/to_client.gleam")
 
   dispatch |> contains("games.games_loaded(") |> should.be_true
-  dispatch |> contains("games.game_created(") |> should.be_true
+  dispatch |> contains("games.game_created(") |> should.be_false
   dispatch |> contains("games.game_updated(") |> should.be_true
   dispatch |> contains("games.games_load_failed(") |> should.be_true
   dispatch |> contains("team.team_loaded(") |> should.be_true
@@ -1720,7 +1720,7 @@ pub fn admin_to_client_dispatch_uses_snake_case_handler_names_test() {
   let dispatch = read("../client/src/generated/admin/to_client.gleam")
 
   dispatch |> contains("games.admin_games_loaded(") |> should.be_true
-  dispatch |> contains("games.game_created(") |> should.be_true
+  dispatch |> contains("games.game_created(") |> should.be_false
   dispatch |> contains("games.game_updated(") |> should.be_true
   dispatch |> contains("games.score_update_saved(") |> should.be_true
   dispatch |> contains("games.result_saved(") |> should.be_true
@@ -1759,7 +1759,7 @@ pub fn admin_server_dispatch_uses_handler_conventions_test() {
   // Command constructors call snake_case handlers with labeled args.
   dispatch
   |> contains("server_admin_pages_games.create_game(")
-  |> should.be_true
+  |> should.be_false
   dispatch
   |> contains("server_admin_pages_games.update_score(")
   |> should.be_true
@@ -1778,7 +1778,7 @@ pub fn to_client_dispatch_explicitly_handles_each_constructor_test() {
   // Verify each handled constructor has an explicit case branch,
   // not relying on the catch-all for constructors that have handlers.
   dispatch |> contains("to_client.GamesLoaded(") |> should.be_true
-  dispatch |> contains("to_client.GameCreated(") |> should.be_true
+  dispatch |> contains("to_client.GameCreated(") |> should.be_false
   dispatch |> contains("to_client.GameUpdated(") |> should.be_true
   dispatch |> contains("to_client.GamesLoadFailed(") |> should.be_true
   dispatch |> contains("to_client.GameLoaded(") |> should.be_true

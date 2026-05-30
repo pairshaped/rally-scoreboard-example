@@ -440,7 +440,7 @@ try {
         markFinalPush.value.constructor.name,
         "GameUpdated",
       );
-      assert.equal(markFinalPush.value.game.game_id, 1);
+      assert.equal(markFinalPush.value.game.id, 1);
     } finally {
       standingsWs.close();
       adminWs.close();
@@ -473,7 +473,7 @@ try {
       )));
       const live1 = await waitForPush(publicProtocol, detailWs);
       assert.equal(live1.value.constructor.name, "GameUpdated");
-      assert.equal(live1.value.game.game_id, 1);
+      assert.equal(live1.value.game.id, 1);
 
       adminWs.send(toPayload(adminProtocol.encode_request(
         "to_server",
@@ -488,7 +488,7 @@ try {
       assert.equal(adminPush.value.constructor.name, "ScoreUpdateSaved");
       const live2 = await waitForPush(publicProtocol, detailWs);
       assert.equal(live2.value.constructor.name, "GameUpdated");
-      assert.equal(live2.value.game.game_id, 2);
+      assert.equal(live2.value.game.id, 2);
 
       detailWs.send(toPayload(publicProtocol.encode_request(
         "to_server",
@@ -535,7 +535,7 @@ try {
         teamWs,
         "GameUpdated",
       );
-      assert.equal(teamPush.value.game.game_id, 1);
+      assert.equal(teamPush.value.game.id, 1);
       assert.equal(teamPush.value.game.home_score, 17);
       assert.equal(teamPush.value.game.away_score, 12);
     } finally {

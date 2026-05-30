@@ -9,7 +9,6 @@ pub type ToServer {
   LoadStandings
   LoadTeam(slug: String)
   LoadAdminGames
-  CreateGame(home_code: String, away_code: String)
   UpdateScore(game_id: Int, home_score: Int, away_score: Int, period: String)
   MarkFinal(game_id: Int)
   CorrectResult(game_id: Int, home_score: Int, away_score: Int)

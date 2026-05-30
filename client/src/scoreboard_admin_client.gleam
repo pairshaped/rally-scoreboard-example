@@ -231,41 +231,7 @@ fn view(model: Model) -> Element(Msg) {
             ),
           ]),
           html.aside([attribute.class("panel admin-tools")], [
-            html.h2([], [html.text("Create game")]),
-            html.div([attribute.class("toolbar")], [
-              html.input([
-                attribute.value(model.pages.games_page.home_code),
-                attribute.placeholder("Home"),
-                event.on_input(fn(value) {
-                  PageMsg(
-                    admin_to_client_dispatch.GamesPage(
-                      admin_games_client.UpdateHomeCode(value),
-                    ),
-                  )
-                }),
-              ]),
-              html.input([
-                attribute.value(model.pages.games_page.away_code),
-                attribute.placeholder("Away"),
-                event.on_input(fn(value) {
-                  PageMsg(
-                    admin_to_client_dispatch.GamesPage(
-                      admin_games_client.UpdateAwayCode(value),
-                    ),
-                  )
-                }),
-              ]),
-              html.button(
-                [
-                  event.on_click(
-                    PageMsg(admin_to_client_dispatch.GamesPage(
-                      admin_games_client.CreateGame,
-                    )),
-                  ),
-                ],
-                [html.text("Create")],
-              ),
-            ]),
+            html.h2([], [html.text("Status")]),
             html.p([attribute.class("muted")], [
               html.text(model.pages.games_page.notice),
             ]),
@@ -282,8 +248,8 @@ fn explainer(route route: admin_route.Route) -> Element(Msg) {
       ui.page_explainer("What this page exercises", [
         "Route: generated from the admin Mount file path for /admin/games.",
         "Load: sends LoadAdminGames during page init after the socket has request context.",
-        "ToServer: sends CreateGame, UpdateScore, and MarkFinal from the score desk controls.",
-        "ToClient: receives AdminGamesLoaded, GameCreated, GameUpdated, ScoreUpdateSaved, ResultSaved, and AdminError.",
+        "ToServer: sends UpdateScore and MarkFinal from the score desk controls.",
+        "ToClient: receives AdminGamesLoaded, GameUpdated, ScoreUpdateSaved, ResultSaved, and AdminError.",
         "Fanout: joins the admin live update scope so another open admin tab patches the same score cards.",
       ])
     admin_route.NotFound ->

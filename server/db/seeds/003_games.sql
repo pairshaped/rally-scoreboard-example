@@ -1,7 +1,8 @@
 -- Demo games for local development and smoke tests.
 --
--- Includes a mix of scheduled, live, and final games so all views have
--- data to render.
+-- This is a complete six-team single round robin: every pair appears once.
+-- It includes a mix of scheduled, live, and final games so all views have
+-- data to render without needing game creation in the example app.
 
 INSERT OR IGNORE INTO games (
     id,

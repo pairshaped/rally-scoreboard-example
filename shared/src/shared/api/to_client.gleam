@@ -25,7 +25,6 @@ pub type ToClient {
   GamesLoadFailed(reason: String)
   TeamLoaded(team: TeamDetail)
   AdminGamesLoaded(games: List(AdminGameSummary))
-  GameCreated(game: GameSnapshot)
   GameUpdated(game: GameSnapshot)
   ScoreUpdateSaved(game: AdminGameDetail)
   ResultSaved(game: AdminGameDetail)

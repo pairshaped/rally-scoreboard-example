@@ -24,7 +24,6 @@ ensure() ->
 do_ensure() ->
     lists:foreach(fun(B) -> binary_to_atom(B) end, [
         <<"correct_result">>,
-        <<"create_game">>,
         <<"decode_error">>,
         <<"error">>,
         <<"false">>,
@@ -46,7 +45,6 @@ do_ensure() ->
         %% ToClient constructor atoms
         <<"admin_error">>,
         <<"admin_games_loaded">>,
-        <<"game_created">>,
         <<"game_loaded">>,
         <<"game_updated">>,
         <<"games_load_failed">>,

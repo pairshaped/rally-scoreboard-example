@@ -393,7 +393,7 @@ fn explainer(route route: public_route.Route) -> Element(Msg) {
       ui.page_explainer("What this page exercises", [
         "Route: generated from the public Mount file path for /games.",
         "Load: sends LoadGames during page init and renders GamesLoaded data.",
-        "ToClient: receives GamesLoaded, GameCreated, GameUpdated, and GamesLoadFailed.",
+        "ToClient: receives GamesLoaded, GameUpdated, and GamesLoadFailed.",
         "Fanout: score updates patch visible game cards without a reload.",
         "Navigation: team and detail links use the generated public router.",
       ])
@@ -415,7 +415,7 @@ fn explainer(route route: public_route.Route) -> Element(Msg) {
       ui.page_explainer("What this page exercises", [
         "Route: generated from the public Mount file path for /teams/:slug.",
         "Load: sends LoadTeam with the slug " <> slug <> ".",
-        "ToClient: receives TeamLoaded, GameCreated, GameUpdated, and GamesLoadFailed.",
+        "ToClient: receives TeamLoaded, GameUpdated, and GamesLoadFailed.",
         "Fanout: the socket joins games involving this team, so score pushes only arrive for relevant games.",
         "Stats: final game updates patch recent games plus W-L, points for, and points against.",
       ])

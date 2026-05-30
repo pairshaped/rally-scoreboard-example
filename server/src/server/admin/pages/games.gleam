@@ -3,8 +3,8 @@
 //// These functions are named after ToServer constructors. Generated admin
 //// dispatch calls them to mutate the database and emit ToClient messages.
 //// After writing to the database, admin handlers also broadcast
-//// GameCreated and GameUpdated through the live-update pubsub
-//// so all connected public clients see changes without a page reload.
+//// GameUpdated through the live-update pubsub so all connected public
+//// clients see changes without a page reload.
 ////
 //// The generated dispatch calls `load_admin_games` — the snake_case form of
 //// the LoadAdminGames ToServer constructor. Page-data handlers like this
@@ -15,7 +15,6 @@ import generated/admin/request_context.{type RequestContext}
 import generated/runtime/effect.{type Effect}
 import generated/runtime/live_updates
 import generated/sql/server/games_sql
-import gleam/bool
 import gleam/list
 import server/admin/model.{type Model}
 import server/helpers/db
@@ -33,33 +32,6 @@ pub fn load_admin_games(
     Ok(games) -> to_client.AdminGamesLoaded(games:)
     Error(reason) -> to_client.AdminError(reason: db.to_string(reason))
   }
-}
-
-pub fn create_game(
-  home_code home_code: String,
-  away_code away_code: String,
-  request_context _request_context: RequestContext,
-  server_context context: ServerContext,
-  backend_model backend_model: Model,
-) -> #(Model, Effect(ToClient)) {
-  let event = case create_admin_game(db: context.db, home_code:, away_code:) {
-    Ok(game) ->
-      case games_sql.get_game(db: context.db, game_id: game.id) {
-        Ok([row]) -> {
-          let snapshot = game_snapshot_from_row(row)
-          live_updates.broadcast(to_client.GameCreated(game: snapshot))
-          effect.send_to_client(to_client.GameCreated(game: snapshot))
-        }
-        _ ->
-          effect.send_to_client(to_client.AdminError(
-            reason: "game created but failed to load",
-          ))
-      }
-    Error(reason) ->
-      effect.send_to_client(to_client.AdminError(reason: db.to_string(reason)))
-  }
-
-  #(backend_model, event)
 }
 
 pub fn update_score(
@@ -199,24 +171,6 @@ fn admin_games(
   }
 }
 
-fn create_admin_game(
-  db db: sqlight.Connection,
-  home_code home_code: String,
-  away_code away_code: String,
-) -> Result(admin_game.AdminGameDetail, db.QueryError) {
-  use <- bool.guard(
-    when: home_code == away_code,
-    return: Error(db.validation(message: "home and away teams must differ")),
-  )
-
-  case games_sql.create_game(db:, home_code:, away_code:) {
-    Ok([row]) -> Ok(admin_detail_from_create(row))
-    Ok([]) -> Error(db.not_found(message: "game not created"))
-    Ok(_) -> Error(db.unexpected_rows(message: "expected one created game"))
-    Error(err) -> Error(db.from_sqlight(err))
-  }
-}
-
 fn update_admin_score(
   db db: sqlight.Connection,
   game_id game_id: Int,
@@ -275,20 +229,6 @@ fn admin_summary_from_row(
     away_score: row.away_score,
     status: domain.game_status(row.final, row.period),
     needs_attention: row.final == 0,
-  )
-}
-
-fn admin_detail_from_create(
-  row: games_sql.CreateGameRow,
-) -> admin_game.AdminGameDetail {
-  admin_game.AdminGameDetail(
-    id: row.id,
-    home_code: row.home_code,
-    away_code: row.away_code,
-    home_score: row.home_score,
-    away_score: row.away_score,
-    status: domain.game_status(row.final, row.period),
-    period: row.period,
   )
 }
 

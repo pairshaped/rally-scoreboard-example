@@ -34,16 +34,6 @@ pub fn games_loaded(
   #(Model(games:, notice: ""), effect.none())
 }
 
-pub fn game_created(
-  model model: Model,
-  game game: GameSnapshot,
-) -> #(Model, Effect(Msg)) {
-  #(
-    Model(..model, games: upsert_game(games: model.games, snapshot: game)),
-    effect.none(),
-  )
-}
-
 pub fn game_updated(
   model model: Model,
   game game: GameSnapshot,
@@ -59,37 +49,6 @@ pub fn games_load_failed(
   reason reason: String,
 ) -> #(Model, Effect(Msg)) {
   #(Model(..model, notice: reason), effect.none())
-}
-
-fn upsert_game(
-  games games: List(PublicGameSummary),
-  snapshot snapshot: GameSnapshot,
-) -> List(PublicGameSummary) {
-  upsert_game_summary(games: games, snapshot: snapshot, seen: False)
-}
-
-fn upsert_game_summary(
-  games games: List(PublicGameSummary),
-  snapshot snapshot: GameSnapshot,
-  seen seen: Bool,
-) -> List(PublicGameSummary) {
-  case games {
-    [] -> {
-      case seen {
-        True -> []
-        False -> [snapshot_to_summary(snapshot)]
-      }
-    }
-    [game, ..rest] -> {
-      case game.id == snapshot.id {
-        True -> [
-          snapshot_to_summary(snapshot),
-          ..upsert_game_summary(games: rest, snapshot:, seen: True)
-        ]
-        False -> [game, ..upsert_game_summary(games: rest, snapshot:, seen:)]
-      }
-    }
-  }
 }
 
 fn update_game(

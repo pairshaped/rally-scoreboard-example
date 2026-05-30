@@ -95,16 +95,6 @@ pub fn to_server(
         server_context:,
         backend_model:,
       )
-    to_server.CreateGame(home_code: _, away_code: _) ->
-      reject.reject_invalid_command(
-        mount: "public",
-        command: "CreateGame",
-        session_id: request_context.session_id,
-        user_id: request_context.user_id,
-        hostname: request_context.hostname,
-        server_context:,
-        backend_model:,
-      )
     to_server.UpdateScore(game_id: _, home_score: _, away_score: _, period: _) ->
       reject.reject_invalid_command(
         mount: "public",

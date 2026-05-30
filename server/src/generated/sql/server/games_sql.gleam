@@ -1,50 +1,6 @@
 import gleam/dynamic/decode
 import sqlight
 
-/// Generated from src/server/sql/games/create_game.sql
-pub type CreateGameRow {
-  CreateGameRow(
-    id: Int,
-    home_code: String,
-    away_code: String,
-    home_score: Int,
-    away_score: Int,
-    period: String,
-    final: Int,
-  )
-}
-
-/// Generated from src/server/sql/games/create_game.sql
-pub fn create_game(
-  db db: sqlight.Connection,
-  home_code home_code: String,
-  away_code away_code: String,
-) -> Result(List(CreateGameRow), sqlight.Error) {
-  sqlight.query(
-    "INSERT INTO games (home_code, away_code, home_score, away_score, period, final) VALUES (:home_code, :away_code, 0, 0, 'Scheduled', 0) RETURNING id, home_code, away_code, home_score, away_score, period, final",
-    on: db,
-    with: [sqlight.text(home_code), sqlight.text(away_code)],
-    expecting: {
-      use id <- decode.field(0, decode.int)
-      use home_code <- decode.field(1, decode.string)
-      use away_code <- decode.field(2, decode.string)
-      use home_score <- decode.field(3, decode.int)
-      use away_score <- decode.field(4, decode.int)
-      use period <- decode.field(5, decode.string)
-      use final <- decode.field(6, decode.int)
-      decode.success(CreateGameRow(
-        id:,
-        home_code:,
-        away_code:,
-        home_score:,
-        away_score:,
-        period:,
-        final:,
-      ))
-    },
-  )
-}
-
 /// Generated from src/server/sql/games/get_game.sql
 pub type GetGameRow {
   GetGameRow(
