@@ -37,7 +37,6 @@ pub fn init() -> Model {
   Model(games: [], notice: "", home_code: "TOR", away_code: "NYC")
 }
 
-// nolint: label_possible -- model/msg is the standard TEA signature.
 pub fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
   case msg {
     UpdateHomeCode(value) -> #(
