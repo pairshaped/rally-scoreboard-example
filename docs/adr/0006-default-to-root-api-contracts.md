@@ -599,11 +599,11 @@ Generated code is Mount-namespaced only when the file depends on the Mount. Gene
 The shared package generated layout is:
 
 ```text
-shared/src/generated/public/route.gleam
-shared/src/generated/admin/route.gleam
+shared/src/generated/routes/public.gleam
+shared/src/generated/routes/admin.gleam
 ```
 
-`route.gleam` is Mount-specific because routes are Mount-specific.
+The files under `shared/src/generated/routes` are Mount-specific because routes are Mount-specific.
 
 The client package generated layout is:
 
@@ -615,7 +615,6 @@ client/src/generated/transport_ffi.mjs
 client/src/generated/protocol_wire.mjs
 client/src/generated/codec.gleam
 client/src/generated/codec_ffi.mjs
-client/src/generated/router.gleam
 client/src/generated/router_ffi.mjs
 
 client/src/generated/runtime/effect.gleam

@@ -2,12 +2,12 @@
 ////
 //// Browser-side route parser and path builder for the admin Mount.
 //// Derived from the Mount route root (`/admin`), discovered page route
-//// patterns, and the shared Route type from generated/admin/route.
+//// patterns, and the shared Route type from generated/routes/admin.
 ////
 //// Client shells use this module for Modem navigation and href generation.
 //// It should stay in lockstep with server/src/generated/admin/router.gleam.
 
-import generated/admin/route.{type Route}
+import generated/routes/admin.{type Route} as route
 import gleam/uri.{type Uri}
 import lustre/attribute.{type Attribute}
 

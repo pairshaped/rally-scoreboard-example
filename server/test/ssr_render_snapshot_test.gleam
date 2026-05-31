@@ -1,10 +1,10 @@
 //// Birdie snapshots for server-rendered page HTML.
 
 import birdie
-import generated/admin/route as admin_route
 import generated/admin/ssr_handler as admin_ssr_handler
-import generated/public/route as public_route
 import generated/public/ssr_handler as public_ssr_handler
+import generated/routes/admin as admin_route
+import generated/routes/public as public_route
 import generated/runtime/db
 import gleam/bit_array
 import gleam/bytes_tree

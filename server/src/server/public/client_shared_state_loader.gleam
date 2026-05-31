@@ -6,7 +6,7 @@
 //// Public receives an optional authentication_context so the nav can show
 //// Sign In / Sign Out and conditionally show the Admin link.
 
-import generated/public/route.{type Route}
+import generated/routes/public.{type Route} as route
 import gleam/option.{type Option, None, Some}
 import server/authentication_context_loader
 import shared/authentication_context.{

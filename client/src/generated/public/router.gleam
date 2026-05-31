@@ -2,12 +2,12 @@
 ////
 //// Browser-side route parser and path builder for the public Mount.
 //// Derived from the Mount route root (`/`), discovered page route patterns,
-//// and the shared Route type from generated/public/route.
+//// and the shared Route type from generated/routes/public.
 ////
 //// Client shells use this module for Modem navigation and href generation.
 //// It should stay in lockstep with server/src/generated/public/router.gleam.
 
-import generated/public/route.{type Route}
+import generated/routes/public.{type Route} as route
 import gleam/result
 import gleam/uri.{type Uri}
 import lustre/attribute.{type Attribute}

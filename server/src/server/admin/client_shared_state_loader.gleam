@@ -6,7 +6,7 @@
 //// Admin consumes authentication_context from the shared identity layer.
 //// It does not own authentication.
 
-import generated/admin/route.{type Route}
+import generated/routes/admin.{type Route} as route
 import gleam/option.{type Option, None}
 import shared/admin/client_shared_state.{
   type AdminClientSharedState, AdminClientSharedState,

@@ -1,13 +1,13 @@
 //// Generated. Do not edit.
 ////
 //// Request metadata passed from the WebSocket runtime into ToServer handlers.
-//// Derived from generated/admin/route, the HTTP request URI, the runtime
+//// Derived from generated/routes/admin, the HTTP request URI, the runtime
 //// session cookie, and admin authentication lookup.
 ////
 //// ToServer constructors carry command data only. Route, query, session,
 //// user, and host facts are supplied through this generated context.
 
-import generated/admin/route.{type Route}
+import generated/routes/admin.{type Route}
 import gleam/dict.{type Dict}
 import gleam/option.{type Option}
 

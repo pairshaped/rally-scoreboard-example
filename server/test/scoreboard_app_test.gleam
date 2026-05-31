@@ -4,8 +4,8 @@
 //// files, independent of Generator Framework generator internals.
 
 import generated/admin/request_context.{RequestContext}
-import generated/admin/route as admin_route
-import generated/public/route as public_route
+import generated/routes/admin as admin_route
+import generated/routes/public as public_route
 import generated/runtime/authentication as authentication_runtime
 import generated/runtime/db
 import generated/runtime/effect as server_effect
@@ -182,8 +182,8 @@ pub fn generated_source_is_checked_into_the_example_test() {
   read("src/generated/ws_runtime.gleam")
   read("src/generated/public/ws_handler.gleam")
   read("src/generated/admin/ws_handler.gleam")
-  read("../shared/src/generated/public/route.gleam")
-  read("../shared/src/generated/admin/route.gleam")
+  read("../shared/src/generated/routes/public.gleam")
+  read("../shared/src/generated/routes/admin.gleam")
   read("src/generated/protocol_wire.gleam")
   read("src/generated/server_generated_protocol_wire_ffi.erl")
 }
@@ -443,7 +443,7 @@ pub fn entry_returns_forbidden_when_user_can_access_admin_is_false_test() {
 
 pub fn public_sign_in_pages_are_client_routes_test() {
   let client = read("../client/src/scoreboard_public_client.gleam")
-  let route = read("../shared/src/generated/public/route.gleam")
+  let route = read("../shared/src/generated/routes/public.gleam")
   let router = read("../client/src/generated/public/router.gleam")
 
   route |> contains("SignIn") |> should.be_true
@@ -484,9 +484,13 @@ pub fn generated_files_stay_under_top_level_generated_dirs_test() {
   file_exists("src/generated/sql/server/games_sql.gleam") |> should.be_true
   file_exists("src/generated/sql/server/standings_sql.gleam") |> should.be_true
   file_exists("src/generated/sql/server/teams_sql.gleam") |> should.be_true
+  file_exists("../shared/src/generated/routes/public.gleam") |> should.be_true
+  file_exists("../shared/src/generated/routes/admin.gleam") |> should.be_true
   file_exists("src/generated/sql/games_sql.gleam") |> should.be_false
   file_exists("src/server/generated/sql/server/games_sql.gleam")
   |> should.be_false
+  file_exists("../shared/src/generated/public/route.gleam") |> should.be_false
+  file_exists("../shared/src/generated/admin/route.gleam") |> should.be_false
   file_exists("../client/src/client/public/generated/router.gleam")
   |> should.be_false
   file_exists("../client/src/client/admin/generated/router.gleam")
@@ -511,7 +515,7 @@ pub fn generated_ws_handlers_delegate_to_package_runtime_test() {
 
   admin_handler |> contains("import generated/ws_runtime") |> should.be_true
   admin_handler |> contains("import server/admin/backend") |> should.be_true
-  admin_handler |> contains("import generated/admin/route") |> should.be_true
+  admin_handler |> contains("import generated/routes/admin") |> should.be_true
   admin_handler
   |> contains("import generated/admin/request_context")
   |> should.be_true
@@ -523,7 +527,7 @@ pub fn generated_ws_handlers_delegate_to_package_runtime_test() {
 
   public_handler |> contains("import generated/ws_runtime") |> should.be_true
   public_handler |> contains("import server/public/backend") |> should.be_true
-  public_handler |> contains("import generated/public/route") |> should.be_true
+  public_handler |> contains("import generated/routes/public") |> should.be_true
   public_handler
   |> contains("import generated/public/request_context")
   |> should.be_true

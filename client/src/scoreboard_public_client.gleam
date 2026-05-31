@@ -4,9 +4,9 @@
 //// storage, ToClient fanout, navigation, and public view composition.
 
 import generated/codec
-import generated/public/route as public_route
 import generated/public/router as public_router
 import generated/public/to_client as public_to_client_dispatch
+import generated/routes/public as public_route
 import generated/runtime/effect as public_effect
 import generated/setup
 import generated/transport

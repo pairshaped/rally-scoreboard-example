@@ -1,7 +1,7 @@
 //// Generated. Do not edit.
 ////
 //// Server-rendered HTML handler for the admin Mount.
-//// Derived from server/admin/pages load/view functions, generated/admin/route.gleam,
+//// Derived from server/admin/pages load/view functions, generated/routes/admin.gleam,
 //// server/admin/shell.html, and server/server_context.gleam.
 ////
 //// Each SSR branch calls the shared page's init_requests() to get the
@@ -10,7 +10,7 @@
 //// embedded as base64 ETF for browser hydration.
 
 import generated/admin/request_context.{type RequestContext, RequestContext}
-import generated/admin/route.{type Route}
+import generated/routes/admin.{type Route} as route
 import generated/runtime/ssr
 import gleam/dict
 import gleam/http/response

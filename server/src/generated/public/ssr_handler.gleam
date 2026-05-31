@@ -1,7 +1,7 @@
 //// Generated. Do not edit.
 ////
 //// Server-rendered HTML handler for the public Mount.
-//// Derived from server/public/pages load/view functions, generated/public/route.gleam,
+//// Derived from server/public/pages load/view functions, generated/routes/public.gleam,
 //// server/public/shell.html, and server/server_context.gleam.
 ////
 //// Each SSR branch calls the shared page's init_requests() to get the
@@ -10,7 +10,7 @@
 //// embedded as base64 ETF for browser hydration.
 
 import generated/public/request_context.{type RequestContext, RequestContext}
-import generated/public/route.{type Route}
+import generated/routes/public.{type Route} as route
 import generated/runtime/ssr
 import gleam/dict
 import gleam/http/response

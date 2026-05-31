@@ -22,7 +22,7 @@
 //// so operators can detect misrouted commands.
 
 import generated/public/request_context.{type RequestContext, RequestContext}
-import generated/public/route
+import generated/routes/public as route
 import generated/runtime/effect as server_effect
 import generated/runtime/reject
 import gleam/int

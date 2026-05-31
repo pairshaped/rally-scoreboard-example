@@ -23,7 +23,7 @@
 //// so operators can detect misrouted commands.
 
 import generated/admin/request_context.{type RequestContext, RequestContext}
-import generated/admin/route
+import generated/routes/admin as route
 import generated/runtime/effect as server_effect
 import generated/runtime/reject
 import lustre/effect.{type Effect}

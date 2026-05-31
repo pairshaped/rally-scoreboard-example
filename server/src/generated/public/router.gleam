@@ -7,7 +7,7 @@
 //// HTTP SSR, WebSocket page_init, and the client router share the same Route
 //// shape so request context construction does not duplicate route semantics.
 
-import generated/public/route.{type Route}
+import generated/routes/public.{type Route} as route
 import gleam/result
 import gleam/uri.{type Uri}
 

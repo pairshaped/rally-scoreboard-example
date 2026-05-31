@@ -10,8 +10,8 @@ Normal page modules use the `.gleam` suffix and are mounted through the Mount sh
 
 ```text
 shared/src/shared/public/pages/games.gleam
-shared/src/shared/public/pages/games/[id].gleam
-shared/src/shared/public/pages/teams/[slug].gleam
+shared/src/shared/public/pages/games/id_.gleam
+shared/src/shared/public/pages/teams/slug_.gleam
 shared/src/shared/admin/pages/games.gleam
 ```
 
@@ -20,8 +20,8 @@ The same route may have matching client and server page modules at the same Moun
 ```text
 client/src/client/public/pages/games.gleam
 server/src/server/public/pages/games.gleam
-client/src/client/public/pages/games/[id].gleam
-server/src/server/public/pages/games/[id].gleam
+client/src/client/public/pages/games/id_.gleam
+server/src/server/public/pages/games/id_.gleam
 ```
 
 The Generator Framework derives the route from the shared page path and wires matching shared, client, and server modules together. Client-only behavior stays in the client target. Server-only behavior stays in the server target. Shared views and target-neutral page helpers stay in the shared target.
@@ -36,12 +36,14 @@ Normal pages use one first-render data convention across targets:
 
 For normal data-backed pages, shared `init_requests` is enough. Generated SSR executes it and generated client init sends it when hydration data is absent. Server and client `init` functions are optional customization hooks, and custom hooks for a route with non-empty shared `init_requests` must call shared `init_requests`.
 
-The Generator Framework maps those files to route constructors, URL parsing, and path builders. Dynamic path segments come from bracketed file or directory names.
+The Generator Framework maps those files to route constructors, URL parsing, and path builders. Dynamic path segments come from file or directory names that end in `_`. The parameter name is the segment name without the trailing `_`.
 
 ```text
-games/[id].gleam     -> GameDetail(id: Int)
-teams/[slug].gleam   -> Team(slug: String)
+games/id_.gleam     -> GamesId(id: String)
+teams/slug_.gleam   -> Team(slug: String)
 ```
+
+Generated route parameters are strings. Pages and handlers parse them into domain types such as `Int` at the boundary where invalid input can choose the correct route-specific behavior.
 
 The generated route module is Mount-specific. Each Mount owns its route root, route type, parser, path builder, and not-found representation.
 

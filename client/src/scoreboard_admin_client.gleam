@@ -7,10 +7,10 @@
 //// after authentication and admin access have been confirmed.
 
 import client/admin/pages/games as admin_games_client
-import generated/admin/route as admin_route
 import generated/admin/router as admin_router
 import generated/admin/to_client as admin_to_client_dispatch
 import generated/codec
+import generated/routes/admin as admin_route
 import generated/runtime/effect as admin_effect
 import generated/setup
 import generated/transport

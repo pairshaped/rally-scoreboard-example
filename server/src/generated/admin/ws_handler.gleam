@@ -13,8 +13,8 @@
 //// receive each other's score changes through the same ToClient broadcast lane.
 
 import generated/admin/request_context.{type RequestContext, RequestContext}
-import generated/admin/route
 import generated/protocol_wire
+import generated/routes/admin as route
 import generated/runtime/effect_state
 import generated/runtime/live_updates
 import generated/ws_runtime
