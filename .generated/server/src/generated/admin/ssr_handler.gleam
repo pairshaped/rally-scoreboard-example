@@ -1,0 +1,129 @@
+//// Generated. Do not edit.
+////
+//// Server-rendered HTML handler for the admin Mount.
+//// Derived from server/admin/pages load/view functions, generated/routes/admin.gleam,
+//// server/admin/shell.html, and server/server_context.gleam.
+////
+//// Each SSR branch calls the shared page's init_requests() to get the
+//// ToServer commands needed for this route, then executes them through the
+//// matching snake_case server handlers. The resulting ToClient values are
+//// embedded as base64 ETF for browser hydration.
+
+import generated/admin/request_context.{type RequestContext, RequestContext}
+import generated/routes/admin.{type Route} as route
+import generated/runtime/ssr
+import gleam/dict
+import gleam/http/response
+import gleam/io
+import gleam/option.{type Option}
+import libero/wire as libero_wire
+import lustre/element
+import mist.{type ResponseData}
+import server/admin/client_shared_state_loader
+import server/admin/pages/games as admin_games_handler
+import server/server_context.{type ServerContext}
+import shared/admin/pages/games as admin_games_page
+import shared/api/to_client
+import shared/api/to_server
+import shared/authentication_context.{type AuthenticationContext}
+
+@external(erlang, "server_generated_protocol_atoms_ffi", "ensure")
+fn ensure_atoms() -> Nil
+
+const shell_path = "src/server/admin/shell.html"
+
+pub fn handle_request(
+  route route: Route,
+  server_context server_context: ServerContext,
+  session_id session_id: String,
+  hostname hostname: String,
+  query query: dict.Dict(String, String),
+  authentication_context authentication_context: Option(AuthenticationContext),
+) -> response.Response(ResponseData) {
+  ensure_atoms()
+  let context =
+    client_shared_state_loader.load(
+      route:,
+      authentication_context:,
+      dark_mode: False,
+    )
+  let client_shared_state_base64 = libero_wire.encode_flags(context)
+  let request_context =
+    RequestContext(
+      route:,
+      query:,
+      session_id:,
+      user_id: option.map(authentication_context, fn(ctx) { ctx.user_id }),
+      hostname:,
+    )
+  let #(page_html, shared_state_base64) =
+    load_route_data(request_context, server_context)
+  ssr.render_shell_response(
+    shell_path:,
+    page_html:,
+    shared_state_base64:,
+    client_shared_state_base64:,
+    fallback_shell: admin_fallback_shell(),
+  )
+}
+
+fn load_route_data(
+  request_context: RequestContext,
+  server_context: ServerContext,
+) -> #(String, String) {
+  case request_context.route {
+    route.AdminGames -> {
+      let result = case admin_games_page.init_requests() {
+        [to_server.LoadAdminGames, ..] ->
+          admin_games_handler.load_admin_games(
+            request_context:,
+            server_context:,
+          )
+        _ -> to_client.AdminError(reason: "init_requests mismatch")
+      }
+      case result {
+        to_client.AdminGamesLoaded(games:) -> {
+          let nil_on_adjust = fn(_, _, _, _) { Nil }
+          let nil_on_final = fn(_) { Nil }
+          #(
+            admin_games_page.view(
+              games,
+              nil_on_adjust,
+              nil_on_adjust,
+              nil_on_final,
+            )
+              |> element.to_string,
+            libero_wire.encode_flags(result),
+          )
+        }
+        to_client.AdminError(reason:) -> {
+          let _ = io.println_error("SSR admin/games load failed: " <> reason)
+          #(
+            admin_games_page.view(
+              [],
+              nil_on_adjust,
+              nil_on_adjust,
+              nil_on_final,
+            )
+              |> element.to_string,
+            "",
+          )
+        }
+        _ -> #("", "")
+      }
+    }
+    _ -> #("", "")
+  }
+}
+
+fn nil_on_adjust(_a, _b, _c, _d) -> Nil {
+  Nil
+}
+
+fn nil_on_final(_a) -> Nil {
+  Nil
+}
+
+fn admin_fallback_shell() -> String {
+  "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n</head>\n<body>\n  <div id=\"app\"></div>\n  <script type=\"module\" data-runtime-client>\n    import { main } from \"/_build/client/scoreboard_admin_client.mjs\";\n    main();\n  </script>\n</body>\n</html>\n"
+}

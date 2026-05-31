@@ -1,0 +1,18 @@
+//// Generated. Do not edit.
+////
+//// Server route parser for the admin Mount.
+//// Derived from server/admin/pages route modules, the Mount route root
+//// (`/admin`), and [[tools.rally.clients]].
+////
+//// HTTP SSR, WebSocket page_init, and the client router share the same Route
+//// shape so request context construction does not duplicate route semantics.
+
+import generated/routes/admin.{type Route} as route
+import gleam/uri.{type Uri}
+
+pub fn parse_route(uri: Uri) -> Route {
+  case uri.path_segments(uri.path) {
+    ["admin", "games"] -> route.AdminGames
+    _ -> route.NotFound
+  }
+}

@@ -1,0 +1,27 @@
+---
+version: 2.0.0
+title: src__generated__admin__request_context_gleam
+---
+//// Generated. Do not edit.
+////
+//// Request metadata passed from the WebSocket runtime into ToServer handlers.
+//// Derived from generated/routes/admin, the HTTP request URI, the runtime
+//// session cookie, and admin authentication lookup.
+////
+//// ToServer constructors carry command data only. Route, query, session,
+//// user, and host facts are supplied through this generated context.
+
+import generated/routes/admin.{type Route}
+import gleam/dict.{type Dict}
+import gleam/option.{type Option}
+
+pub type RequestContext {
+  RequestContext(
+    route: Route,
+    query: Dict(String, String),
+    session_id: String,
+    user_id: Option(Int),
+    hostname: String,
+  )
+}
+
