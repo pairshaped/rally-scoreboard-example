@@ -1,7 +1,3 @@
----
-version: 2.0.0
-title: shared__src__generated__admin__route_gleam
----
 //// Generated. Do not edit.
 ////
 //// Shared route union for one Mount. The server, client router,
@@ -14,4 +10,3 @@ pub type Route {
   AdminGames
   NotFound
 }
-

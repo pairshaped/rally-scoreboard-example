@@ -5,13 +5,20 @@ version = "0.1.0"
 gleam_stdlib = ">= 0.60.0 and < 2.0.0"
 lustre = ">= 5.7.0 and < 7.0.0"
 proute = { path = "../proute" }
+sqlight = ">= 1.0.0 and < 2.0.0"
 
 [dev-dependencies]
 gleeunit = ">= 1.0.0 and < 2.0.0"
 glinter = ">= 2.19.0 and < 3.0.0"
+marmot = "1.7.1"
 
 [tools.glinter]
 stats = true
 warnings_as_errors = false
-exclude = ["src/generated/**/*.gleam", "src/shared/**/*.gleam"]
-scan_paths = ["src/generated", "src/shared"]
+exclude = ["src/generated/**/*.gleam"]
+scan_paths = ["src"]
+
+[tools.marmot]
+database = "db/scoreboard.db"
+sql_dir = "src/sql"
+output = "src/generated/sql"

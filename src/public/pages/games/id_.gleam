@@ -1,10 +1,10 @@
+import api/domain/game.{type GameDetail}
 import generated/proute/public/page_input
 import gleam/option.{type Option, None}
 import lustre/effect.{type Effect}
 import lustre/element.{type Element}
 import page_context.{type PageContext}
-import shared/api/domain/game.{type GameDetail}
-import shared/public/pages/games/id_ as shared_game_detail_page
+import public/views/games/id_ as shared_game_detail_page
 
 pub type Model {
   Model(game: Option(GameDetail))

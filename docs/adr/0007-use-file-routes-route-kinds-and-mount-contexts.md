@@ -6,25 +6,29 @@ The generated routing contract follows an Elm Land style convention: the file pa
 
 ## File Routes
 
-Normal page modules use the `.gleam` suffix and are mounted through the Mount shell. The shared page module declares the route file path so target-neutral view code can compile for both targets.
+Normal page modules use the `.gleam` suffix and are mounted through the Mount shell. The root source page module declares the route file path. Target-neutral view code lives beside the Mount under `views`.
 
 ```text
-shared/src/shared/public/pages/games.gleam
-shared/src/shared/public/pages/games/[id].gleam
-shared/src/shared/public/pages/teams/[slug].gleam
-shared/src/shared/admin/pages/games.gleam
+src/public/pages/games.gleam
+src/public/pages/games/[id].gleam
+src/public/pages/teams/[slug].gleam
+src/admin/pages/games.gleam
+src/public/views/games.gleam
+src/public/views/games/[id].gleam
+src/public/views/teams/[slug].gleam
+src/admin/views/games.gleam
 ```
 
-The same route may have matching client and server page modules at the same Mount-relative path:
+The Generator Framework projects those root modules into matching client and server targets:
 
 ```text
-client/src/client/public/pages/games.gleam
-server/src/server/public/pages/games.gleam
-client/src/client/public/pages/games/[id].gleam
-server/src/server/public/pages/games/[id].gleam
+.generated/client/src/client/public/pages/games.gleam
+.generated/server/src/server/public/pages/games.gleam
+.generated/client/src/client/public/pages/games/[id].gleam
+.generated/server/src/server/public/pages/games/[id].gleam
 ```
 
-The Generator Framework derives the route from the shared page path and wires matching shared, client, and server modules together. Client-only behavior stays in the client target. Server-only behavior stays in the server target. Shared views and target-neutral page helpers stay in the shared target.
+The Generator Framework derives the route from the root page path and wires the projected client and server modules together. Client-only behavior stays in the client projection. Server-only behavior stays in the server projection. Target-neutral views and page helpers stay in root source and can be projected where needed.
 
 Normal pages use one first-render data convention across targets:
 

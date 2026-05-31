@@ -182,8 +182,8 @@ pub fn generated_source_is_checked_into_the_example_test() {
   read("src/generated/ws_runtime.gleam")
   read("src/generated/public/ws_handler.gleam")
   read("src/generated/admin/ws_handler.gleam")
-  read("../shared/src/generated/routes/public.gleam")
-  read("../shared/src/generated/routes/admin.gleam")
+  read("../client/src/generated/routes/public.gleam")
+  read("../client/src/generated/routes/admin.gleam")
   read("src/generated/protocol_wire.gleam")
   read("src/generated/server_generated_protocol_wire_ffi.erl")
 }
@@ -443,7 +443,7 @@ pub fn entry_returns_forbidden_when_user_can_access_admin_is_false_test() {
 
 pub fn public_sign_in_pages_are_client_routes_test() {
   let client = read("../client/src/scoreboard_public_client.gleam")
-  let route = read("../shared/src/generated/routes/public.gleam")
+  let route = read("../client/src/generated/routes/public.gleam")
   let router = read("../client/src/generated/public/router.gleam")
 
   route |> contains("SignIn") |> should.be_true
@@ -484,20 +484,22 @@ pub fn generated_files_stay_under_top_level_generated_dirs_test() {
   file_exists("src/generated/sql/server/games_sql.gleam") |> should.be_true
   file_exists("src/generated/sql/server/standings_sql.gleam") |> should.be_true
   file_exists("src/generated/sql/server/teams_sql.gleam") |> should.be_true
-  file_exists("../shared/src/generated/routes/public.gleam") |> should.be_true
-  file_exists("../shared/src/generated/routes/admin.gleam") |> should.be_true
+  file_exists("../client/src/generated/routes/public.gleam") |> should.be_true
+  file_exists("../client/src/generated/routes/admin.gleam") |> should.be_true
+  file_exists("src/generated/routes/public.gleam") |> should.be_true
+  file_exists("src/generated/routes/admin.gleam") |> should.be_true
   file_exists("src/generated/sql/games_sql.gleam") |> should.be_false
   file_exists("src/server/generated/sql/server/games_sql.gleam")
   |> should.be_false
-  file_exists("../shared/src/generated/public/route.gleam") |> should.be_false
-  file_exists("../shared/src/generated/admin/route.gleam") |> should.be_false
+  file_exists("../client/src/generated/public/route.gleam") |> should.be_false
+  file_exists("../client/src/generated/admin/route.gleam") |> should.be_false
   file_exists("../client/src/client/public/generated/router.gleam")
   |> should.be_false
   file_exists("../client/src/client/admin/generated/router.gleam")
   |> should.be_false
-  file_exists("../shared/src/generated/public/runtime/data.gleam")
+  file_exists("../client/src/generated/public/runtime/data.gleam")
   |> should.be_false
-  file_exists("../shared/src/generated/admin/runtime/data.gleam")
+  file_exists("../client/src/generated/admin/runtime/data.gleam")
   |> should.be_false
 }
 
@@ -537,7 +539,7 @@ pub fn generated_ws_handlers_delegate_to_package_runtime_test() {
 pub fn mount_clients_use_generated_routers_and_effects_test() {
   let public_client = read("../client/src/scoreboard_public_client.gleam")
   let admin_client = read("../client/src/scoreboard_admin_client.gleam")
-  let client_ui = read("../shared/src/shared/components/ui.gleam")
+  let client_ui = read("../client/src/shared/components/ui.gleam")
   let client_effect = read("../client/src/generated/runtime/effect.gleam")
   let client_effect_ffi =
     read("../client/src/generated/runtime/client_effect_ffi.mjs")
@@ -630,11 +632,11 @@ pub fn generated_browser_imports_stay_inside_static_build_prefix_test() {
 
   codec_ffi |> contains("from \"../../libero/") |> should.be_true
   codec_ffi
-  |> contains("from \"../../scoreboard_shared/")
+  |> contains("from \"../shared/")
   |> should.be_true
   codec_ffi |> contains("from \"../../../libero/") |> should.be_false
   codec_ffi
-  |> contains("from \"../../../scoreboard_shared/")
+  |> contains("scoreboard" <> "_shared")
   |> should.be_false
 }
 
@@ -654,7 +656,7 @@ pub fn admin_save_updates_do_not_refetch_the_games_list_test() {
 pub fn admin_final_games_do_not_show_final_action_test() {
   let admin_client = read("../client/src/scoreboard_admin_client.gleam")
   let admin_games_client = read("../client/src/client/admin/pages/games.gleam")
-  let admin_games_page = read("../shared/src/shared/admin/pages/games.gleam")
+  let admin_games_page = read("../client/src/shared/admin/pages/games.gleam")
 
   admin_games_page
   |> contains("fn final_action")
@@ -676,7 +678,7 @@ pub fn admin_final_games_do_not_show_final_action_test() {
 pub fn admin_score_controls_live_next_to_team_names_test() {
   let admin_client = read("../client/src/scoreboard_admin_client.gleam")
   let admin_games_client = read("../client/src/client/admin/pages/games.gleam")
-  let admin_games_page = read("../shared/src/shared/admin/pages/games.gleam")
+  let admin_games_page = read("../client/src/shared/admin/pages/games.gleam")
   let admin_shell = read("src/server/admin/shell.html")
 
   admin_games_page
@@ -1093,8 +1095,8 @@ pub fn ssr_runtime_injects_client_shared_state_into_shell_test() {
 }
 
 pub fn admin_and_public_client_shared_states_are_different_types_test() {
-  let admin_ctx = read("../shared/src/shared/admin/client_shared_state.gleam")
-  let public_ctx = read("../shared/src/shared/public/client_shared_state.gleam")
+  let admin_ctx = read("../client/src/shared/admin/client_shared_state.gleam")
+  let public_ctx = read("../client/src/shared/public/client_shared_state.gleam")
 
   admin_ctx |> contains("AuthenticationContext") |> should.be_true
   admin_ctx |> contains("dark_mode: Bool") |> should.be_true
@@ -1284,7 +1286,7 @@ pub fn entry_passes_authentication_context_to_admin_ssr_test() {
 }
 
 pub fn authentication_context_type_has_expected_shape_and_helper_test() {
-  let source = read("../shared/src/shared/authentication_context.gleam")
+  let source = read("../client/src/shared/authentication_context.gleam")
 
   source |> contains("user_id: Int") |> should.be_true
   source |> contains("email: String") |> should.be_true
@@ -1897,11 +1899,11 @@ pub fn mount_clients_delegate_page_messages_through_update_page_test() {
 }
 
 pub fn shared_pages_expose_init_requests_with_function_comment_test() {
-  let games = read("../shared/src/shared/public/pages/games.gleam")
-  let game_detail = read("../shared/src/shared/public/pages/games/id_.gleam")
-  let standings = read("../shared/src/shared/public/pages/standings.gleam")
-  let team = read("../shared/src/shared/public/pages/teams/slug_.gleam")
-  let admin_games = read("../shared/src/shared/admin/pages/games.gleam")
+  let games = read("../client/src/shared/public/pages/games.gleam")
+  let game_detail = read("../client/src/shared/public/pages/games/id_.gleam")
+  let standings = read("../client/src/shared/public/pages/standings.gleam")
+  let team = read("../client/src/shared/public/pages/teams/slug_.gleam")
+  let admin_games = read("../client/src/shared/admin/pages/games.gleam")
 
   // Each shared page exposes init_requests().
   games |> contains("pub fn init_requests()") |> should.be_true

@@ -1,9 +1,9 @@
+import admin/views/games as shared_admin_games_page
+import api/domain/game.{type AdminGameSummary}
 import generated/proute/admin/page_input
 import lustre/effect.{type Effect}
 import lustre/element.{type Element}
 import page_context.{type PageContext}
-import shared/admin/pages/games as shared_admin_games_page
-import shared/api/domain/game.{type AdminGameSummary}
 
 pub type Model {
   Model(games: List(AdminGameSummary))

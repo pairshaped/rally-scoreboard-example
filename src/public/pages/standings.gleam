@@ -1,9 +1,9 @@
+import api/domain/standing.{type StandingRow}
 import generated/proute/public/page_input
 import lustre/effect.{type Effect}
 import lustre/element.{type Element}
 import page_context.{type PageContext}
-import shared/api/domain/standing.{type StandingRow}
-import shared/public/pages/standings as shared_standings_page
+import public/views/standings as shared_standings_page
 
 pub type Model {
   Model(rows: List(StandingRow))

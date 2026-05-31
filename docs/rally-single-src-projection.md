@@ -216,36 +216,36 @@ That keeps one visual view while letting generated client and server entrypoints
 
 ## What The Current Scoreboard Code Shows
 
-The current sibling app already has most of the pieces, but spread across `client`, `server`, and `shared`.
+The current sibling app already has most of the pieces, but spread across `client`, `server`, and `shared`. The unified chase target should keep those names out of root user source and only use them in generated targets.
 
 Current root protocol:
 
-- `shared/src/shared/api/to_server.gleam`
-- `shared/src/shared/api/to_client.gleam`
-- `shared/src/shared/api/domain/**/*.gleam`
+- `src/api/to_server.gleam`
+- `src/api/to_client.gleam`
+- `src/api/domain/**/*.gleam`
 
 This part should survive mostly unchanged. It is the good part.
 
-Current client roots:
+Projected client roots:
 
-- `client/src/scoreboard_public_client.gleam`
-- `client/src/scoreboard_admin_client.gleam`
-- `client/src/client/**/pages/**/*.gleam`
+- `.generated/client/src/scoreboard_public_client.gleam`
+- `.generated/client/src/scoreboard_admin_client.gleam`
+- `.generated/client/src/client/**/pages/**/*.gleam`
 
 These modules own browser `Msg`, hydration, navigation, local page updates, and `ToClient` handlers.
 
-Current server roots:
+Projected server roots:
 
-- `server/src/server/public/backend.gleam`
-- `server/src/server/admin/backend.gleam`
-- `server/src/server/**/pages/**/*.gleam`
+- `.generated/server/src/server/public/backend.gleam`
+- `.generated/server/src/server/admin/backend.gleam`
+- `.generated/server/src/server/**/pages/**/*.gleam`
 
 These modules own `backend.Msg`, `backend.update`, route request context, DB-backed handlers, and `ToServer` dispatch.
 
 Current target-neutral views and boot requests:
 
-- `shared/src/shared/**/pages/**/*.gleam`
-- `shared/src/shared/components/**/*.gleam`
+- `src/{public,admin}/views/**/*.gleam`
+- `src/components/**/*.gleam`
 
 These modules are the best evidence that a single-source projection is plausible. They already contain Lustre views with events, and they compile in the shared package by keeping messages generic.
 
@@ -272,10 +272,9 @@ The unified spike uses the current split app as the generated target shape:
 ```text
 .generated/client
 .generated/server
-.generated/shared
 ```
 
-This keeps the known-good package split intact while `src/` becomes the experimental authored source.
+This keeps the known-good client/server app shape intact while `src/` becomes the experimental authored source. Target-neutral modules are projected into both generated packages so target-specific issues are visible during generation.
 
 The chase target must function after generation. It is not enough for the
 projector to emit files with the right names. A generated run should preserve
@@ -304,27 +303,36 @@ Marmot output should live in root `src/generated/sql`.
 The authored root should contain the SQL files:
 
 ```text
-src/server/sql/**/*.sql
+src/sql/**/*.sql
 ```
 
-Marmot's defaults fit this shape:
+Marmot's source discovery fits this shape:
 
 ```text
-sql discovery: src/**/sql/
+sql discovery: src/sql/
 output:        src/generated/sql
 ```
 
-With SQL under `src/server/sql`, Marmot writes:
+With root Marmot configured as:
 
 ```text
-src/generated/sql/server/**/*.gleam
+sql_dir = "src/sql"
+output = "src/generated/sql"
 ```
 
-That is the right place because root source code references the typed query modules directly. The projection can then include the referenced `generated/sql/server/...` modules in the server output by reachability.
+Marmot writes:
+
+```text
+src/generated/sql/games_sql.gleam
+src/generated/sql/standings_sql.gleam
+src/generated/sql/teams_sql.gleam
+```
+
+That is the right place because root source code references the typed query modules directly. The projection can then include the referenced `generated/sql/...` modules in the server output by reachability.
 
 Raw `.sql` files do not need to be copied into generated targets. They are generator inputs for the root source package, not runtime source for the generated client/server packages.
 
-The generated server package may still contain projected copies of `src/generated/sql/server/**/*.gleam`, because server handlers compile against those modules. The raw SQL stays in root `src/server/sql`.
+The generated server package may still contain projected copies or compatibility adapters for `src/generated/sql/**/*.gleam`, because server handlers compile against those modules. The raw SQL stays in root `src/sql`.
 
 ## Proute
 
@@ -402,12 +410,12 @@ output and root `src/` as the source of truth.
 Root source inputs:
 
 ```text
-src/shared/api/**/*.gleam
-src/shared/{public,admin}/**/*.gleam
+src/api/**/*.gleam
+src/components/**/*.gleam
+src/{public,admin}/views/**/*.gleam
 src/public/pages/**/*.gleam
 src/admin/pages/**/*.gleam
-src/server/**/*.gleam
-src/server/sql/**/*.sql
+src/sql/**/*.sql
 src/generated/sql/**/*.gleam
 src/generated/proute/**/*.gleam
 ```
@@ -415,11 +423,13 @@ src/generated/proute/**/*.gleam
 Generated target outputs:
 
 ```text
-.generated/shared/src/shared/api/**/*.gleam
-.generated/shared/src/shared/{public,admin}/**/*.gleam
+.generated/client/src/shared/**/*.gleam
+.generated/client/src/generated/routes/**/*.gleam
 .generated/client/src/client/{public,admin}/**/*.gleam
 .generated/client/src/scoreboard_*_client.gleam
 .generated/client/src/generated/**/*.gleam
+.generated/server/src/shared/**/*.gleam
+.generated/server/src/generated/routes/**/*.gleam
 .generated/server/src/server/{public,admin}/**/*.gleam
 .generated/server/src/scoreboard_server.gleam
 .generated/server/src/generated/**/*.gleam
@@ -434,7 +444,6 @@ The acceptance bar for the chase target is:
 ```sh
 gleam run -m proute
 gleam check
-(cd .generated/shared && gleam test)
 (cd .generated/client && gleam test)
 (cd .generated/server && gleam test)
 ```
@@ -468,7 +477,7 @@ The output is JSON for the public package API. It includes:
 - return types
 - implementation target facts for public functions and constants
 
-In this app, running it in `shared/` exposes `shared/api/to_server`, `shared/api/to_client`, and the domain types in a directly useful shape for codec generation.
+In this app, running it in `shared/` exposes `api/to_server`, `api/to_client`, and the domain types in a directly useful shape for codec generation.
 
 This should probably be the first input for protocol and public API work. It is much safer than poking compiler internals when Rally only needs public type shapes.
 
@@ -541,9 +550,9 @@ Second, `view` should stay client-message-shaped. The server can reuse it for SS
 A plausible single-source admin games page would combine today’s three modules:
 
 ```text
-client/src/client/admin/pages/games.gleam
-server/src/server/admin/pages/games.gleam
-shared/src/shared/admin/pages/games.gleam
+.generated/client/src/client/admin/pages/games.gleam
+.generated/server/src/server/admin/pages/games.gleam
+src/admin/views/games.gleam
 ```
 
 into one authored page that contains:

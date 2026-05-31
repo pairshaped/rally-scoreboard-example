@@ -4,7 +4,7 @@ These ADRs describe the Generator Framework contract that Scoreboard validates.
 
 Scoreboard is the golden example app for the Generator Framework. It exercises the generated root API, generated runtime, Mount layout, wire protocol, authentication, live updates, logging, and database boundaries that the Generator Framework supports.
 
-This repo does not implement the Generator Framework and does not run app generation itself. Generated app code is checked in as the hand-written target shape for generator output. Marmot is the exception: it generates typed SQL modules from the SQL files in `server/src/server/sql/`.
+This repo does not implement the Generator Framework and does not run app generation itself. Generated app code is checked in as the hand-written target shape for generator output. Marmot is the exception: it generates typed SQL modules from the SQL files in `src/sql/`.
 
 The ADRs describe the intended design.
 

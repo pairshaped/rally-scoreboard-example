@@ -14,14 +14,14 @@ title: client__src__generated__codec_ffi_mjs
 // atoms must be unique across the whole shared API graph.
 
 import { registerConstructor } from "../../libero/libero/etf/wire_ffi.mjs";
-import * as toServer from "../../scoreboard_shared/shared/api/to_server.mjs";
-import * as toClient from "../../scoreboard_shared/shared/api/to_client.mjs";
-import * as game from "../../scoreboard_shared/shared/api/domain/game.mjs";
-import * as standing from "../../scoreboard_shared/shared/api/domain/standing.mjs";
-import * as team from "../../scoreboard_shared/shared/api/domain/team.mjs";
-import * as authenticationContext from "../../scoreboard_shared/shared/authentication_context.mjs";
-import * as adminClientSharedState from "../../scoreboard_shared/shared/admin/client_shared_state.mjs";
-import * as publicClientSharedState from "../../scoreboard_shared/shared/public/client_shared_state.mjs";
+import * as toServer from "../shared/api/to_server.mjs";
+import * as toClient from "../shared/api/to_client.mjs";
+import * as game from "../shared/api/domain/game.mjs";
+import * as standing from "../shared/api/domain/standing.mjs";
+import * as team from "../shared/api/domain/team.mjs";
+import * as authenticationContext from "../shared/authentication_context.mjs";
+import * as adminClientSharedState from "../shared/admin/client_shared_state.mjs";
+import * as publicClientSharedState from "../shared/public/client_shared_state.mjs";
 
 registerConstructor("load_games", toServer.LoadGames, 0);
 registerConstructor("load_game", toServer.LoadGame, 1);

@@ -113,7 +113,7 @@ try {
   );
   await check("public and admin summaries use explicit global API names", async () => {
     const game = await import(
-      "../../client/build/dev/javascript/scoreboard_shared/shared/api/domain/game.mjs"
+      "../../client/build/dev/javascript/client/shared/api/domain/game.mjs"
     );
 
     assert.notDeepEqual(
@@ -242,7 +242,7 @@ try {
     const publicProtocol = protocol;
     const adminProtocol = protocol;
     const adminToServer = await import(
-      "../../client/build/dev/javascript/scoreboard_shared/shared/api/to_server.mjs"
+      "../../client/build/dev/javascript/client/shared/api/to_server.mjs"
     );
 
     const publicWs = await openWs("/ws");
@@ -280,7 +280,7 @@ try {
   await check("admin game tabs receive live score broadcasts", async () => {
     const adminProtocol = protocol;
     const adminToServer = await import(
-      "../../client/build/dev/javascript/scoreboard_shared/shared/api/to_server.mjs"
+      "../../client/build/dev/javascript/client/shared/api/to_server.mjs"
     );
 
     const senderWs = await openWs("/admin/ws");
@@ -322,7 +322,7 @@ try {
   await check("admin score update persists across SSR reload", async () => {
     const adminProtocol = protocol;
     const adminToServer = await import(
-      "../../client/build/dev/javascript/scoreboard_shared/shared/api/to_server.mjs"
+      "../../client/build/dev/javascript/client/shared/api/to_server.mjs"
     );
 
     const adminWs = await openWs("/admin/ws");
@@ -354,7 +354,7 @@ try {
   await check("admin score update writes through to SQLite", async () => {
     const adminProtocol = protocol;
     const adminToServer = await import(
-      "../../client/build/dev/javascript/scoreboard_shared/shared/api/to_server.mjs"
+      "../../client/build/dev/javascript/client/shared/api/to_server.mjs"
     );
 
     const adminWs = await openWs("/admin/ws");
@@ -386,7 +386,7 @@ try {
     const publicProtocol = protocol;
     const adminProtocol = protocol;
     const adminToServer = await import(
-      "../../client/build/dev/javascript/scoreboard_shared/shared/api/to_server.mjs"
+      "../../client/build/dev/javascript/client/shared/api/to_server.mjs"
     );
 
     const standingsWs = await openWs("/ws");
@@ -451,10 +451,10 @@ try {
     const publicProtocol = protocol;
     const adminProtocol = protocol;
     const adminToServer = await import(
-      "../../client/build/dev/javascript/scoreboard_shared/shared/api/to_server.mjs"
+      "../../client/build/dev/javascript/client/shared/api/to_server.mjs"
     );
     const publicToServer = await import(
-      "../../client/build/dev/javascript/scoreboard_shared/shared/api/to_server.mjs"
+      "../../client/build/dev/javascript/client/shared/api/to_server.mjs"
     );
 
     const detailWs = await openWs("/ws");
@@ -508,7 +508,7 @@ try {
     const publicProtocol = protocol;
     const adminProtocol = protocol;
     const adminToServer = await import(
-      "../../client/build/dev/javascript/scoreboard_shared/shared/api/to_server.mjs"
+      "../../client/build/dev/javascript/client/shared/api/to_server.mjs"
     );
 
     const teamWs = await openWs("/ws");
@@ -547,7 +547,7 @@ try {
   await check("non-ASCII team slug round-trips through LoadTeam", async () => {
     const publicProtocol = protocol;
     const publicToServer = await import(
-      "../../client/build/dev/javascript/scoreboard_shared/shared/api/to_server.mjs"
+      "../../client/build/dev/javascript/client/shared/api/to_server.mjs"
     );
 
     const ws = await openWs("/ws");

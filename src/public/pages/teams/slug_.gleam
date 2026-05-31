@@ -3,7 +3,7 @@ import gleam/option.{type Option, None}
 import lustre/effect.{type Effect}
 import lustre/element.{type Element}
 import page_context.{type PageContext}
-import shared/public/pages/teams/slug_ as shared_team_page
+import public/views/teams/slug_ as shared_team_page
 
 pub type Model {
   Model(team: Option(shared_team_page.Model))

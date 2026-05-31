@@ -1,6 +1,6 @@
 ---
 version: 2.0.0
-title: shared__src__generated__public__route_gleam
+title: src__generated__routes__admin_gleam
 ---
 //// Generated. Do not edit.
 ////
@@ -11,11 +11,7 @@ title: shared__src__generated__public__route_gleam
 //// Derived from the Mount pages discovered by the Generator Framework.
 
 pub type Route {
-  Games
-  GamesId(id: String)
-  Standings
-  Team(slug: String)
-  SignIn
+  AdminGames
   NotFound
 }
 

@@ -2,7 +2,7 @@
 
 The Generator Framework's server emissions are delivered as `ToClient` values. `ToServer` is the client-to-server command vocabulary. `ToClient` is the server-to-client result and event vocabulary.
 
-Any public custom type named `ToServer` under `shared/api` contributes command messages. Any public custom type named `ToClient` under `shared/api` contributes server-emitted messages. Other public custom types under `shared/api` are domain types.
+Any public custom type named `ToServer` under `api` contributes command messages. Any public custom type named `ToClient` under `api` contributes server-emitted messages. Other public custom types under `api` are domain types.
 
 Operation result constructors carry the data the client needs to update local state. Operations that only need confirmation carry `Nil` or an app-defined empty result. `NotAsked`, `Loading`, and other async state markers belong in client models.
 

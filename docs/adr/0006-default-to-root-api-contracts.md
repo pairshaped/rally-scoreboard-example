@@ -1,26 +1,24 @@
 # Default to Root API Contracts
 
-The Generator Framework's wire contracts live under `shared/api`. Pages own local UI state and rendering. The `shared/api` tree owns the types that cross the wire.
+The Generator Framework's wire contracts live under `api`. Pages own local UI state and rendering. The `api` tree owns the types that cross the wire.
 
-The shared package targets both Erlang and JavaScript, so every wire-visible type must compile on both targets. Types in `server/` or `client/` are target-specific and cannot be wire payloads.
+The root source package is projected to both Erlang and JavaScript, so every wire-visible type must compile on both targets. Target-specific code is projected into generated client or server output and cannot be a wire payload.
 
 ## Root API Layout
 
 The Generator Framework uses one shared API graph for wire-visible app types:
 
 ```text
-shared/src/shared/api/to_server.gleam
-shared/src/shared/api/to_client.gleam
-shared/src/shared/api/domain/**/*.gleam
-shared/src/shared/api/**/*.gleam
+src/api/to_server.gleam
+src/api/to_client.gleam
+src/api/domain/**/*.gleam
+src/api/**/*.gleam
 
-server/src/server/public/backend.gleam
-server/src/server/public/model.gleam
-server/src/server/admin/backend.gleam
-server/src/server/admin/model.gleam
+src/public/**/*.gleam
+src/admin/**/*.gleam
 ```
 
-Any public custom type named `ToServer` under `shared/api` contributes client-to-server command constructors. Constructor fields are the command payload.
+Any public custom type named `ToServer` under `api` contributes client-to-server command constructors. Constructor fields are the command payload.
 
 ```gleam
 pub type ToServer {
@@ -29,7 +27,7 @@ pub type ToServer {
 }
 ```
 
-Any public custom type named `ToClient` under `shared/api` contributes server-to-client result and event constructors. Constructor fields are the delivered payload.
+Any public custom type named `ToClient` under `api` contributes server-to-client result and event constructors. Constructor fields are the delivered payload.
 
 ```gleam
 pub type ToClient {
@@ -38,18 +36,18 @@ pub type ToClient {
 }
 ```
 
-Other public custom types under `shared/api` are reusable wire-visible domain shapes. They do not define one wrapper type per message just to make handlers receive a message-shaped value. The `ToServer` and `ToClient` unions are the message-shaped values.
+Other public custom types under `api` are reusable wire-visible domain shapes. They do not define one wrapper type per message just to make handlers receive a message-shaped value. The `ToServer` and `ToClient` unions are the message-shaped values.
 
-Module structure under `shared/api` is for code organization and JavaScript packaging. It does not create wire identity. API modules are not Mount namespaces. Public/admin Mount boundaries are expressed by the user-owned app code and generated Mount modules, not by `shared/api/public` or `shared/api/admin` protocol roots.
+Module structure under `api` is for code organization and JavaScript packaging. It does not create wire identity. API modules are not Mount namespaces. Public/admin Mount boundaries are expressed by the user-owned app code and generated Mount modules, not by `api/public` or `api/admin` protocol roots.
 
 The preferred shared API shape is:
 
 ```text
-shared/src/shared/api/to_server.gleam
-shared/src/shared/api/to_client.gleam
-shared/src/shared/api/domain/game.gleam
-shared/src/shared/api/domain/user.gleam
-shared/src/shared/api/domain/**/*.gleam
+src/api/to_server.gleam
+src/api/to_client.gleam
+src/api/domain/game.gleam
+src/api/domain/user.gleam
+src/api/domain/**/*.gleam
 ```
 
 Apps may split the shared API into additional modules for readability or packaging, but those modules are still one global wire graph. Any constructor that crosses the wire needs a unique plain ETF atom in the whole shared API graph.
@@ -77,10 +75,10 @@ Use these terms consistently:
 The Generator Framework builds one shared API codec graph:
 
 ```text
-shared/api/**/*.gleam
+api/**/*.gleam
 ```
 
-Client and server packages may import subsets of `shared/api` for packaging, but those subsets do not weaken the global wire-name rule. Moving a type to another module or directory does not fix a wire collision. Renaming the constructor does.
+Client and server packages may import subsets of `api` for packaging, but those subsets do not weaken the global wire-name rule. Moving a type to another module or directory does not fix a wire collision. Renaming the constructor does.
 
 The Generator Framework validates constructor names within the shared API graph. Duplicate plain ETF constructor names fail generation before codegen. The check includes `ToServer` constructors, `ToClient` constructors, domain constructors, and any other public wire-visible custom type constructor. The check does not use module paths, type names, transport direction, arity, namespace prefixes, hashes, or generated identities to disambiguate values.
 
@@ -92,13 +90,13 @@ Duplicate ETF constructor `User` in the shared API codec graph.
 Plain ETF uses constructor atoms without module or type identity, so the Generator Framework cannot
 safely decode both of these values:
 
-- shared/api/domain/user.gleam
+- api/domain/user.gleam
   User.User(id: Int)
 
-- shared/api/domain/admin_user.gleam
+- api/domain/admin_user.gleam
   AdminUser.User(id: Int)
 
-Rename one constructor so every wire-visible constructor in shared/api has
+Rename one constructor so every wire-visible constructor in api has
 a unique plain ETF atom.
 ```
 
@@ -115,25 +113,26 @@ browser-only UI data
 client effects and JS FFI callbacks
 ```
 
-Pages are a three-target concept. A route may have matching page modules in shared, client, and server targets:
+Pages are authored once in root source. The projector may emit matching client and server modules for the route, while target-neutral views can live beside the Mount under `views`:
 
 ```text
-shared/src/shared/{mount}/pages/**/*.gleam
-client/src/client/{mount}/pages/**/*.gleam
-server/src/server/{mount}/pages/**/*.gleam
+src/{mount}/pages/**/*.gleam
+src/{mount}/views/**/*.gleam
+.generated/client/src/client/{mount}/pages/**/*.gleam
+.generated/server/src/server/{mount}/pages/**/*.gleam
 ```
 
-The shared page module owns the route's target-neutral view, view input helpers, pure data helpers, and boot request declaration. Its main view function is named `view`, and it is the first function after `init_requests` when `init_requests` exists. When a page has normal first-render data needs, the shared page module declares them with `init_requests() -> List(to_server.ToServer)`.
+The root page module owns the route's page model, boot request declaration, target-specific update hooks, and server handlers. Target-neutral view modules own reusable Lustre views, view input helpers, and pure data helpers. When a page has normal first-render data needs, the root page module declares them with `init_requests() -> List(to_server.ToServer)`.
 
-The client page module owns the browser page model, local `Msg`, browser-only behavior such as DOM effects, JS FFI, drag and drop, subscriptions, browser event handling, optional client-side `init`, local `update`, and client `ToClient` handlers.
+The client projection owns local `Msg`, browser-only behavior such as DOM effects, JS FFI, drag and drop, subscriptions, browser event handling, optional client-side `init`, local `update`, and client `ToClient` handlers.
 
-The server page module owns server-only behavior such as page data loading, database access, authorization checks, provider/server API calls, optional server-side `init`, and command handlers.
+The server projection owns server-only behavior such as page data loading, database access, authorization checks, provider/server API calls, optional server-side `init`, and command handlers.
 
-The Generator Framework wires matching target modules together by route. It does not ask app authors to put all page code in one file and split that file into target-specific generated output.
+The Generator Framework wires projected target modules together by route.
 
 Local page `Msg` values do not cross the wire. They are reserved for browser-originated page events such as clicks, input changes, timers, subscriptions, and JS FFI callbacks. Server results and pushed events cross the wire as `ToClient` values. Client `ToClient` handlers apply those values directly to page models; they do not mirror `ToClient` constructors into local `Msg` values.
 
-Page modules may import `shared/api` domain and protocol types. They do not define wire-visible `ToServer`, `ToClient`, or wire domain types.
+Page modules may import `api` domain and protocol types. They do not define wire-visible `ToServer`, `ToClient`, or wire domain types.
 
 ## Page Boot Requests
 
@@ -211,78 +210,54 @@ A `ToServer.LoadGames` constructor maps to `load_games`, `ToServer.LoadTeam` map
 
 ## User-Owned Package Layout
 
-User-owned app code is Mount-first. A Mount is a runnable app boundary mounted at a route root. The Mount owns shared page modules, client page modules, server page modules, backend state, SSR loaders, its shell, and Mount-specific policy.
+User-owned app code is Mount-first in one root source package. A Mount is a runnable app boundary mounted at a route root. The Mount owns page modules, target-neutral views, client shared state, server handlers, SSR loaders, shell state, and Mount-specific policy.
 
-The shared package has one exception: `shared/api` is the wire graph and is not Mount-namespaced. It does not use `shared/api/public` or `shared/api/admin`.
+The root source package has one exception: `api` is the wire graph and is not Mount-namespaced. It does not use `api/public` or `api/admin`.
 
-Shared API code lives under:
-
-```text
-shared/src/shared/api/to_server.gleam
-shared/src/shared/api/to_client.gleam
-shared/src/shared/api/domain/**/*.gleam
-```
-
-Shared public UI code lives under:
+API code lives under:
 
 ```text
-shared/src/shared/public/pages/**/*.gleam
-shared/src/shared/public/client_shared_state.gleam
+src/api/to_server.gleam
+src/api/to_client.gleam
+src/api/domain/**/*.gleam
 ```
 
-Shared admin UI code lives under:
+Public user code lives under:
 
 ```text
-shared/src/shared/admin/pages/**/*.gleam
-shared/src/shared/admin/client_shared_state.gleam
+src/public/pages/**/*.gleam
+src/public/views/**/*.gleam
+src/public/client_shared_state.gleam
 ```
 
-Public client and server user code lives under:
+Admin user code lives under:
 
 ```text
-client/src/client/public/pages/**/*.gleam
-client/src/client/public/client_shared_state.gleam
-
-server/src/server/public/backend.gleam
-server/src/server/public/model.gleam
-server/src/server/public/pages/**/*.gleam
-server/src/server/public/client_shared_state_loader.gleam
-server/src/server/public/shell.html
+src/admin/pages/**/*.gleam
+src/admin/views/**/*.gleam
+src/admin/client_shared_state.gleam
 ```
 
-Admin client and server user code lives under:
+Reusable target-neutral UI helpers live under:
 
 ```text
-client/src/client/admin/pages/**/*.gleam
-client/src/client/admin/client_shared_state.gleam
-
-server/src/server/admin/backend.gleam
-server/src/server/admin/model.gleam
-server/src/server/admin/pages/**/*.gleam
-server/src/server/admin/client_shared_state_loader.gleam
-server/src/server/admin/shell.html
+src/components/**/*.gleam
 ```
 
-Shared server-only helpers live under:
+SQL generator inputs live under:
 
 ```text
-server/src/server/helpers/**/*.gleam
+src/sql/**/*.sql
 ```
 
-Shared client-only helpers live under:
+Generator-owned root output lives under:
 
 ```text
-client/src/client/helpers/**/*.gleam
+src/generated/proute/**/*.gleam
+src/generated/sql/**/*.gleam
 ```
 
-Shared target-neutral UI helpers live under:
-
-```text
-shared/src/shared/components/**/*.gleam
-shared/src/shared/helpers/**/*.gleam
-```
-
-Do not organize the shared API under `shared/src/shared/api/public` or `shared/src/shared/api/admin`. Mount directories are fine for shared UI modules because pages do not cross the wire.
+Do not organize the API under `src/api/public` or `src/api/admin`. Mount directories are fine for page and view modules because pages do not cross the wire.
 
 ## Backend And Server Handlers
 
@@ -291,14 +266,14 @@ Each Mount has one server backend module. The backend module is the server-side 
 `backend.Model` lives in `server/{mount_namespace}/model.gleam`, next to `backend.gleam`. Generated dispatch and server handlers need the `Model` type in their signatures (both return `#(Model, Effect(ToClient))`). Keeping `Model` outside `backend.gleam` lets generated dispatch import the type without forcing a cyclic dependency on `backend.gleam`, which itself imports generated dispatch.
 
 ```gleam
-// server/src/server/public/model.gleam
+// .generated/server/src/server/public/model.gleam
 pub type Model {
   Model(read_only: Bool)
 }
 ```
 
 ```gleam
-// server/src/server/public/backend.gleam
+// .generated/server/src/server/public/backend.gleam
 import generated/public/dispatch as generated_dispatch
 import server/public/model.{type Model, Model}
 
@@ -360,11 +335,11 @@ This rule includes page-data load commands. `ToServer.LoadGames` maps to `load_g
 Handlers live in the server target under the matching Mount namespace. By default, page-specific server handlers live in the matching server page module, beside the page-specific queries and mapping code they use. `backend.gleam` is the server update boundary and default interception/delegation point.
 
 ```text
-server/src/server/admin/pages/games.gleam
-server/src/server/public/pages/standings.gleam
+.generated/server/src/server/admin/pages/games.gleam
+.generated/server/src/server/public/pages/standings.gleam
 ```
 
-Shared server-only helpers are extracted to `server/helpers/...` only after at least two server modules use the same helper. The Generator Framework does not create `store.gleam`, `helpers/`, or another shared app layer by default.
+Server-only helpers are extracted only after at least two server modules use the same helper. The Generator Framework does not create `store.gleam`, `helpers/`, or another shared app layer by default.
 
 Handlers receive constructor fields as named arguments, plus the Generator Framework-provided context. They do not receive the whole `ToServer` value.
 
@@ -475,16 +450,11 @@ The Generator Framework must flag inconsistencies:
 Each named Mount gets its own `ClientSharedState` contract by default:
 
 ```text
-shared/src/shared/public/client_shared_state.gleam
-client/src/client/public/client_shared_state.gleam
-server/src/server/public/client_shared_state_loader.gleam
-
-shared/src/shared/admin/client_shared_state.gleam
-client/src/client/admin/client_shared_state.gleam
-server/src/server/admin/client_shared_state_loader.gleam
+src/public/client_shared_state.gleam
+src/admin/client_shared_state.gleam
 ```
 
-The shared target owns `ClientSharedState` and `ClientSharedStateMsg` because SSR and browser hydration need the same shape. The shared page target owns `init_requests`. The client target owns optional browser `init` and update. The server target owns optional server `init` and server handlers.
+Root source owns `ClientSharedState` and `ClientSharedStateMsg` because SSR and browser hydration need the same shape. Root page modules own `init_requests`. The client projection owns optional browser `init` and update. The server projection owns optional server `init` and server handlers.
 
 When `ClientSharedState` exists, page and layout update functions may return `Option(ClientSharedStateMsg)`. Generated root client code applies those messages through `ClientSharedState.update`.
 
@@ -584,48 +554,49 @@ shared/admin
 client/admin
 ```
 
-The API contract uses `shared/api` with no public/admin subdivision because it is the global wire boundary. Shared page/view modules may still use public/admin Mount directories because pages do not cross the wire.
+The API contract uses `api` with no public/admin subdivision because it is the global wire boundary. Page and view modules may still use public/admin Mount directories because pages do not cross the wire.
 
-Each package has one generated root:
+Each generated target package has one generated root:
 
 ```text
-client/src/generated
-server/src/generated
-shared/src/generated
+.generated/client/src/generated
+.generated/server/src/generated
 ```
 
 Generated code is Mount-namespaced only when the file depends on the Mount. Generated runtime helpers, codecs, protocol wire modules, database boot code, and SQL output are package-level generated files.
 
-The shared package generated layout is:
+Route union modules are projected into both generated packages:
 
 ```text
-shared/src/generated/routes/public.gleam
-shared/src/generated/routes/admin.gleam
+.generated/client/src/generated/routes/public.gleam
+.generated/client/src/generated/routes/admin.gleam
+.generated/server/src/generated/routes/public.gleam
+.generated/server/src/generated/routes/admin.gleam
 ```
 
-The files under `shared/src/generated/routes` are Mount-specific because routes are Mount-specific.
+The files under `generated/routes` are Mount-specific because routes are Mount-specific.
 
 The client package generated layout is:
 
 ```text
-client/src/generated/setup.gleam
-client/src/generated/setup_ffi.mjs
-client/src/generated/transport.gleam
-client/src/generated/transport_ffi.mjs
-client/src/generated/protocol_wire.mjs
-client/src/generated/codec.gleam
-client/src/generated/codec_ffi.mjs
-client/src/generated/router_ffi.mjs
+.generated/client/src/generated/setup.gleam
+.generated/client/src/generated/setup_ffi.mjs
+.generated/client/src/generated/transport.gleam
+.generated/client/src/generated/transport_ffi.mjs
+.generated/client/src/generated/protocol_wire.mjs
+.generated/client/src/generated/codec.gleam
+.generated/client/src/generated/codec_ffi.mjs
+.generated/client/src/generated/router_ffi.mjs
 
-client/src/generated/runtime/effect.gleam
-client/src/generated/runtime/client_effect_ffi.mjs
-client/src/generated/runtime/authentication.gleam
+.generated/client/src/generated/runtime/effect.gleam
+.generated/client/src/generated/runtime/client_effect_ffi.mjs
+.generated/client/src/generated/runtime/authentication.gleam
 
-client/src/generated/public/router.gleam
-client/src/generated/public/to_client.gleam
+.generated/client/src/generated/public/router.gleam
+.generated/client/src/generated/public/to_client.gleam
 
-client/src/generated/admin/router.gleam
-client/src/generated/admin/to_client.gleam
+.generated/client/src/generated/admin/router.gleam
+.generated/client/src/generated/admin/to_client.gleam
 ```
 
 Client `protocol_wire`, `codec`, transport, setup, and effect modules are generated once because the shared API graph and transport runtime are package-level. Client routers and `to_client` dispatch are Mount-specific because they depend on active routes and active page handlers.
@@ -637,47 +608,47 @@ The Generator Framework does not ask Modem to intercept every internal link. Lin
 The server package generated layout is:
 
 ```text
-server/src/generated/entry.gleam
-server/src/generated/protocol_wire.gleam
-server/src/generated/static_handler.gleam
-server/src/generated/ws_runtime.gleam
-server/src/generated/server_generated_protocol_atoms_ffi.erl
-server/src/generated/server_generated_protocol_wire_ffi.erl
+.generated/server/src/generated/entry.gleam
+.generated/server/src/generated/protocol_wire.gleam
+.generated/server/src/generated/static_handler.gleam
+.generated/server/src/generated/ws_runtime.gleam
+.generated/server/src/generated/server_generated_protocol_atoms_ffi.erl
+.generated/server/src/generated/server_generated_protocol_wire_ffi.erl
 
-server/src/generated/runtime/authentication.gleam
-server/src/generated/runtime/db.gleam
-server/src/generated/runtime/effect.gleam
-server/src/generated/runtime/effect_runner.gleam
-server/src/generated/runtime/effect_state.gleam
-server/src/generated/runtime/env.gleam
-server/src/generated/runtime/jobs.gleam
-server/src/generated/runtime/session.gleam
-server/src/generated/runtime/static.gleam
-server/src/generated/runtime/system.gleam
-server/src/generated/runtime/system_db.gleam
-server/src/generated/runtime/trace.gleam
+.generated/server/src/generated/runtime/authentication.gleam
+.generated/server/src/generated/runtime/db.gleam
+.generated/server/src/generated/runtime/effect.gleam
+.generated/server/src/generated/runtime/effect_runner.gleam
+.generated/server/src/generated/runtime/effect_state.gleam
+.generated/server/src/generated/runtime/env.gleam
+.generated/server/src/generated/runtime/jobs.gleam
+.generated/server/src/generated/runtime/session.gleam
+.generated/server/src/generated/runtime/static.gleam
+.generated/server/src/generated/runtime/system.gleam
+.generated/server/src/generated/runtime/system_db.gleam
+.generated/server/src/generated/runtime/trace.gleam
 
-server/src/generated/runtime/server_generated_runtime_effect_state_ffi.erl
-server/src/generated/runtime/server_generated_runtime_trace_ffi.erl
+.generated/server/src/generated/runtime/server_generated_runtime_effect_state_ffi.erl
+.generated/server/src/generated/runtime/server_generated_runtime_trace_ffi.erl
 
-server/src/generated/sql/**/*.gleam
+.generated/server/src/generated/sql/**/*.gleam
 
-server/src/generated/public/dispatch.gleam
-server/src/generated/public/request_context.gleam
-server/src/generated/public/router.gleam
-server/src/generated/public/ssr_handler.gleam
-server/src/generated/public/ws_handler.gleam
+.generated/server/src/generated/public/dispatch.gleam
+.generated/server/src/generated/public/request_context.gleam
+.generated/server/src/generated/public/router.gleam
+.generated/server/src/generated/public/ssr_handler.gleam
+.generated/server/src/generated/public/ws_handler.gleam
 
-server/src/generated/admin/dispatch.gleam
-server/src/generated/admin/request_context.gleam
-server/src/generated/admin/router.gleam
-server/src/generated/admin/ssr_handler.gleam
-server/src/generated/admin/ws_handler.gleam
+.generated/server/src/generated/admin/dispatch.gleam
+.generated/server/src/generated/admin/request_context.gleam
+.generated/server/src/generated/admin/router.gleam
+.generated/server/src/generated/admin/ssr_handler.gleam
+.generated/server/src/generated/admin/ws_handler.gleam
 ```
 
-Server runtime modules under `server/src/generated/runtime` are generated once. A runtime module does not become Mount-specific just because two Mounts call it. If a runtime helper needs per-Mount state, it accepts a Mount key or stores scoped values internally; the Generator Framework does not duplicate the whole module under `generated/public/runtime` and `generated/admin/runtime`.
+Server runtime modules under `.generated/server/src/generated/runtime` are generated once. A runtime module does not become Mount-specific just because two Mounts call it. If a runtime helper needs per-Mount state, it accepts a Mount key or stores scoped values internally; the Generator Framework does not duplicate the whole module under `generated/public/runtime` and `generated/admin/runtime`.
 
-Server `dispatch`, `request_context`, `router`, `ssr_handler`, and `ws_handler` are Mount-specific. The static asset handler is generated once at `server/src/generated/static_handler.gleam` because all Mounts serve the same client build tree. The WebSocket runtime is generated once at `server/src/generated/ws_runtime.gleam`; Mount WebSocket handlers adapt their route and backend modules into that runtime. Mount modules import package-level generated runtime modules from `generated/runtime` and package-level protocol modules from `generated`.
+Server `dispatch`, `request_context`, `router`, `ssr_handler`, and `ws_handler` are Mount-specific. The static asset handler is generated once at `.generated/server/src/generated/static_handler.gleam` because all Mounts serve the same client build tree. The WebSocket runtime is generated once at `.generated/server/src/generated/ws_runtime.gleam`; Mount WebSocket handlers adapt their route and backend modules into that runtime. Mount modules import package-level generated runtime modules from `generated/runtime` and package-level protocol modules from `generated`.
 
 The Generator Framework does not generate Mount RPC dispatch, page dispatch, or server-side `ToClient` handler stubs for the root API path. Page init, `ToServer`, and `ToClient` use the package-level protocol wire module.
 
@@ -688,19 +659,19 @@ Generated Erlang FFI files follow the same ownership rule. A generated `.erl` fi
 Good:
 
 ```text
-server/src/generated/server_generated_protocol_wire_ffi.erl
-server/src/generated/server_generated_protocol_atoms_ffi.erl
-server/src/generated/runtime/server_generated_runtime_db_ffi.erl
+.generated/server/src/generated/server_generated_protocol_wire_ffi.erl
+.generated/server/src/generated/server_generated_protocol_atoms_ffi.erl
+.generated/server/src/generated/runtime/server_generated_runtime_db_ffi.erl
 ```
 
 Avoid:
 
 ```text
-server/src/generated/public/runtime/server_public_generated_runtime_db_ffi.erl
-server/src/generated/admin/runtime/server_admin_generated_runtime_db_ffi.erl
-server/src/server_public_generated_protocol_wire_ffi.erl
-server/src/server_public_generated_runtime_db_ffi.erl
-server/src/server_generated_runtime_db_ffi.erl
+.generated/server/src/generated/public/runtime/server_public_generated_runtime_db_ffi.erl
+.generated/server/src/generated/admin/runtime/server_admin_generated_runtime_db_ffi.erl
+.generated/server/src/server_public_generated_protocol_wire_ffi.erl
+.generated/server/src/server_public_generated_runtime_db_ffi.erl
+.generated/server/src/server_generated_runtime_db_ffi.erl
 ```
 
 ## Transport
@@ -724,15 +695,15 @@ Type aliases are transparent on the wire, as they are in Gleam. Domain identitie
 
 ## Rules
 
-1. Wire-visible types live under `shared/api`.
-2. Public custom types named `ToServer` under `shared/api` define command constructors.
-3. Public custom types named `ToClient` under `shared/api` define server-emitted result and event constructors.
-4. Other public custom types under `shared/api` are domain types.
+1. Wire-visible types live under `api`.
+2. Public custom types named `ToServer` under `api` define command constructors.
+3. Public custom types named `ToClient` under `api` define server-emitted result and event constructors.
+4. Other public custom types under `api` are domain types.
 5. Live updates use `ToClient`; the Generator Framework does not generate separate live-update topic or payload types.
 6. Types under `server/`, `client/`, page modules, and layout modules do not cross the wire.
-7. Codec generation validates the selected `shared/api` graph.
-8. Module paths and directories under `shared/api` are code organization only; they do not contribute wire identity.
-9. Client packages may import subsets of `shared/api` for JavaScript packaging.
+7. Codec generation validates the selected `api` graph.
+8. Module paths and directories under `api` are code organization only; they do not contribute wire identity.
+9. Client packages may import subsets of `api` for JavaScript packaging.
 10. Duplicate plain ETF constructor names inside the shared API graph are generation errors. The uniqueness check includes `ToServer`, `ToClient`, and domain constructors, and does not consider module path, type name, transport direction, arity, namespace prefix, hash, or generated identity.
 11. Every `ToServer` constructor has exactly one server handler in the app.
 12. `ToServer` constructors carry command data only.
@@ -752,8 +723,8 @@ Type aliases are transparent on the wire, as they are in Gleam. Domain identitie
 26. App-wide string notices use the built-in layout/client-shell lane.
 27. Rich app-wide payloads use `ToClient` values.
 28. `ToServer` uses the command lane without transport acknowledgements; app-visible outcomes use `ToClient`.
-29. User-owned app code is Mount-first: `server/src/server/{mount_namespace}`, `client/src/client/{mount_namespace}`, and `shared/src/shared/{mount_namespace}`. The exception is `shared/src/shared/api`, which is one global wire graph and has no public/admin subdivision.
-30. Each package has exactly one generated root: `client/src/generated`, `server/src/generated`, or `shared/src/generated`.
+29. User-owned app code is Mount-first under root `src/{mount_namespace}`. The exception is `src/api`, which is one global wire graph and has no public/admin subdivision.
+30. Each generated target package has exactly one generated root: `.generated/client/src/generated` or `.generated/server/src/generated`.
 31. Generated files are Mount-namespaced only when they depend on Mount-specific inputs. Mount-specific generated files live under `generated/public` or `generated/admin`.
 32. Generated runtime helpers, codecs, package protocol wire modules, SQL modules, setup modules, and transport modules are package-level generated files. They live under `generated`, `generated/runtime`, or `generated/sql`, not under `generated/{mount_namespace}/runtime`.
 33. Generated Erlang FFI files live under the owning package's generated root beside the Gleam module that imports them. The Generator Framework does not write generated `.erl` files into package `src/` roots.

@@ -62,7 +62,7 @@ async function runPublic() {
     "../../client/build/dev/javascript/client/generated/protocol_wire.mjs"
   );
   const toServer = await import(
-    "../../client/build/dev/javascript/scoreboard_shared/shared/api/to_server.mjs"
+    "../../client/build/dev/javascript/client/shared/api/to_server.mjs"
   );
   const ws = await openWs("/ws");
   try {
@@ -104,7 +104,7 @@ async function runAdmin() {
     "../../client/build/dev/javascript/client/generated/protocol_wire.mjs"
   );
   const toServer = await import(
-    "../../client/build/dev/javascript/scoreboard_shared/shared/api/to_server.mjs"
+    "../../client/build/dev/javascript/client/shared/api/to_server.mjs"
   );
   const ws = await openWs("/admin/ws");
   try {

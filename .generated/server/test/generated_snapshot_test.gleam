@@ -14,7 +14,7 @@ pub fn generated_source_files_match_snapshots_test() {
 }
 
 fn generated_source_files() -> List(String) {
-  ["../client/src", "../shared/src", "src"]
+  ["../client/src", "src"]
   |> list.flat_map(walk)
   |> list.filter(is_generated_source_file)
   |> list.sort(by: string.compare)
