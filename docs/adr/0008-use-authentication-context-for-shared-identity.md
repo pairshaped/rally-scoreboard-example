@@ -1,16 +1,16 @@
 # Use Authentication Context For Shared Identity
 
-The Generator Framework uses `authentication_context` for the signed-in browser identity shared by Mounts.
+The generator uses `authentication_context` for the signed-in browser identity shared by Mounts.
 
 Public, admin, system, and authentication callback routes do not own authentication. They consume a shared authentication context and apply their own access or authorization rules.
 
 ## Decision Summary
 
-Authentication is framework infrastructure with app-placed routes.
+Authentication is generated runtime infrastructure with app-placed routes.
 
-The framework provides the shared identity contract, normalization helpers, session helpers, access guard plumbing, redirect helpers, and provider handoff helpers. The app decides where user-facing sign-in and sign-out routes live.
+The generated runtime provides the shared identity contract, normalization helpers, session helpers, access guard plumbing, redirect helpers, and provider handoff helpers. The app decides where user-facing sign-in and sign-out routes live.
 
-The framework does not require a fixed authentication Mount. An app can put sign-in routes in the public Mount, in a dedicated authentication Mount, or in multiple entry points. The generated code must carry enough route metadata to support that placement.
+The generated runtime does not require a fixed authentication Mount. An app can put sign-in routes in the public Mount, in a dedicated authentication Mount, or in multiple entry points. The generated code must carry enough route metadata to support that placement.
 
 Scoreboard uses public-owned authentication routes because it is a small app:
 
@@ -29,7 +29,7 @@ The admin Mount only renders after the signed-in user has admin access.
 
 ## Taxonomy
 
-Use `user` for the framework-facing identity.
+Use `user` for the generated-runtime-facing identity.
 
 Use `account` only when app code is specifically talking about a billing, provider, or tenant account.
 
@@ -37,7 +37,7 @@ Use these terms consistently:
 
 - `user`: the signed-in identity row
 - `authentication`: proving who the browser session represents
-- `authentication_context`: the framework-facing identity loaded from a session
+- `authentication_context`: the generated-runtime-facing identity loaded from a session
 - `authorization`: deciding what the user may do
 - `ClientSharedState`: Mount-specific shell/shared browser state derived from route, authentication context, authorization facts, and app data
 - SSR `ToClient` page data: boot-time page data produced by generated SSR execution of the current route's boot requests. It seeds the page model and is separate from `ClientSharedState`
@@ -86,7 +86,7 @@ If `display_name` is `None`, the display label is the normalized email.
 
 ## Runtime Helpers
 
-Authentication behavior belongs in framework runtime or library code before it belongs in generated code.
+Authentication behavior belongs in runtime or library code before it belongs in generated code.
 
 The runtime provides helpers like:
 
@@ -98,7 +98,7 @@ pub fn display_label(context: AuthenticationContext) -> String
 
 Any built-in sign-in link, sign-in code, SSO, OAuth, or handoff helper must normalize email before lookup, storage, comparison, token creation, code verification, or session creation.
 
-When the framework provides a reference users table, its email column stores only normalized emails and has a unique index.
+When the runtime provides a reference users table, its email column stores only normalized emails and has a unique index.
 
 ## Scoreboard User Model
 
@@ -122,7 +122,7 @@ fan@example.com     role = fan
 
 Both rows are users. The admin user can use public signed-in features. The fan user can use public signed-in features but cannot access admin routes or admin commands. Anonymous visitors have no authentication context.
 
-The `role` field is Scoreboard app policy. It is not the framework authorization model. Scoreboard exposes authorization facts such as `can_access_admin` from that role.
+The `role` field is Scoreboard app policy. It is not a runtime authorization model. Scoreboard exposes authorization facts such as `can_access_admin` from that role.
 
 ## Mount Integration
 
@@ -147,7 +147,7 @@ Handlers own authorization policy. They decide whether the authenticated user ma
 
 Generated code helps by passing authentication context consistently and by giving guarded Mounts a standard redirect or rejection path.
 
-For Scoreboard, admin access derives from the app-owned `users.role` value. That is an example app policy, not a framework-wide authorization model.
+For Scoreboard, admin access derives from the app-owned `users.role` value. That is an example app policy, not a generated-runtime authorization model.
 
 ## Navigation And Layout
 
@@ -179,7 +179,7 @@ This keeps authentication UI from pretending to be an unauthenticated admin page
 
 ## Authentication Routes
 
-The framework does not require a fixed authentication Mount.
+The generated runtime does not require a fixed authentication Mount.
 
 Authentication is shared infrastructure. The app decides where user-facing authentication routes live. A small app may put sign-in and sign-out routes in its public Mount. A larger app may use a dedicated authentication Mount or multiple sign-in entry points.
 
@@ -226,11 +226,11 @@ club.example.com/admin/sign_in
 
 The destination host redeems the handoff token server-side, sets its own session cookie, and redirects to the original return path.
 
-This means the framework needs absolute URL helpers and host-aware request context for callback and handoff routes. It does not mean public or admin Mounts own authentication.
+This means the generated runtime needs absolute URL helpers and host-aware request context for callback and handoff routes. It does not mean public or admin Mounts own authentication.
 
 The callback host cannot set the final host-only session cookie for a different league subdomain. That is why the handoff completion route must run on the destination host.
 
-The framework pieces are:
+The generated runtime pieces are:
 
 - provider callback route verifies provider state
 - callback route creates a short-lived handoff token
@@ -239,4 +239,4 @@ The framework pieces are:
 - destination host sets its own session cookie
 - destination host redirects to the safe return path
 
-These routes may live in the same Mount or different Mounts. The framework supports both placements.
+These routes may live in the same Mount or different Mounts. The generated runtime supports both placements.

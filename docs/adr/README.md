@@ -1,14 +1,12 @@
 # Architecture Decision Records
 
-These ADRs describe the Generator Framework contract that Scoreboard validates.
+These ADRs describe the generated-source contract that Scoreboard validates.
 
-Scoreboard is the golden example app for the Generator Framework. It exercises the generated root API, generated runtime, Mount layout, wire protocol, authentication, live updates, logging, and database boundaries that the Generator Framework supports.
+Scoreboard exercises the generated root API, generated runtime, Mount layout, wire protocol, authentication, live updates, logging, and database boundaries.
 
-This repo does not implement the Generator Framework and does not run app generation itself. Generated app code is checked in as the hand-written target shape for generator output. Marmot is the exception: it generates typed SQL modules from the SQL files in `src/sql/`.
+This repo checks in generated source under `src/generated` while the unified source shape is being proven. Marmot and Proute already write generated modules there.
 
 The ADRs describe the intended design.
-
-Literal config names use lowercase `rally`.
 
 ## Records
 
@@ -19,3 +17,4 @@ Literal config names use lowercase `rally`.
 - [0006: Default To Root API Contracts](0006-default-to-root-api-contracts.md)
 - [0007: Use File Routes, Route Kinds, And Mount Contexts](0007-use-file-routes-route-kinds-and-mount-contexts.md)
 - [0008: Use Authentication Context For Shared Identity](0008-use-authentication-context-for-shared-identity.md)
+- [0009: Use Target Annotations For Unified Source](0009-use-target-annotations-for-unified-source.md)

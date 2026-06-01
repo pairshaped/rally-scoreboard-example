@@ -1,6 +1,6 @@
 # Use ToClient For Live Updates
 
-The Generator Framework's live updates use `ToClient` values.
+The generator's live updates use `ToClient` values.
 
 ```gleam
 pub type ToClient {
@@ -16,7 +16,7 @@ A server handler may emit one or more `ToClient` values. Those values use the sa
 ToClient -> generated to_client dispatch -> active client ToClient handlers -> page models
 ```
 
-There are no separate live-update topic or payload types in the public API. A constructor-named client `ToClient` handler is the client-side interest signal. If multiple active client modules handle the same `ToClient` constructor, the Generator Framework fans the value out to all of them. If no active client handler handles the value, the configured no-handler policy applies.
+There are no separate live-update topic or payload types in the public API. A constructor-named client `ToClient` handler is the client-side interest signal. If multiple active client modules handle the same `ToClient` constructor, the generator fans the value out to all of them. If no active client handler handles the value, the configured no-handler policy applies.
 
 Client `ToClient` handlers do not proxy server events into local page `Msg` values. They receive the page model and constructor fields, then return the updated page model plus any client effect. Local page `Msg` values are reserved for browser-originated events.
 

@@ -1,6 +1,6 @@
 # Use File Routes, Route Kinds, And Mount Contexts
 
-The Generator Framework derives Mount routes from route modules. App authors add, move, and name modules; the Generator Framework emits the route type, URL parser, path builder, server dispatch, client router, and navigation helpers.
+The generator derives Mount routes from route modules. App authors add, move, and name modules; the generator emits the route type, URL parser, path builder, page glue, and navigation helpers.
 
 The generated routing contract follows an Elm Land style convention: the file path is the route declaration.
 
@@ -19,16 +19,19 @@ src/public/views/teams/[slug].gleam
 src/admin/views/games.gleam
 ```
 
-The Generator Framework projects those root modules into matching client and server targets:
+The generator keeps those root modules in the unified source tree. Target-specific page declarations and imports carry target annotations. Generated route and page glue lives under `src/generated/proute`:
 
 ```text
-.generated/client/src/client/public/pages/games.gleam
-.generated/server/src/server/public/pages/games.gleam
-.generated/client/src/client/public/pages/games/[id].gleam
-.generated/server/src/server/public/pages/games/[id].gleam
+src/generated/proute/public/routes.gleam
+src/generated/proute/public/page_input.gleam
+src/generated/proute/public/pages.gleam
+
+src/generated/proute/admin/routes.gleam
+src/generated/proute/admin/page_input.gleam
+src/generated/proute/admin/pages.gleam
 ```
 
-The Generator Framework derives the route from the root page path and wires the projected client and server modules together. Client-only behavior stays in the client projection. Server-only behavior stays in the server projection. Target-neutral views and page helpers stay in root source and can be projected where needed.
+The generator derives the route from the root page path and wires the unified page module into generated route/page glue. Client-only behavior stays behind JavaScript target annotations. Server-only behavior stays behind Erlang target annotations. Target-neutral views and page helpers stay unannotated when they compile for both targets.
 
 Normal pages use one first-render data convention across targets:
 
@@ -40,7 +43,7 @@ Normal pages use one first-render data convention across targets:
 
 For normal data-backed pages, shared `init_requests` is enough. Generated SSR executes it and generated client init sends it when hydration data is absent. Server and client `init` functions are optional customization hooks, and custom hooks for a route with non-empty shared `init_requests` must call shared `init_requests`.
 
-The Generator Framework maps those files to route constructors, URL parsing, and path builders. Dynamic path segments come from bracketed file or directory names.
+The generator maps those files to route constructors, URL parsing, and path builders. Dynamic path segments come from bracketed file or directory names.
 
 ```text
 games/[id].gleam     -> GameDetail(id: Int)
@@ -51,7 +54,7 @@ The generated route module is Mount-specific. Each Mount owns its route root, ro
 
 ## Route Kinds
 
-Some routes are not live SPA pages, even when they live near page modules. The Generator Framework uses file suffixes to classify route behavior.
+Some routes are not live SPA pages, even when they live near page modules. The generator uses file suffixes to classify route behavior.
 
 ```text
 .gleam            normal Mount page
@@ -89,7 +92,7 @@ Examples include:
 - current season or selected resource
 - root-level toast or flash state
 
-The Generator Framework emits the Mount boot contract:
+The generator emits the Mount boot contract:
 
 - server shell encodes the Mount `ClientSharedState`
 - client setup decodes the `ClientSharedState`
@@ -103,7 +106,7 @@ The Generator Framework emits the Mount boot contract:
 
 ## Authorization Support
 
-Authorization policy stays in app-owned handlers and domain modules. The Generator Framework does not try to declare every permission rule beside routes or commands.
+Authorization policy stays in app-owned handlers and domain modules. The generator does not try to declare every permission rule beside routes or commands.
 
 Generated code still supports authorization by making the policy path consistent:
 
@@ -120,13 +123,13 @@ This keeps row-level, function-level, route-level, and role-specific permission 
 
 The shared root `ToClient` graph is the live update contract. A server operation in one Mount may emit a `ToClient` value handled by another Mount when that Mount has an active handler for the constructor.
 
-The Generator Framework does not introduce separate topic payload types. Constructor-named client handler presence is the client-side interest signal.
+The generator does not introduce separate topic payload types. Constructor-named client handler presence is the client-side interest signal.
 
 App-domain events and topic subscriptions are outside this contract.
 
 ## Extraction Boundary
 
-The Generator Framework owns code that is derived from source files or wire-visible types in places Gleam cannot derive itself.
+The generator owns code that is derived from source files or wire-visible types in places Gleam cannot derive itself.
 
 Generation is a good fit for:
 
