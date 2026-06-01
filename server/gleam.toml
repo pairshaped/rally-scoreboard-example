@@ -23,7 +23,7 @@ scoreboard_shared = { path = "../shared" }
 birdie = ">= 2.0.0 and < 3.0.0"
 gleeunit = ">= 1.0.0 and < 2.0.0"
 glinter = ">= 2.19.0 and < 3.0.0"
-marmot = ">= 1.6.0 and < 2.0.0"
+marmot = "1.7.1"
 
 [tools.glinter]
 stats = true
@@ -32,4 +32,4 @@ warnings_as_errors = false
 [tools.marmot]
 database = "db/scoreboard.db"
 sql_dir = "src/server/sql"
-output = "src/generated/sql"
+output = "src/generated/sql/server"
