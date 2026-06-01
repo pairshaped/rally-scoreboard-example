@@ -9,6 +9,19 @@ export function websocket_url() {
   return `${protocol}//${location.host}/ws`;
 }
 
+export function push_path(path) {
+  const history = globalThis.history;
+  const location = globalThis.location;
+  if (!history || !location || location.pathname === path) return;
+  history.pushState(null, "", path);
+}
+
+export function listen_popstate(dispatch) {
+  globalThis.addEventListener?.("popstate", () => {
+    dispatch(path());
+  });
+}
+
 const DEVICE_COOKIE_NAME = "_scoreboard_device";
 
 export function device_dark_mode() {

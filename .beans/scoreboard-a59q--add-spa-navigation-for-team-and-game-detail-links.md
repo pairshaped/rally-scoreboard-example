@@ -1,7 +1,7 @@
 ---
 # scoreboard-a59q
 title: Add SPA navigation for team and game detail links
-status: todo
+status: completed
 type: task
 priority: normal
 tags:
@@ -9,7 +9,7 @@ tags:
     - javascript-target
     - client-shared-state
 created_at: 2026-06-01T22:14:26Z
-updated_at: 2026-06-01T22:14:26Z
+updated_at: 2026-06-01T23:07:33Z
 ---
 
 ## Problem
@@ -49,3 +49,18 @@ This should stay separate from dark-mode/device preference state. Both belong at
 - Destination page load effects still run and receive their ToClient responses.
 - The implementation uses @target(javascript) only at real browser boundaries.
 - If modem is introduced, document why it earns the dependency.
+
+
+## Completed notes
+
+Implemented public SPA navigation for team and game detail links at the mount boundary. Page-level navigation messages now map to generated routes, update browser history, reload the generated page model, and preserve destination load effects. Browser back/forward dispatches the current path back into the Lustre app without a full document reload.
+
+Validation run before completion:
+
+- `gleam format src`
+- `gleam check`
+- `gleam build --target javascript`
+- `gleam build --target erlang`
+- `gleam run -m glinter`
+- `beans check`
+- browser smoke test covering `/games`, game detail navigation, team navigation, and back/forward state sync

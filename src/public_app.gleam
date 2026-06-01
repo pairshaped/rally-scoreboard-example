@@ -13,7 +13,9 @@ import generated/proute/public/pages
 @target(javascript)
 import generated/proute/public/routes
 @target(javascript)
-import gleam/option.{None}
+import gleam/int
+@target(javascript)
+import gleam/option.{type Option, None, Some}
 @target(javascript)
 import lustre
 @target(javascript)
@@ -26,6 +28,14 @@ import page_context.{PageContext}
 import public/client_shared_state.{
   type PublicClientSharedState, PublicClientSharedState,
 }
+@target(javascript)
+import public/pages/games as games_page
+@target(javascript)
+import public/pages/games/id_ as games_id_page
+@target(javascript)
+import public/pages/standings as standings_page
+@target(javascript)
+import public/pages/teams/slug_ as teams_slug_page
 
 @target(javascript)
 type Model {
@@ -37,6 +47,7 @@ type Msg {
   PageMsg(pages.Message)
   ServerFrame(BitArray)
   DarkModeChanged(Bool)
+  BrowserPathChanged(String)
 }
 
 @target(javascript)
@@ -68,6 +79,7 @@ fn init(_flags: Nil) -> #(Model, Effect(Msg)) {
       effect.map(page_effect, PageMsg),
       apply_dark_mode(dark_mode),
       api_client.connect(url: browser.websocket_url(), on_frame: ServerFrame),
+      listen_for_browser_navigation(),
     ]),
   )
 }
@@ -76,8 +88,13 @@ fn init(_flags: Nil) -> #(Model, Effect(Msg)) {
 fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
   case msg {
     PageMsg(inner) -> {
-      let #(page, page_effect) = pages.update(model.page, inner)
-      #(Model(..model, page: page), effect.map(page_effect, PageMsg))
+      case page_navigation(inner) {
+        Some(route) -> navigate(model: model, route: route, push_history: True)
+        None -> {
+          let #(page, page_effect) = pages.update(model.page, inner)
+          #(Model(..model, page: page), effect.map(page_effect, PageMsg))
+        }
+      }
     }
     ServerFrame(bytes) -> {
       let #(page, page_effect) =
@@ -91,6 +108,10 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
         Model(..model, shared_state:),
         effect.batch([persist_dark_mode(dark_mode), apply_dark_mode(dark_mode)]),
       )
+    }
+    BrowserPathChanged(path) -> {
+      let route = routes.parse_path(path)
+      navigate(model: model, route: route, push_history: False)
     }
   }
 }
@@ -113,4 +134,57 @@ fn apply_dark_mode(dark_mode: Bool) -> Effect(Msg) {
 @target(javascript)
 fn persist_dark_mode(dark_mode: Bool) -> Effect(Msg) {
   effect.from(fn(_dispatch) { browser.persist_dark_mode(dark_mode) })
+}
+
+@target(javascript)
+fn page_navigation(message: pages.Message) -> Option(routes.Route) {
+  case message {
+    pages.GamesMsg(games_page.NavigateTeam(slug)) ->
+      Some(routes.TeamsSlug(slug:))
+    pages.GamesMsg(games_page.NavigateGame(id)) ->
+      Some(routes.GamesId(id: int.to_string(id)))
+    pages.GamesIdMsg(games_id_page.NavigateTeam(slug)) ->
+      Some(routes.TeamsSlug(slug:))
+    pages.StandingsMsg(standings_page.NavigateTeam(slug)) ->
+      Some(routes.TeamsSlug(slug:))
+    pages.TeamsSlugMsg(teams_slug_page.NavigateTeam(slug)) ->
+      Some(routes.TeamsSlug(slug:))
+    pages.TeamsSlugMsg(teams_slug_page.NavigateGame(id)) ->
+      Some(routes.GamesId(id: int.to_string(id)))
+    _ -> None
+  }
+}
+
+@target(javascript)
+fn navigate(
+  model model: Model,
+  route route: routes.Route,
+  push_history push_history: Bool,
+) -> #(Model, Effect(Msg)) {
+  let path = routes.route_to_path(route)
+  let #(page, page_effect) =
+    pages.load(PageContext, page_input.empty_query_params(), route)
+  let shared_state =
+    PublicClientSharedState(..model.shared_state, active_section: path)
+  let history_effect = case push_history {
+    True -> push_path(path)
+    False -> effect.none()
+  }
+
+  #(
+    Model(page: page, shared_state:),
+    effect.batch([history_effect, effect.map(page_effect, PageMsg)]),
+  )
+}
+
+@target(javascript)
+fn push_path(path: String) -> Effect(Msg) {
+  effect.from(fn(_dispatch) { browser.push_path(path) })
+}
+
+@target(javascript)
+fn listen_for_browser_navigation() -> Effect(Msg) {
+  effect.from(fn(dispatch) {
+    browser.listen_popstate(fn(path) { dispatch(BrowserPathChanged(path)) })
+  })
 }
