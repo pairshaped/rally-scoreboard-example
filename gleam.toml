@@ -31,14 +31,3 @@ output = "src/generated/sql"
 api_dir = "src/api"
 js_output_dir = "src/generated/api"
 erlang_output_dir = "src/generated/api"
-
-[tools.proute]
-pages_root = "src"
-page_context_type = "page_context.PageContext"
-
-[[tools.proute.mounts]]
-name = "public"
-route_root = "/"
-
-[[tools.proute.mounts]]
-name = "admin"

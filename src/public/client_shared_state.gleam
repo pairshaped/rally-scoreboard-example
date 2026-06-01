@@ -14,6 +14,7 @@ pub type PublicClientSharedState {
   PublicClientSharedState(
     league_name: String,
     active_section: String,
+    dark_mode: Bool,
     authentication_context: Option(AuthenticationContext),
     can_access_admin: Bool,
   )

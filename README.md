@@ -39,6 +39,7 @@ From the repository root:
 
 ```sh
 gleam run -m marmot migrate
+gleam run -m marmot seed
 gleam run -m marmot
 gleam run -m proute
 gleam check
