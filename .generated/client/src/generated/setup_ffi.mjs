@@ -11,7 +11,7 @@
 // SSR-only and should not open an authenticated WebSocket.
 import { registerTransport } from "./runtime/client_effect_ffi.mjs";
 import * as transport from "./transport_ffi.mjs";
-import { decode_safe } from "../../libero/libero/rpc_ffi.mjs";
+import { decode_safe } from "./protocol_wire.mjs";
 import { Ok } from "../../gleam_stdlib/gleam.mjs";
 import { Some, None } from "../../gleam_stdlib/gleam/option.mjs";
 
@@ -60,6 +60,7 @@ export function readSsrToClient() {
     const binary = atob(raw);
     const bytes = new Uint8Array(binary.length);
     for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    // TODO: Rust generator emits the SSR ToClient boot payload decoder here.
     const result = decode_safe(bytes);
     if (result instanceof Ok) {
       return new Some(result[0]);
@@ -79,6 +80,7 @@ export function readClientSharedState() {
     const binary = atob(raw);
     const bytes = new Uint8Array(binary.length);
     for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    // TODO: Rust generator emits the ClientSharedState boot payload decoder here.
     const result = decode_safe(bytes);
     if (result instanceof Ok) {
       return new Some(result[0]);

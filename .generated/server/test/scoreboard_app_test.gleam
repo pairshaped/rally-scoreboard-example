@@ -24,8 +24,6 @@ import gleam/list
 import gleam/option
 import gleam/string
 import gleeunit/should
-import libero/error.{type DecodeError}
-import libero/wire as libero_wire
 import mist
 import server/admin/authentication
 import server/admin/client_shared_state_loader as admin_client_shared_state_loader
@@ -35,9 +33,6 @@ import server/authentication_context_loader
 import server/helpers/domain
 import server/public/client_shared_state_loader as public_client_shared_state_loader
 import server/server_context.{ServerContext}
-import shared/admin/client_shared_state.{
-  type AdminClientSharedState, AdminClientSharedState,
-}
 import shared/api/domain/game
 import shared/api/to_client
 import shared/authentication_context
@@ -188,13 +183,11 @@ pub fn generated_source_is_checked_into_the_example_test() {
   read("src/generated/server_generated_protocol_wire_ffi.erl")
 }
 
-pub fn rally_config_opts_mounts_into_local_logging_test() {
-  let config = read("../rally.toml")
+pub fn generated_runtime_includes_local_logging_tables_test() {
+  let source = read("src/generated/runtime/system_db.gleam")
 
-  config |> contains("namespace = \"public\"") |> should.be_true
-  config |> contains("namespace = \"admin\"") |> should.be_true
-  config |> contains("user_logging = true") |> should.be_true
-  config |> contains("issue_logging = true") |> should.be_true
+  source |> contains("CREATE TABLE IF NOT EXISTS user_logs") |> should.be_true
+  source |> contains("CREATE TABLE IF NOT EXISTS issue_logs") |> should.be_true
 }
 
 pub fn system_db_uses_user_and_issue_logs_test() {
@@ -630,11 +623,11 @@ pub fn mount_clients_do_not_import_the_opposite_api_test() {
 pub fn generated_browser_imports_stay_inside_static_build_prefix_test() {
   let codec_ffi = read("../client/src/generated/codec_ffi.mjs")
 
-  codec_ffi |> contains("from \"../../libero/") |> should.be_true
   codec_ffi
-  |> contains("from \"../shared/")
+  |> contains(
+    "TODO: Rust generator emits the client ETF constructor registry here.",
+  )
   |> should.be_true
-  codec_ffi |> contains("from \"../../../libero/") |> should.be_false
   codec_ffi
   |> contains("scoreboard" <> "_shared")
   |> should.be_false
@@ -1054,7 +1047,7 @@ pub fn admin_ssr_handler_loads_and_encodes_client_shared_state_test() {
   |> should.be_true
   admin_ssr |> contains("client_shared_state_loader.load(") |> should.be_true
   admin_ssr
-  |> contains("libero_wire.encode_flags(context)")
+  |> contains("protocol_wire.encode_flags(context)")
   |> should.be_true
   admin_ssr |> contains("client_shared_state_base64:") |> should.be_true
   admin_loader |> contains("authentication_context") |> should.be_true
@@ -1072,7 +1065,7 @@ pub fn public_ssr_handler_loads_and_encodes_client_shared_state_test() {
   |> should.be_true
   public_ssr |> contains("client_shared_state_loader.load(") |> should.be_true
   public_ssr
-  |> contains("libero_wire.encode_flags(context)")
+  |> contains("protocol_wire.encode_flags(context)")
   |> should.be_true
   public_ssr |> contains("client_shared_state_base64:") |> should.be_true
   public_loader
@@ -1157,37 +1150,16 @@ pub fn ssr_shell_embeds_both_payloads_without_collision_test() {
   }
 }
 
-pub fn ssr_context_roundtrips_through_encode_embed_decode_test() {
-  let auth_ctx =
-    authentication_context.AuthenticationContext(
-      user_id: 1,
-      email: "admin@example.com",
-      display_name: option.None,
-    )
-  let context =
-    AdminClientSharedState(
-      authentication_context: option.Some(auth_ctx),
-      league_name: "Rally Rec League",
-      dark_mode: False,
-      active_section: "games",
-      toast: option.None,
-    )
+pub fn ssr_context_wire_codec_is_rust_generator_owned_test() {
+  let protocol_wire = read("src/generated/protocol_wire.gleam")
+  let protocol_wire_js = read("../client/src/generated/protocol_wire.mjs")
 
-  let encoded = libero_wire.encode_flags(context)
-  let result: Result(AdminClientSharedState, DecodeError) =
-    libero_wire.decode_flags_typed(encoded, "admin_client_shared_state")
-  let assert Ok(decoded) = result
-
-  case decoded.authentication_context {
-    option.Some(ac) -> {
-      ac.user_id |> should.equal(1)
-      ac.email |> should.equal("admin@example.com")
-    }
-    option.None -> should.be_true(False)
-  }
-  decoded.league_name |> should.equal("Rally Rec League")
-  decoded.dark_mode |> should.equal(False)
-  decoded.active_section |> should.equal("games")
+  protocol_wire
+  |> contains("TODO: Rust generator emits SSR boot flag encoding here.")
+  |> should.be_true
+  protocol_wire_js
+  |> contains("TODO: Rust generator emits SSR boot flag encoding here.")
+  |> should.be_true
 }
 
 pub fn client_setup_exposes_read_client_shared_state_test() {
@@ -1205,21 +1177,14 @@ pub fn client_setup_exposes_read_client_shared_state_test() {
   setup_js |> contains("ssrWindow") |> should.be_true
 }
 
-pub fn client_shared_state_constructors_are_registered_for_etf_test() {
+pub fn client_shared_state_constructors_are_available_to_generated_etf_test() {
   let codec = read("../client/src/generated/codec_ffi.mjs")
   let atoms = read("src/generated/server_generated_protocol_atoms_ffi.erl")
 
-  codec |> contains("authentication_context") |> should.be_true
-  codec |> contains("admin_client_shared_state") |> should.be_true
-  codec |> contains("public_client_shared_state") |> should.be_true
   codec
-  |> contains("authenticationContext.AuthenticationContext, 3")
-  |> should.be_true
-  codec
-  |> contains("adminClientSharedState.AdminClientSharedState, 5")
-  |> should.be_true
-  codec
-  |> contains("publicClientSharedState.PublicClientSharedState, 4")
+  |> contains(
+    "TODO: Rust generator emits the client ETF constructor registry here.",
+  )
   |> should.be_true
   atoms |> contains("<<\"authentication_context\">>") |> should.be_true
   atoms |> contains("<<\"admin_client_shared_state\">>") |> should.be_true

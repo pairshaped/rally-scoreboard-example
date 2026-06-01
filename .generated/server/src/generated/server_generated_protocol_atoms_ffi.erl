@@ -74,6 +74,6 @@ do_ensure() ->
         <<"admin_client_shared_state">>,
         <<"public_client_shared_state">>
     ]),
-    persistent_term:put({libero, wire_module}, 'server_generated_protocol_wire_ffi'),
+    %% TODO: Rust generator owns ETF wire registration.
     persistent_term:put({?MODULE, done}, true),
     nil.

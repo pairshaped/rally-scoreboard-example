@@ -26,7 +26,6 @@ function formatRaw(value, depth = 0) {
   if (typeof value === "string") return JSON.stringify(value);
   if (typeof value === "number" || typeof value === "bigint") return String(value);
   if (value instanceof BitArray) return `<<${value.rawBuffer.length} bytes>>`;
-  if (value && value.__liberoRawBinary) return `<<${value.rawBuffer.length} bytes>>`;
   if (Array.isArray(value)) {
     if (value.length === 0) return "[]";
     if (typeof value[0] === "string" && /^[a-z_]/.test(value[0])) {
@@ -120,11 +119,11 @@ if (typeof window !== "undefined") {
 // connection. Sends issued before the socket's open event are queued
 // and flushed once it opens.
 //
-// Server-to-client frames are decoded through Libero's boundary API.
+// Server-to-client frames are decoded through the generated boundary API.
 // decode_server_frame returns `{ kind: "push", module, value }` for
 // server ToClient emissions and `{ kind: "response", requestId, value }`
-// for page-init acknowledgements. The runtime never inspects tag bytes or slices
-// frame headers: Libero owns that boundary.
+// for page-init acknowledgements. The runtime never inspects tag bytes or
+// frame headers: generated protocol code owns that boundary.
 //
 // Reconnection is automatic. On unexpected close (network blip, server
 // restart, page resume from sleep), the socket reconnects with exponential
@@ -424,4 +423,3 @@ export function send_page_init(url, module, params, query) {
 export function registerPushHandler(module, callback) {
   pushHandlers.set(module, callback);
 }
-

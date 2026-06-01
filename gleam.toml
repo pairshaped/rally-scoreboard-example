@@ -4,13 +4,13 @@ version = "0.1.0"
 [dependencies]
 gleam_stdlib = ">= 0.60.0 and < 2.0.0"
 lustre = ">= 5.7.0 and < 7.0.0"
-proute = { path = "../proute" }
 sqlight = ">= 1.0.0 and < 2.0.0"
 
 [dev-dependencies]
 gleeunit = ">= 1.0.0 and < 2.0.0"
 glinter = ">= 2.19.0 and < 3.0.0"
 marmot = "1.7.1"
+proute = { path = "../proute" }
 
 [tools.glinter]
 stats = true
@@ -22,3 +22,14 @@ scan_paths = ["src"]
 database = "db/scoreboard.db"
 sql_dir = "src/sql"
 output = "src/generated/sql"
+
+[tools.proute]
+pages_root = "src"
+page_context_type = "page_context.PageContext"
+
+[[tools.proute.mounts]]
+name = "public"
+route_root = "/"
+
+[[tools.proute.mounts]]
+name = "admin"

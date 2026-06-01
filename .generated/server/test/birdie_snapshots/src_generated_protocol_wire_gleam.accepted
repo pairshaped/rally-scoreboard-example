@@ -11,23 +11,31 @@ title: src__generated__protocol_wire_gleam
 //// "to_client" envelope module.
 
 import gleam/dynamic.{type Dynamic}
-import libero/error.{type DecodeError, DecodeError}
-import libero/wire as libero_wire
 import shared/api/to_client.{type ToClient}
 import shared/api/to_server.{type ToServer}
 
+pub type DecodeError {
+  DecodeError(String)
+}
+
 pub fn decode_request(
-  data: BitArray,
+  _data: BitArray,
 ) -> Result(#(String, Int, Dynamic), DecodeError) {
-  libero_wire.decode_request(data)
+  // TODO: Rust generator emits ETF request decoding here.
+  Error(DecodeError("rust ETF request decoder not generated yet"))
 }
 
-pub fn encode_response(request_id request_id: Int, value value: a) -> BitArray {
-  libero_wire.encode_response(request_id:, value:)
+pub fn encode_response(
+  request_id _request_id: Int,
+  value _value: a,
+) -> BitArray {
+  // TODO: Rust generator emits ETF response encoding here.
+  <<>>
 }
 
-pub fn coerce(value: a) -> b {
-  libero_wire.coerce(value)
+pub fn coerce(_value: a) -> b {
+  // TODO: Rust generator emits typed ETF coercion here.
+  panic as "rust ETF coercion not generated yet"
 }
 
 /// Decode a root API ToServer frame from the client.
@@ -42,7 +50,13 @@ pub fn decode_to_server(data: BitArray) -> Result(ToServer, DecodeError) {
 
 /// Encode a typed server emission for all active ToClient handlers.
 /// The client runtime fans this out through to_client dispatch.
-pub fn encode_to_client(msg: ToClient) -> BitArray {
-  libero_wire.encode_push("to_client", msg)
+pub fn encode_to_client(_msg: ToClient) -> BitArray {
+  // TODO: Rust generator emits ToClient push encoding here.
+  <<>>
+}
+
+pub fn encode_flags(_value: a) -> String {
+  // TODO: Rust generator emits SSR boot flag encoding here.
+  ""
 }
 

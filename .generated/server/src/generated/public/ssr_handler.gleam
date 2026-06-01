@@ -9,6 +9,7 @@
 //// matching snake_case server handlers. The resulting ToClient values are
 //// embedded as base64 ETF for browser hydration.
 
+import generated/protocol_wire
 import generated/public/request_context.{type RequestContext, RequestContext}
 import generated/routes/public.{type Route} as route
 import generated/runtime/ssr
@@ -17,7 +18,6 @@ import gleam/http/response
 import gleam/int
 import gleam/io
 import gleam/option.{type Option}
-import libero/wire as libero_wire
 import lustre/element
 import mist.{type ResponseData}
 import server/public/client_shared_state_loader
@@ -54,7 +54,7 @@ pub fn handle_request(
       route:,
       authentication_context:,
     )
-  let client_shared_state_base64 = libero_wire.encode_flags(context)
+  let client_shared_state_base64 = protocol_wire.encode_flags(context)
   let request_context =
     RequestContext(
       route:,
@@ -96,7 +96,7 @@ fn load_route_data(
         to_client.GamesLoaded(games:) -> #(
           public_games_page.view(games, nil_on_navigate, nil_on_game)
             |> element.to_string,
-          libero_wire.encode_flags(result),
+          protocol_wire.encode_flags(result),
         )
         to_client.GamesLoadFailed(reason:) -> {
           let _ = io.println_error("SSR public/games load failed: " <> reason)
@@ -127,7 +127,7 @@ fn load_route_data(
         to_client.GameLoaded(game:) -> #(
           public_game_detail_page.view(option.Some(game), nil_on_navigate)
             |> element.to_string,
-          libero_wire.encode_flags(result),
+          protocol_wire.encode_flags(result),
         )
         to_client.GamesLoadFailed(reason:) -> {
           let _ =
@@ -154,7 +154,7 @@ fn load_route_data(
         to_client.StandingsLoaded(rows:) -> #(
           public_standings_page.view(rows, nil_on_navigate)
             |> element.to_string,
-          libero_wire.encode_flags(result),
+          protocol_wire.encode_flags(result),
         )
         to_client.GamesLoadFailed(reason:) -> {
           let _ =
@@ -186,7 +186,7 @@ fn load_route_data(
             nil_on_game,
           )
             |> element.to_string,
-          libero_wire.encode_flags(result),
+          protocol_wire.encode_flags(result),
         )
         to_client.GamesLoadFailed(reason:) -> {
           let _ = io.println_error("SSR public/team load failed: " <> reason)

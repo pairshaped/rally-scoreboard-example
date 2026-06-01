@@ -247,7 +247,7 @@ Current target-neutral views and boot requests:
 - `src/{public,admin}/views/**/*.gleam`
 - `src/components/**/*.gleam`
 
-These modules are the best evidence that a single-source projection is plausible. They already contain Lustre views with events, and they compile in the shared package by keeping messages generic.
+These modules are the best evidence that a single-source projection is plausible. They already contain Lustre views with events, and they compile in both generated targets by keeping messages generic.
 
 Current duplication that the projection could remove:
 
@@ -274,7 +274,7 @@ The unified spike uses the current split app as the generated target shape:
 .generated/server
 ```
 
-This keeps the known-good client/server app shape intact while `src/` becomes the experimental authored source. Target-neutral modules are projected into both generated packages so target-specific issues are visible during generation.
+This keeps the known-good client/server app shape intact while `src/` becomes the experimental authored source. Target-neutral modules are projected into both generated packages so target-specific issues are visible during generation. The `shared` namespace under `.generated/{client,server}/src/shared` is an output compatibility namespace, not a source directory and not a separate package.
 
 The chase target must function after generation. It is not enough for the
 projector to emit files with the right names. A generated run should preserve
@@ -285,9 +285,9 @@ the sibling app behavior:
 - SPA navigation sends compact `ToServer` ETF requests and applies `ToClient`
   responses locally
 - admin score mutations write to SQLite and fan out `ToClient` updates
-- shared, client, and server test suites pass inside `.generated/`
+- client and server test suites pass inside `.generated/`
 
-Root source generators run before the client/server/shared projection:
+Root source generators run before the client/server projection:
 
 ```text
 src/generated/sql/...
@@ -477,7 +477,7 @@ The output is JSON for the public package API. It includes:
 - return types
 - implementation target facts for public functions and constants
 
-In this app, running it in `shared/` exposes `api/to_server`, `api/to_client`, and the domain types in a directly useful shape for codec generation.
+In this app, root `src/api` exposes `to_server`, `to_client`, and the domain types in a directly useful shape for codec generation.
 
 This should probably be the first input for protocol and public API work. It is much safer than poking compiler internals when Rally only needs public type shapes.
 
@@ -591,7 +591,7 @@ Do this against a small page first, then the admin games page. Admin games is th
 
 ## Open Questions
 
-- Can package-interface JSON fully replace Libero's current type walking for public wire contracts?
+- Can package-interface JSON fully replace the current type walking for public wire contracts?
 - Is LSP useful as an optional editor integration later, separate from generation?
 - Is direct `gleam-core` usage simpler than a Rally-owned parser for the first internal version?
 - How much maintenance should Rally expect when the pinned Gleam version changes?

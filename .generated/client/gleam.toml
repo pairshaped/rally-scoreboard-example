@@ -6,11 +6,9 @@ target = "javascript"
 gleam_stdlib = ">= 0.60.0 and < 2.0.0"
 lustre = ">= 5.7.0 and < 7.0.0"
 modem = ">= 2.0.0 and < 3.0.0"
-libero = ">= 6.0.0 and < 7.0.0"
 
 [dev-dependencies]
 gleeunit = ">= 1.0.0 and < 2.0.0"
-glinter = ">= 2.19.0 and < 3.0.0"
 
 [tools.glinter]
 stats = true

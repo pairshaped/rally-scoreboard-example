@@ -10,13 +10,13 @@
 //// embedded as base64 ETF for browser hydration.
 
 import generated/admin/request_context.{type RequestContext, RequestContext}
+import generated/protocol_wire
 import generated/routes/admin.{type Route} as route
 import generated/runtime/ssr
 import gleam/dict
 import gleam/http/response
 import gleam/io
 import gleam/option.{type Option}
-import libero/wire as libero_wire
 import lustre/element
 import mist.{type ResponseData}
 import server/admin/client_shared_state_loader
@@ -47,7 +47,7 @@ pub fn handle_request(
       authentication_context:,
       dark_mode: False,
     )
-  let client_shared_state_base64 = libero_wire.encode_flags(context)
+  let client_shared_state_base64 = protocol_wire.encode_flags(context)
   let request_context =
     RequestContext(
       route:,
@@ -93,7 +93,7 @@ fn load_route_data(
               nil_on_final,
             )
               |> element.to_string,
-            libero_wire.encode_flags(result),
+            protocol_wire.encode_flags(result),
           )
         }
         to_client.AdminError(reason:) -> {
