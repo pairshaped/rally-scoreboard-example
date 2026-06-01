@@ -2,22 +2,10 @@ build/
 tmp/
 manifest.toml
 
-# Per-package build + manifest output
-client/build/
-client/manifest.toml
-server/build/
-server/manifest.toml
-shared/build/
-shared/manifest.toml
-.generated/
-
 # Runtime database files. Keep migrations and seeds checked in.
 db/*.db
 db/*.db-shm
 db/*.db-wal
-server/db/*.db
-server/db/*.db-shm
-server/db/*.db-wal
 
 erl_crash.dump
 *.bak
