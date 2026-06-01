@@ -9,8 +9,7 @@ server/build/
 server/manifest.toml
 shared/build/
 shared/manifest.toml
-.generated/*/build/
-.generated/*/manifest.toml
+.generated/
 
 # Runtime database files. Keep migrations and seeds checked in.
 db/*.db
@@ -19,11 +18,7 @@ db/*.db-wal
 server/db/*.db
 server/db/*.db-shm
 server/db/*.db-wal
-.generated/server/db/*.db
-.generated/server/db/*.db-shm
-.generated/server/db/*.db-wal
 
 erl_crash.dump
-.generated/server/erl_crash.dump
 *.bak
 .DS_Store
