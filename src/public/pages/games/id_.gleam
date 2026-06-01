@@ -1,6 +1,12 @@
-import api/domain/game.{type GameDetail}
+import api/domain/game.{type GameDetail, type GameSnapshot, GameDetail}
+@target(javascript)
+import api/to_server
+@target(javascript)
+import client/api as api_client
 import generated/proute/public/page_input
-import gleam/option.{type Option, None}
+@target(javascript)
+import gleam/int
+import gleam/option.{type Option, None, Some}
 import lustre/effect.{type Effect}
 import lustre/element.{type Element}
 import page_context.{type PageContext}
@@ -19,7 +25,10 @@ pub fn init(
   route_params route_params: page_input.GamesIdRouteParams,
   query_params query_params: page_input.QueryParams,
 ) -> #(Model, Effect(Message)) {
-  #(initial_model(page_context, route_params, query_params), effect.none())
+  #(
+    initial_model(page_context, route_params, query_params),
+    init_effect(route_params.id),
+  )
 }
 
 pub fn initial_model(
@@ -37,6 +46,52 @@ pub fn update(
   #(model, effect.none())
 }
 
+pub fn game_loaded(
+  model _model: Model,
+  game game: GameDetail,
+) -> #(Model, Effect(Message)) {
+  #(Model(game: Some(game)), effect.none())
+}
+
+pub fn game_updated(
+  model model: Model,
+  game game: GameSnapshot,
+) -> #(Model, Effect(Message)) {
+  case model.game {
+    Some(detail) if detail.id == game.id -> #(
+      Model(game: Some(update_detail(detail, game))),
+      effect.none(),
+    )
+    _ -> #(model, effect.none())
+  }
+}
+
 pub fn view(model model: Model) -> Element(Message) {
   shared_game_detail_page.view(model.game, fn(slug) { NavigateTeam(slug:) })
+}
+
+fn update_detail(detail: GameDetail, game: GameSnapshot) -> GameDetail {
+  GameDetail(
+    ..detail,
+    home_score: game.home_score,
+    away_score: game.away_score,
+    status: game.status,
+  )
+}
+
+@target(javascript)
+fn init_effect(id: String) -> Effect(Message) {
+  case int.parse(id) {
+    Ok(game_id) ->
+      api_client.send(
+        module: "public/games",
+        message: to_server.LoadGame(game_id:),
+      )
+    Error(Nil) -> effect.none()
+  }
+}
+
+@target(erlang)
+fn init_effect(_id: String) -> Effect(Message) {
+  effect.none()
 }
