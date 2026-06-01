@@ -45,7 +45,9 @@ The API roots are:
 - `api/to_client.ToClient`: server-to-browser results, boot data, and live events
 - `api/domain/**`: domain models that cross the wire
 
-Types outside `src/api/**` are not wire-visible. This includes page models, page messages, route types, SQL row types, handler-local types, view input types, and generated runtime helper types.
+Types outside `src/api/**` are not wire-visible. This includes page models, page
+messages, route types, SQL row types, handler-local types, view input types, and
+runtime helper types.
 
 Codec generation walks the `src/api/**` graph and enforces one global plain ETF constructor namespace.
 
@@ -61,15 +63,20 @@ Target-specific imports should be annotated too. An inactive declaration with an
 
 ## Generated Modules
 
-Generated support modules cover the pieces Gleam does not derive:
+Generated support modules cover the pieces the app should not hand-write:
 
 - ETF codecs for `ToServer`, `ToClient`, and `api/domain/**`
-- browser API transport glue around sending `ToServer`
-- server API transport glue around decoding `ToServer`, dispatching handlers, and emitting `ToClient`
+- JavaScript frame helpers for encoding `ToServer` requests and decoding
+  `ToClient` response or push frames
+- Erlang frame helpers for decoding `ToServer` requests and encoding
+  `ToClient` response or push frames
 - route and page glue from file routes
 - SQL modules from SQL files
 
 The generated API modules are part of the same root package. Their target annotations decide which declarations are visible to each target build.
+
+Mist setup, browser WebSocket setup, reconnect behavior, app dispatch, page
+reducers, and live fanout are app-owned modules outside `src/generated`.
 
 ## Page Contract
 

@@ -2,7 +2,8 @@
 
 These ADRs describe the generated-source contract that Scoreboard validates.
 
-Scoreboard exercises the generated root API, generated runtime, Mount layout, wire protocol, authentication, live updates, logging, and database boundaries.
+Scoreboard exercises the generated root API, app-owned runtime, Mount layout,
+wire protocol, authentication, live updates, logging, and database boundaries.
 
 This repo checks in generated source under `src/generated` while the unified source shape is being proven. Marmot and Proute already write generated modules there.
 

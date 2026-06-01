@@ -41,7 +41,10 @@ Normal pages use one first-render data convention across targets:
 - server page modules may define `init(...) -> List(ToServer)` for custom SSR request selection
 - server `ToServer` handlers still use constructor-derived snake_case names such as `load_games`
 
-For normal data-backed pages, shared `init_requests` is enough. Generated SSR executes it and generated client init sends it when hydration data is absent. Server and client `init` functions are optional customization hooks, and custom hooks for a route with non-empty shared `init_requests` must call shared `init_requests`.
+For normal data-backed pages, shared `init_requests` is enough. SSR can execute
+it, and client init sends it when hydration data is absent. Server and client
+`init` functions are optional customization hooks, and custom hooks for a route
+with non-empty shared `init_requests` must call shared `init_requests`.
 
 The generator maps those files to route constructors, URL parsing, and path builders. Dynamic path segments come from bracketed file or directory names.
 
@@ -92,7 +95,8 @@ Examples include:
 - current season or selected resource
 - root-level toast or flash state
 
-The generator emits the Mount boot contract:
+The Mount boot contract is app-owned until the route generator grows explicit
+runtime support for it:
 
 - server shell encodes the Mount `ClientSharedState`
 - client setup decodes the `ClientSharedState`
@@ -108,14 +112,13 @@ The generator emits the Mount boot contract:
 
 Authorization policy stays in app-owned handlers and domain modules. The generator does not try to declare every permission rule beside routes or commands.
 
-Generated code still supports authorization by making the policy path consistent:
+Generated route code still supports authorization by making the policy path
+consistent:
 
 - request context reaches every server handler
-- Mount backend dispatch can reject commands before handler delegation
-- generated dispatch rejects commands that belong to another Mount
-- rejection returns the backend model unchanged
+- app dispatch can reject commands before handler delegation
 - rejection can emit a Mount-appropriate `ToClient` value when the app defines one
-- rejection can log an issue through generated runtime logging
+- rejection can log an issue through app runtime logging
 
 This keeps row-level, function-level, route-level, and role-specific permission checks in app code while keeping the transport behavior predictable.
 
@@ -123,7 +126,8 @@ This keeps row-level, function-level, route-level, and role-specific permission 
 
 The shared root `ToClient` graph is the live update contract. A server operation in one Mount may emit a `ToClient` value handled by another Mount when that Mount has an active handler for the constructor.
 
-The generator does not introduce separate topic payload types. Constructor-named client handler presence is the client-side interest signal.
+The generator does not introduce separate topic payload types. The app runtime
+decides which pushed `ToClient` values go to which connected clients.
 
 App-domain events and topic subscriptions are outside this contract.
 
@@ -136,10 +140,8 @@ Generation is a good fit for:
 - routes derived from page file paths
 - route kind dispatch derived from file suffixes
 - shared API codec graphs
-- transport encoders and decoders
-- client and server dispatch tables
-- Mount boot contracts
-- request context plumbing
+- ETF encoders and decoders
+- route metadata
 
 Libraries are a better first fit for reusable behavior such as validation, form widgets, job queues, upload state machines, payment providers, CSV writers, and storage adapters.
 

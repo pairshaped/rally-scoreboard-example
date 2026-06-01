@@ -1,9 +1,39 @@
-# Keep Generated Dispatch Inside Backend Update
+# Keep Dispatch Effect Agnostic
 
-The generator's root dispatch routes a Mount `ToServer` command to the one handler for that constructor. It receives the current `backend.Model`, `RequestContext`, and `ServerContext`, then returns `#(backend.Model, Effect(ToClient))`.
+Scoreboard's server API dispatch maps decoded `ToServer` values to app-owned
+handlers and returns `ToClient` values.
 
-The runtime decodes the wire frame, builds `backend.Msg.FromClient(ToServer, RequestContext)`, and calls `backend.update`. The backend update may handle that message itself or delegate to generated dispatch. Dispatch owns generated routing logic once the backend delegates.
+The dispatch layer should not own sockets, process groups, request framing,
+response framing, or browser delivery. It should be usable from a WebSocket
+handler, an SSR boot path, a test, or a future HTTP endpoint.
 
-Generated dispatch does not decode wire frames, encode responses, or choose transport framing. The WebSocket runtime owns decoding, effect execution, and fanout behavior. `ToServer` command frames are fire-and-forget at the transport layer; app-visible outcomes are emitted as `ToClient` pushes.
+## Decision
 
-Internal compatibility modules may use their own dispatch result shapes. Those shapes are not the root API contract.
+`server/api.gleam` owns app dispatch:
+
+```gleam
+pub fn dispatch(
+  db db: sqlight.Connection,
+  message message: to_server.ToServer,
+) -> List(to_client.ToClient)
+```
+
+Each `ToServer` constructor maps to one app handler. Handlers may read or write
+SQLite, then return zero or more `ToClient` values.
+
+The WebSocket runtime owns frame decode, response frame encode, socket writes,
+and live fanout. Libero's generated modules own only ETF codec and frame helper
+code.
+
+`dispatch_request` is a convenience boundary for tests and simple frame-driven
+callers. It decodes one generated request frame and returns response frames. It
+does not own long-lived socket behavior.
+
+## Consequences
+
+Handlers stay small and easy to test.
+
+Transport code can change without rewriting app behavior.
+
+The app can reuse the same `ToServer -> List(ToClient)` flow for page boot,
+socket requests, and operation responses.

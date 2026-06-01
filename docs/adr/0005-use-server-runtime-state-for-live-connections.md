@@ -1,30 +1,42 @@
-# Use Server Runtime State For Live Connections
+# Use App-Owned Runtime State For Live Connections
 
-The generator uses its own server runtime state to manage live client connections. The runtime tracks small live facts such as connection identity, session/context, current page/route, active client `ToClient` handler interests, and outgoing `ToClient` delivery.
+Scoreboard owns its WebSocket runtime in app source. Libero generates ETF codec
+and frame helper modules, but it does not own connection state, topic routing,
+or server handler dispatch.
 
-This state is generated runtime state. App-owned live server state belongs in the Mount backend model. Page models stay on the client. Durable app data stays in SQLite or another database/cache. Large event snapshots are not stored per connection.
+## Decision
 
-The live update flow is:
+The Erlang runtime uses Mist for the HTTP and WebSocket server.
 
-1. A client connects or navigates.
-2. The generator knows the connection's current page and route.
-3. The generator knows the active client `ToClient` handlers for that client root.
-4. Server code emits one or more `ToClient` values.
-5. The generator delivers each `ToClient` value to the intended client roots.
-6. Generated client `to_client` dispatch routes the value to every active handler for its constructor.
+Each WebSocket connection keeps a small `server/ws.State` with the shared
+database connection. Incoming binary frames are decoded by
+`generated/api/server`, dispatched through `server/api`, and encoded back as
+generated response frames.
 
-Constructor-named client `ToClient` handlers are the client-side interest signal. A page, layout, or shared-state module with a `game_updated` handler is interested in `GameUpdated` whenever that module is active. The generator does not require a separate live-update topic declaration for that interest.
+Live fanout uses an Erlang `pg` group through `server/topics.gleam` and
+`server_topics_ffi.erl`. Connected sockets join the app group. When a server
+operation produces a public live event such as `GameUpdated`, the WebSocket
+handler broadcasts a generated push frame to the group.
 
-Every server-originated value shares the same client update path after transport decode:
+The sender receives normal response frames for the request it sent. Other
+connected clients receive push frames. Both carry `ToClient` payloads.
 
-```text
-ToClient -> generated to_client dispatch -> active client ToClient handlers -> page models
-```
+The browser runtime is app-owned in `client/api.gleam` and
+`client/api_ffi.mjs`. It opens a WebSocket, queues outbound generated request
+frames until the socket is open, reconnects after close, and delivers inbound
+frames to the app shell.
 
-Client `ToClient` handlers are page mini-updates. They receive the page model plus constructor fields and return the updated page model plus any client effect. Local page `Msg` values are for browser-originated events and do not mirror server-emitted `ToClient` constructors.
+There is no generated per-page socket handler, page-local server component, or
+generated JavaScript embedding lane. Browser-only code lives in app-owned
+JavaScript FFI or JavaScript-targeted Gleam modules.
 
-App-wide string notices use the generator's built-in layout/client-shell lane. Rich app-wide payloads use `ToClient` values.
+## Consequences
 
-This fits BEAM well: many mostly idle connection processes with small state, supervised brokers, and message-passing fanout. It also supports embedded widgets such as the Curling I/O results widget: initial snapshots can still use CDN-cached reads, while live score changes can be pushed as compact deltas.
+The runtime is explicit and easy to inspect in this app.
 
-The generator runtime state supports presence, current route tracking, active handler counts, fanout stats, slow-consumer stats, and admin introspection. App-owned per-connection server app state belongs in `backend.Model`. Durable app data stays in the database or cache.
+Libero remains a codec and frame generator instead of becoming the web
+framework.
+
+Live delivery is coarse today: connected clients join the app group and page
+reducers ignore irrelevant `ToClient` values. Finer interest tracking can be a
+future app or framework decision.

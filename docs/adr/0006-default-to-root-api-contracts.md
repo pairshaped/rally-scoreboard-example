@@ -27,7 +27,9 @@ src/api/domain/user.gleam
 src/api/domain/**/*.gleam
 ```
 
-Any type outside `src/api/**` is not a wire type. That includes page models, page messages, route types, SQL row types, handler-local types, view helper types, generated route types, generated runtime helper types, and database result types.
+Any type outside `src/api/**` is not a wire type. That includes page models,
+page messages, route types, SQL row types, handler-local types, view helper
+types, generated route types, runtime helper types, and database result types.
 
 ## Root Message Types
 
@@ -128,7 +130,10 @@ Local page messages do not cross the wire. They are reserved for browser-origina
 
 Server results and pushed events cross the wire as `ToClient` values. Client `ToClient` handlers apply those values directly to page models. They do not mirror `ToClient` constructors into local page messages.
 
-Browser-originated commands cross the wire as `ToServer` values. Generated browser API transport sends them through the transport. Generated server API transport decodes and dispatches them to server handlers.
+Browser-originated commands cross the wire as `ToServer` values. Libero's
+generated API modules encode and decode the ETF frames. App-owned browser and
+server transport modules move those frames over WebSocket and dispatch decoded
+commands.
 
 ## Page Boot Requests
 
@@ -149,15 +154,19 @@ pub fn init_requests() -> List(to_server.ToServer) {
 
 `init_requests` is shared boot wiring for the route. It takes no page model, `RequestContext`, `ServerContext`, or `ClientSharedState`. It does not decide whether data is already present and it does not load data itself.
 
-Generated SSR executes the route's `init_requests`, maps each `ToServer` value to its server handler, and embeds the returned `ToClient` values as page-data hydration flags.
+SSR execution may run the route's `init_requests`, map each `ToServer` value to
+its server handler, and embed the returned `ToClient` values as page-data
+hydration flags.
 
-Generated client init skips requests when SSR hydration already populated the page model. When hydration is absent, generated client init sends `init_requests` over the generated API transport path.
+Client init sends `init_requests` over the app-owned API transport path when
+hydration has not already populated the page model.
 
 Static pages can omit `init_requests`.
 
 ## Server Handlers
 
-Each `ToServer` constructor has exactly one server handler in the app.
+Each `ToServer` constructor has exactly one server handler in the app dispatch
+module.
 
 The default handler convention maps a constructor to a snake-case function:
 
@@ -169,15 +178,14 @@ MarkFinal   -> mark_final
 
 This rule includes page-data load commands. `ToServer.LoadGames` maps to `load_games`; it does not map to page `init`.
 
-Handlers receive constructor fields as named arguments, plus generator-provided context. They do not receive the whole `ToServer` value by default.
+Handlers receive constructor fields, plus any app-owned context they need. The
+current app dispatches from the whole decoded `ToServer` value and delegates to
+constructor-specific private handlers.
 
 Page-data handlers return the `ToClient` values that populate the page:
 
 ```gleam
-pub fn load_games(
-  request_context request_context: RequestContext,
-  server_context server_context: ServerContext,
-) -> List(to_client.ToClient) {
+fn load_games(db: sqlight.Connection) -> List(to_client.ToClient) {
   panic as "implemented by the app"
 }
 ```
@@ -188,9 +196,11 @@ Server-only handlers and imports carry Erlang target annotations in the unified 
 
 ## Client ToClient Handlers
 
-`ToClient` is the server emission vocabulary. Pages, layouts, and shared client state handle `ToClient` values through generated `to_client` dispatch and constructor-named client handlers.
+`ToClient` is the server emission vocabulary. Pages and shared client state
+handle `ToClient` values through app-owned reducer modules.
 
-A client `ToClient` handler is a mini-update over the page model. Its function name is the snake-case form of the `ToClient` constructor name:
+A client `ToClient` handler is a mini-update over the page model. Its function
+name is the snake-case form of the `ToClient` constructor name:
 
 ```gleam
 pub fn game_updated(
@@ -201,21 +211,27 @@ pub fn game_updated(
 }
 ```
 
-Handlers receive the page model as the first argument, then constructor fields as named arguments. They do not receive the whole `ToClient` value by default.
+Handlers receive the page model as the first argument, then constructor fields
+as named arguments.
 
-Client `ToClient` handlers do not proxy server events into local page messages. Local page messages are for browser-originated events.
+Client `ToClient` handlers do not proxy server events into local page messages.
+Local page messages are for browser-originated events.
 
 ## Runtime Taxonomy
 
 Use these terms consistently:
 
 - `AuthenticationContext`: shared identity facts loaded from the browser session. It answers who the session represents.
-- `RequestContext`: per-request or per-socket facts passed to server handlers. It carries route params, query params, session facts, and authenticated user facts.
-- `ServerContext`: server-side resources such as DB handles, config, clocks, service clients, and logging.
+- `RequestContext`: per-request or per-socket facts when a runtime needs them.
+  It can carry route params, query params, session facts, and authenticated user
+  facts.
+- `ServerContext`: server-side resources such as DB handles, config, clocks,
+  service clients, and logging.
 - `ClientSharedState`: per-Mount browser state shared by the Mount shell, layouts, and pages.
-- SSR `ToClient` page data: boot-time server-emitted `ToClient` values produced by generated SSR execution of the route's boot requests.
+- SSR `ToClient` page data: boot-time server-emitted `ToClient` values produced
+  by executing the route's boot requests.
 - page `Model`: local UI state for a page or root client app.
-- `backend.Model`: app-owned live server state for one Mount connection.
+- live connection state: app-owned WebSocket state for one browser connection.
 - `ToServer`: browser-to-server command vocabulary.
 - `ToClient`: server-to-browser result, boot data, and event vocabulary.
 
@@ -256,7 +272,7 @@ Type aliases are transparent on the wire, as they are in Gleam. Domain identitie
 14. `ToClient` values are applied to page, layout, or shared-state models by constructor-named client handlers.
 15. Local page messages are for browser-originated events and do not cross the wire.
 16. `ClientSharedState` is per Mount by default.
-17. `backend.Model` is per live SPA root connection.
+17. Live connection state belongs to the app runtime.
 18. Rich app-wide payloads use `ToClient` values.
 19. User-owned app code is Mount-first under root `src/{mount_namespace}`. The exception is `src/api`, which is one global wire graph and has no public/admin subdivision.
 20. Generated support modules live under `src/generated`.
