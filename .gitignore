@@ -1,6 +1,7 @@
 build/
 tmp/
 manifest.toml
+.env
 
 # Runtime database files. Keep migrations and seeds checked in.
 db/*.db

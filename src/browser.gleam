@@ -11,6 +11,36 @@ pub fn websocket_url() -> String {
 }
 
 @target(javascript)
+@external(javascript, "./browser_ffi.mjs", "boot_auth_user_id")
+pub fn boot_auth_user_id() -> Int {
+  0
+}
+
+@target(javascript)
+@external(javascript, "./browser_ffi.mjs", "boot_auth_email")
+pub fn boot_auth_email() -> String {
+  ""
+}
+
+@target(javascript)
+@external(javascript, "./browser_ffi.mjs", "boot_auth_display_name")
+pub fn boot_auth_display_name() -> String {
+  ""
+}
+
+@target(javascript)
+@external(javascript, "./browser_ffi.mjs", "boot_can_access_admin")
+pub fn boot_can_access_admin() -> Bool {
+  False
+}
+
+@target(javascript)
+@external(javascript, "./browser_ffi.mjs", "query_string")
+pub fn query_string() -> String {
+  ""
+}
+
+@target(javascript)
 @external(javascript, "./browser_ffi.mjs", "push_path")
 pub fn push_path(_path: String) -> Nil {
   Nil

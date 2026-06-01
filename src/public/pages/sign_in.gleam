@@ -1,36 +1,101 @@
 import generated/proute/public/page_input
+import gleam/list
+import lustre/attribute
 import lustre/effect.{type Effect}
 import lustre/element.{type Element}
+import lustre/element/html
 import page_context.{type PageContext}
-import page_stub
 
-pub type Model =
-  page_stub.Model
+pub type Model {
+  Model(return_to: String, invalid: Bool)
+}
 
-pub type Message =
-  page_stub.Message
+pub type Message {
+  NoOp
+}
 
+// nolint: label_possible -- generated page glue calls conventional page init positionally.
 pub fn init(
-  _page_context: PageContext,
-  _query_params: page_input.QueryParams,
+  page_context: PageContext,
+  query_params: page_input.QueryParams,
 ) -> #(Model, Effect(Message)) {
-  page_stub.init(title: "Sign in")
+  #(initial_model(page_context, query_params), effect.none())
 }
 
 pub fn initial_model(
   _page_context: PageContext,
-  _query_params: page_input.QueryParams,
+  query_params: page_input.QueryParams,
 ) -> Model {
-  page_stub.initial_model(title: "Sign in")
+  let page_input.QueryParams(values:) = query_params
+  Model(
+    return_to: find_query(values, "return_to") |> safe_admin_return_to,
+    invalid: find_query(values, "error") == Ok("invalid"),
+  )
 }
 
 pub fn update(
   model model: Model,
-  msg msg: Message,
+  msg _msg: Message,
 ) -> #(Model, Effect(Message)) {
-  page_stub.update(model:, msg:)
+  #(model, effect.none())
 }
 
 pub fn view(model model: Model) -> Element(Message) {
-  page_stub.view(model:)
+  html.section([attribute.class("panel")], [
+    html.h1([], [html.text("Sign in")]),
+    html.p([attribute.class("muted")], [
+      html.text("Use the demo admin code to open the score desk."),
+    ]),
+    case model.invalid {
+      True ->
+        html.p([attribute.class("auth-error")], [
+          html.text("Invalid sign-in code."),
+        ])
+      False -> html.text("")
+    },
+    html.form(
+      [
+        attribute.method("post"),
+        attribute.action("/sign_in"),
+        attribute.class("sign-in-form"),
+      ],
+      [
+        html.input([
+          attribute.type_("hidden"),
+          attribute.name("return_to"),
+          attribute.value(model.return_to),
+        ]),
+        html.label([attribute.for("code")], [html.text("Sign-in code")]),
+        html.input([
+          attribute.id("code"),
+          attribute.name("code"),
+          attribute.type_("text"),
+          attribute.autocomplete("one-time-code"),
+          attribute.placeholder("A1Z9Q"),
+          attribute.required(True),
+        ]),
+        html.button([attribute.type_("submit")], [html.text("Sign In")]),
+      ],
+    ),
+  ])
+}
+
+fn find_query(
+  values: List(#(String, String)),
+  key: String,
+) -> Result(String, Nil) {
+  list.find_map(values, fn(pair) {
+    case pair.0 {
+      name if name == key -> Ok(pair.1)
+      _ -> Error(Nil)
+    }
+  })
+}
+
+fn safe_admin_return_to(path: Result(String, Nil)) -> String {
+  case path {
+    Ok("/admin") -> "/admin"
+    Ok("/admin/" <> rest) -> "/admin/" <> rest
+    _ -> "/admin/games"
+  }
 }

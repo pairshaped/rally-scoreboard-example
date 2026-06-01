@@ -1,6 +1,8 @@
 @target(javascript)
 import app_shell
 @target(javascript)
+import authentication_context.{type AuthenticationContext, AuthenticationContext}
+@target(javascript)
 import browser
 @target(javascript)
 import client/api as api_client
@@ -15,7 +17,11 @@ import generated/proute/public/routes
 @target(javascript)
 import gleam/int
 @target(javascript)
+import gleam/list
+@target(javascript)
 import gleam/option.{type Option, None, Some}
+@target(javascript)
+import gleam/string
 @target(javascript)
 import lustre
 @target(javascript)
@@ -61,16 +67,16 @@ pub fn main() -> Nil {
 fn init(_flags: Nil) -> #(Model, Effect(Msg)) {
   let current_path = browser.path()
   let route = routes.parse_path(current_path)
+  let query_params = query_params_from_browser()
   let dark_mode = browser.device_dark_mode()
-  let #(page, page_effect) =
-    pages.load(PageContext, page_input.empty_query_params(), route)
+  let #(page, page_effect) = pages.load(PageContext, query_params, route)
   let shared_state =
     PublicClientSharedState(
       league_name: "Scoreboard",
       active_section: current_path,
       dark_mode:,
-      authentication_context: None,
-      can_access_admin: True,
+      authentication_context: boot_authentication_context(),
+      can_access_admin: browser.boot_can_access_admin(),
     )
 
   #(
@@ -121,6 +127,8 @@ fn view(model: Model) -> Element(Msg) {
   app_shell.public(
     current_path: model.shared_state.active_section,
     dark_mode: model.shared_state.dark_mode,
+    authentication_context: model.shared_state.authentication_context,
+    can_access_admin: model.shared_state.can_access_admin,
     on_dark_mode_change: DarkModeChanged,
     content: pages.view(model.page) |> element.map(PageMsg),
   )
@@ -187,4 +195,36 @@ fn listen_for_browser_navigation() -> Effect(Msg) {
   effect.from(fn(dispatch) {
     browser.listen_popstate(fn(path) { dispatch(BrowserPathChanged(path)) })
   })
+}
+
+@target(javascript)
+fn boot_authentication_context() -> Option(AuthenticationContext) {
+  case browser.boot_auth_user_id() {
+    0 -> None
+    user_id -> {
+      let display_name = case browser.boot_auth_display_name() {
+        "" -> None
+        value -> Some(value)
+      }
+      Some(AuthenticationContext(
+        user_id:,
+        email: browser.boot_auth_email(),
+        display_name:,
+      ))
+    }
+  }
+}
+
+@target(javascript)
+fn query_params_from_browser() -> page_input.QueryParams {
+  let values =
+    browser.query_string()
+    |> string.split("&")
+    |> list.filter_map(fn(pair) {
+      case string.split(pair, "=") {
+        [key, value] -> Ok(#(key, value))
+        _ -> Error(Nil)
+      }
+    })
+  page_input.QueryParams(values:)
 }

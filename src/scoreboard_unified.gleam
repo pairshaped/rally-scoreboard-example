@@ -1,9 +1,17 @@
 @target(erlang)
 import device_preferences
 @target(erlang)
+import gleam/bit_array
+@target(erlang)
 import gleam/bytes_tree
 @target(erlang)
+import gleam/crypto
+@target(erlang)
 import gleam/erlang/process
+@target(erlang)
+import gleam/http
+@target(erlang)
+import gleam/http/cookie
 @target(erlang)
 import gleam/http/request.{type Request, Request}
 @target(erlang)
@@ -15,11 +23,21 @@ import gleam/io
 @target(erlang)
 import gleam/list
 @target(erlang)
-import gleam/option.{None}
+import gleam/option.{None, Some}
+@target(erlang)
+import gleam/result
 @target(erlang)
 import gleam/string
 @target(erlang)
+import gleam/uri
+@target(erlang)
 import mist.{type Connection, type ResponseData}
+@target(erlang)
+import server/auth
+@target(erlang)
+import server/config
+@target(erlang)
+import server/session
 @target(erlang)
 import server/ws
 @target(erlang)
@@ -31,22 +49,42 @@ const db_path = "db/scoreboard.db"
 @target(erlang)
 pub fn main() -> Nil {
   let assert Ok(db) = sqlight.open(db_path)
+  let assert Ok(key) = session_key()
+  let session = session.new(key)
   let port = 8080
 
   let handler = fn(req: Request(Connection)) {
-    let Request(path: path, ..) = req
-    case path {
-      "/ws" ->
+    let Request(path: path, method: method, ..) = req
+    case method, path {
+      http.Post, "/sign_in" ->
+        handle_sign_in_post(req: req, db: db, session: session)
+      http.Get, "/sign_out" -> handle_sign_out(req)
+      http.Post, "/sign_out" -> handle_sign_out(req)
+      _, "/ws" -> {
+        let admin_authorized =
+          check_admin_session(req: req, db: db, session: session)
+          |> result.is_ok
         mist.websocket(
           req,
           ws.handler,
-          fn(conn) { ws.on_init(conn, db) },
+          fn(conn) { ws.on_init(conn, db, admin_authorized) },
           ws.on_close,
         )
-      _ ->
+      }
+      _, _ ->
         case string.starts_with(path, "/_build/") {
           True -> serve_static(string.drop_start(path, 8))
-          False -> html_response(app_html(req, path))
+          False ->
+            case string.starts_with(path, "/admin") {
+              True -> handle_admin_path(req: req, db: db, session: session)
+              False ->
+                html_response(app_html(
+                  req: req,
+                  path: path,
+                  db: db,
+                  session: session,
+                ))
+            }
         }
     }
   }
@@ -57,6 +95,24 @@ pub fn main() -> Nil {
     |> mist.port(port)
     |> mist.start
   process.sleep_forever()
+}
+
+@target(erlang)
+fn session_key() -> Result(BitArray, config.SecretKeyError) {
+  case config.secret_key() {
+    Ok(key) -> Ok(key)
+    Error(config.MissingSecret) -> {
+      io.println_error(
+        config.secret_key_error_message(config.MissingSecret)
+        <> "; using an in-memory development key",
+      )
+      Ok(crypto.strong_random_bytes(32))
+    }
+    Error(error) -> {
+      io.println_error(config.secret_key_error_message(error))
+      Error(error)
+    }
+  }
 }
 
 @target(erlang)
@@ -97,12 +153,18 @@ fn html_response(body: String) -> Response(ResponseData) {
 }
 
 @target(erlang)
-fn app_html(req: Request(Connection), path: String) -> String {
+fn app_html(
+  req req: Request(Connection),
+  path path: String,
+  db db: sqlight.Connection,
+  session session: session.Session,
+) -> String {
   let entrypoint = case string.starts_with(path, "/admin") {
     True -> "admin_app.mjs"
     False -> "public_app.mjs"
   }
   let theme = resolve_theme(req)
+  let app_attrs = app_boot_attrs(req: req, db: db, session: session)
 
   "<!doctype html>
 <html data-theme=\"" <> theme <> "\">
@@ -116,7 +178,7 @@ fn app_html(req: Request(Connection), path: String) -> String {
   </style>
 </head>
 <body>
-  <div id=\"app\"></div>
+  <div id=\"app\"" <> app_attrs <> "></div>
   <script type=\"module\">
     import { main } from '/_build/scoreboard_unified/" <> entrypoint <> "';
     main();
@@ -146,6 +208,250 @@ fn resolve_theme(req: Request(Connection)) -> String {
         Error(Nil) -> "light"
       }
     Error(Nil) -> "light"
+  }
+}
+
+@target(erlang)
+fn handle_admin_path(
+  req req: Request(Connection),
+  db db: sqlight.Connection,
+  session session: session.Session,
+) -> Response(ResponseData) {
+  case check_admin_session(req: req, db: db, session: session) {
+    Ok(_) ->
+      html_response(app_html(req: req, path: req.path, db: db, session: session))
+    Error(Nil) ->
+      redirect("/sign_in?return_to=" <> uri.percent_encode(req.path))
+  }
+}
+
+@target(erlang)
+fn handle_sign_in_post(
+  req req: Request(Connection),
+  db db: sqlight.Connection,
+  session session: session.Session,
+) -> Response(ResponseData) {
+  case mist.read_body(req, max_body_limit: 4096) {
+    Ok(req_with_body) ->
+      case bit_array.to_string(req_with_body.body) {
+        Ok(body) -> process_sign_in_body(db: db, session: session, body: body)
+        Error(Nil) -> redirect_to_sign_in("/admin/games")
+      }
+    Error(error) -> {
+      io.println_error(
+        "sign_in: failed to read body: " <> string.inspect(error),
+      )
+      redirect_to_sign_in("/admin/games")
+    }
+  }
+}
+
+@target(erlang)
+fn process_sign_in_body(
+  db db: sqlight.Connection,
+  session session: session.Session,
+  body body: String,
+) -> Response(ResponseData) {
+  case uri.parse_query(body) {
+    Ok(pairs) -> verify_credentials(db: db, session: session, pairs: pairs)
+    Error(Nil) -> redirect_to_sign_in("/admin/games")
+  }
+}
+
+@target(erlang)
+fn verify_credentials(
+  db db: sqlight.Connection,
+  session session: session.Session,
+  pairs pairs: List(#(String, String)),
+) -> Response(ResponseData) {
+  let return_to =
+    find_pair(pairs, "return_to")
+    |> safe_admin_return_to
+
+  case find_pair(pairs, "code") {
+    Ok(code) ->
+      case auth.verify_sign_in_code(db: db, code: code) {
+        Ok(user_id) ->
+          issue_session(
+            session: session,
+            return_to: return_to,
+            user_id: user_id,
+          )
+        Error(Nil) -> redirect_to_sign_in(return_to)
+      }
+    Error(Nil) -> redirect_to_sign_in(return_to)
+  }
+}
+
+@target(erlang)
+fn issue_session(
+  session session: session.Session,
+  return_to return_to: String,
+  user_id user_id: Int,
+) -> Response(ResponseData) {
+  case session.encode_user_id(user_id: user_id, session: session) {
+    Ok(encoded) ->
+      response.new(302)
+      |> response.set_header("location", return_to)
+      |> response.set_cookie(
+        session.session_cookie,
+        encoded,
+        session_cookie_attributes(),
+      )
+      |> response.set_body(mist.Bytes(bytes_tree.from_string("")))
+    Error(Nil) ->
+      response.new(500)
+      |> response.set_body(
+        mist.Bytes(bytes_tree.from_string("Cannot issue session")),
+      )
+  }
+}
+
+@target(erlang)
+fn handle_sign_out(req: Request(Connection)) -> Response(ResponseData) {
+  let path = case request.get_query(req) {
+    Ok(pairs) ->
+      find_pair(pairs, "return_to")
+      |> safe_local_path
+    Error(Nil) -> "/games"
+  }
+
+  response.new(302)
+  |> response.set_header("location", path)
+  |> response.expire_cookie(session.session_cookie, session_cookie_attributes())
+  |> response.set_body(mist.Bytes(bytes_tree.from_string("")))
+}
+
+@target(erlang)
+fn redirect_to_sign_in(return_to: String) -> Response(ResponseData) {
+  redirect(
+    "/sign_in?return_to=" <> uri.percent_encode(return_to) <> "&error=invalid",
+  )
+}
+
+@target(erlang)
+fn redirect(path: String) -> Response(ResponseData) {
+  response.new(302)
+  |> response.set_header("location", path)
+  |> response.set_body(mist.Bytes(bytes_tree.from_string("")))
+}
+
+@target(erlang)
+fn session_cookie_attributes() -> cookie.Attributes {
+  cookie.Attributes(
+    max_age: None,
+    domain: None,
+    path: Some("/"),
+    secure: False,
+    http_only: True,
+    same_site: Some(cookie.Lax),
+  )
+}
+
+@target(erlang)
+fn check_admin_session(
+  req req: Request(Connection),
+  db db: sqlight.Connection,
+  session session: session.Session,
+) -> Result(auth.AuthenticatedUser, Nil) {
+  use user <- result.try(authenticated_user(req: req, db: db, session: session))
+  case auth.can_access_admin(user) {
+    True -> Ok(user)
+    False -> Error(Nil)
+  }
+}
+
+@target(erlang)
+fn authenticated_user(
+  req req: Request(Connection),
+  db db: sqlight.Connection,
+  session session: session.Session,
+) -> Result(auth.AuthenticatedUser, Nil) {
+  let cookies = request.get_cookies(req)
+  use cookie_value <- result.try(auth.find_session(cookies))
+  use user_id <- result.try(session.decode_user_id(
+    encoded: cookie_value,
+    session: session,
+  ))
+  auth.user_by_id(db: db, user_id: user_id)
+}
+
+@target(erlang)
+fn app_boot_attrs(
+  req req: Request(Connection),
+  db db: sqlight.Connection,
+  session session: session.Session,
+) -> String {
+  case authenticated_user(req: req, db: db, session: session) {
+    Ok(user) -> {
+      let context = user.context
+      let display_name = case context.display_name {
+        Some(value) -> value
+        None -> ""
+      }
+      " data-auth-user-id=\""
+      <> int.to_string(context.user_id)
+      <> "\" data-auth-email=\""
+      <> html_attr_escape(context.email)
+      <> "\" data-auth-display-name=\""
+      <> html_attr_escape(display_name)
+      <> "\" data-can-access-admin=\""
+      <> bool_attr(auth.can_access_admin(user))
+      <> "\""
+    }
+    Error(Nil) -> " data-can-access-admin=\"0\""
+  }
+}
+
+// nolint: prefer_guard_clause -- this is a string conversion helper, not control flow.
+@target(erlang)
+fn bool_attr(value: Bool) -> String {
+  case value {
+    True -> "1"
+    False -> "0"
+  }
+}
+
+@target(erlang)
+fn html_attr_escape(value: String) -> String {
+  value
+  |> string.replace("&", "&amp;")
+  |> string.replace("\"", "&quot;")
+  |> string.replace("<", "&lt;")
+  |> string.replace(">", "&gt;")
+}
+
+@target(erlang)
+fn find_pair(
+  pairs: List(#(String, String)),
+  name: String,
+) -> Result(String, Nil) {
+  list.find_map(pairs, fn(pair) {
+    case pair.0 {
+      key if key == name -> Ok(pair.1)
+      _ -> Error(Nil)
+    }
+  })
+}
+
+@target(erlang)
+fn safe_admin_return_to(path: Result(String, Nil)) -> String {
+  case path {
+    Ok("/admin") -> "/admin"
+    Ok("/admin/" <> rest) -> "/admin/" <> rest
+    _ -> "/admin/games"
+  }
+}
+
+@target(erlang)
+fn safe_local_path(path: Result(String, Nil)) -> String {
+  case path {
+    Ok(value) ->
+      case string.starts_with(value, "/"), string.starts_with(value, "//") {
+        True, False -> value
+        _, _ -> "/games"
+      }
+    Error(Nil) -> "/games"
   }
 }
 
@@ -269,6 +575,17 @@ body {
 
 .theme-icon {
   flex: 0 0 auto;
+}
+
+.sign-in-form {
+  display: grid;
+  gap: 10px;
+  max-width: 320px;
+}
+
+.auth-error {
+  color: var(--score-live);
+  font-weight: 700;
 }
 
 .topbar, .panel, .game-card, .stat-card {

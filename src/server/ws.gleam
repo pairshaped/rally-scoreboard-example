@@ -25,13 +25,14 @@ import sqlight
 
 @target(erlang)
 pub type State {
-  State(db: sqlight.Connection)
+  State(db: sqlight.Connection, admin_authorized: Bool)
 }
 
 @target(erlang)
 pub fn on_init(
   _conn: WebsocketConnection,
   db: sqlight.Connection,
+  admin_authorized: Bool,
 ) -> #(State, Option(Selector(BitArray))) {
   topics.start()
   topics.join("app")
@@ -46,7 +47,7 @@ pub fn on_init(
         |> result.unwrap(<<>>)
       },
     )
-  #(State(db: db), Some(selector))
+  #(State(db: db, admin_authorized:), Some(selector))
 }
 
 @target(erlang)
@@ -87,7 +88,12 @@ fn handle_client_frame(
       message: message,
       ..,
     )) -> {
-      let replies = api.dispatch(db: state.db, message: message)
+      let replies =
+        api.dispatch(
+          db: state.db,
+          message: message,
+          admin_authorized: state.admin_authorized,
+        )
       list.each(replies, fn(reply) {
         let response = generated_server.encode_response(request_id, reply)
         let _sent = mist.send_binary_frame(conn, response)

@@ -9,6 +9,35 @@ export function websocket_url() {
   return `${protocol}//${location.host}/ws`;
 }
 
+function bootData() {
+  return globalThis.document?.querySelector?.("#app")?.dataset ?? {};
+}
+
+export function boot_auth_user_id() {
+  const value = Number.parseInt(bootData().authUserId ?? "0", 10);
+  return Number.isFinite(value) ? value : 0;
+}
+
+export function boot_auth_email() {
+  return bootData().authEmail ?? "";
+}
+
+export function boot_auth_display_name() {
+  return bootData().authDisplayName ?? "";
+}
+
+export function boot_can_access_admin() {
+  return bootData().canAccessAdmin === "1";
+}
+
+export function query_string() {
+  const search = globalThis.location?.search ?? "";
+  const params = new URLSearchParams(search);
+  return Array.from(params.entries())
+    .map(([key, value]) => `${key}=${value}`)
+    .join("&");
+}
+
 export function push_path(path) {
   const history = globalThis.history;
   const location = globalThis.location;

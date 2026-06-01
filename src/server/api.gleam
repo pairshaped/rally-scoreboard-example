@@ -37,6 +37,7 @@ import sqlight
 pub fn dispatch_request(
   db db: sqlight.Connection,
   bytes bytes: BitArray,
+  admin_authorized admin_authorized: Bool,
 ) -> List(BitArray) {
   case generated_server.decode_request(bytes) {
     Ok(generated_server.ClientRequest(
@@ -44,7 +45,7 @@ pub fn dispatch_request(
       message: message,
       ..,
     )) ->
-      dispatch(db: db, message: message)
+      dispatch(db: db, message: message, admin_authorized:)
       |> list.map(fn(reply) {
         generated_server.encode_response(request_id, reply)
       })
@@ -56,18 +57,34 @@ pub fn dispatch_request(
 pub fn dispatch(
   db db: sqlight.Connection,
   message message: ToServer,
+  admin_authorized admin_authorized: Bool,
 ) -> List(ToClient) {
+  case is_admin_message(message), admin_authorized {
+    True, False -> [to_client.AdminError("Unauthorized.")]
+    _, _ ->
+      case message {
+        to_server.LoadGames -> load_games(db)
+        to_server.LoadGame(game_id) -> load_game(db, game_id)
+        to_server.LoadStandings -> load_standings(db)
+        to_server.LoadTeam(slug) -> load_team(db, slug)
+        to_server.LoadAdminGames -> load_admin_games(db)
+        to_server.UpdateScore(game_id, home_score, away_score, period) ->
+          update_score(db, game_id, home_score, away_score, period)
+        to_server.MarkFinal(game_id) -> mark_final(db, game_id)
+        to_server.CorrectResult(game_id, home_score, away_score) ->
+          correct_result(db, game_id, home_score, away_score)
+      }
+  }
+}
+
+@target(erlang)
+fn is_admin_message(message: ToServer) -> Bool {
   case message {
-    to_server.LoadGames -> load_games(db)
-    to_server.LoadGame(game_id) -> load_game(db, game_id)
-    to_server.LoadStandings -> load_standings(db)
-    to_server.LoadTeam(slug) -> load_team(db, slug)
-    to_server.LoadAdminGames -> load_admin_games(db)
-    to_server.UpdateScore(game_id, home_score, away_score, period) ->
-      update_score(db, game_id, home_score, away_score, period)
-    to_server.MarkFinal(game_id) -> mark_final(db, game_id)
-    to_server.CorrectResult(game_id, home_score, away_score) ->
-      correct_result(db, game_id, home_score, away_score)
+    to_server.LoadAdminGames
+    | to_server.UpdateScore(_, _, _, _)
+    | to_server.MarkFinal(_)
+    | to_server.CorrectResult(_, _, _) -> True
+    _ -> False
   }
 }
 

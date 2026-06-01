@@ -1,7 +1,7 @@
 ---
 # scoreboard-l651
 title: Add encrypted auth session and device cookie bag
-status: todo
+status: completed
 type: task
 priority: normal
 tags:
@@ -10,7 +10,7 @@ tags:
     - javascript-target
     - erlang-target
 created_at: 2026-06-01T22:14:38Z
-updated_at: 2026-06-01T22:14:38Z
+updated_at: 2026-06-01T23:32:11Z
 ---
 
 ## Problem
@@ -51,3 +51,32 @@ Keep the device preference work as the simple cookie bag. Do not mix sensitive s
 - The device cookie remains client-writable and continues to preserve dark-mode preference.
 - ClientSharedState reflects real authentication/admin access state.
 - Both JavaScript and Erlang target builds pass.
+
+
+## Completed notes
+
+Implemented the unified app auth tracer bullet against the `../scoreboard-sc` reference shape:
+
+- `_scoreboard_session` is server-owned, encrypted/authenticated with AES-256-GCM, `HttpOnly`, `SameSite=Lax`, and scoped to `/`.
+- Sign-in uses a normal HTTP POST to `/sign_in`, validates the seeded demo admin code, sets the session cookie, and redirects to the safe admin return path.
+- Sign-out expires the session cookie and redirects to a safe local path.
+- `/admin` and `/admin/games` redirect anonymous or invalid sessions to `/sign_in?return_to=...`.
+- WebSocket admin commands require an admin session from the connection request; unauthenticated admin commands receive `AdminError("Unauthorized.")`.
+- The public/admin shell boot state receives non-sensitive authentication facts from server-rendered `#app` data attributes. JavaScript does not read or write `_scoreboard_session`.
+- `_scoreboard_device` remains browser-owned and continues to drive dark-mode preference.
+
+Validation run before completion:
+
+- `gleam format src test`
+- `gleam check`
+- `gleam build --target javascript`
+- `gleam build --target erlang`
+- `gleam test`
+- `gleam run -m glinter`
+- `beans check`
+- `git diff --check`
+- HTTP smoke: admin redirect, sign-in cookie issuance, authenticated admin document boot attrs, invalid-code redirect, sign-out expiry
+- Playwright smoke: unauthenticated admin redirect, client-rendered sign-in form, admin sign-in, `document.cookie` cannot see `_scoreboard_session`, sign-out, admin route guarded again
+
+
+Session key configuration now reads `SCOREBOARD_SECRET_KEY_BASE` when present. The value must decode to exactly 32 bytes. Missing env falls back to an in-memory development key so local smoke runs still work; invalid env stops startup through the main startup assertion after logging the config error.

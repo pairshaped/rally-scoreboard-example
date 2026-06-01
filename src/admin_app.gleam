@@ -5,6 +5,8 @@ import admin/client_shared_state.{
 @target(javascript)
 import app_shell
 @target(javascript)
+import authentication_context.{type AuthenticationContext, AuthenticationContext}
+@target(javascript)
 import browser
 @target(javascript)
 import client/api as api_client
@@ -17,7 +19,7 @@ import generated/proute/admin/pages
 @target(javascript)
 import generated/proute/admin/routes
 @target(javascript)
-import gleam/option.{None}
+import gleam/option.{type Option, None, Some}
 @target(javascript)
 import lustre
 @target(javascript)
@@ -55,7 +57,7 @@ fn init(_flags: Nil) -> #(Model, Effect(Msg)) {
     pages.load(PageContext, page_input.empty_query_params(), route)
   let shared_state =
     AdminClientSharedState(
-      authentication_context: None,
+      authentication_context: boot_authentication_context(),
       league_name: "Scoreboard",
       dark_mode:,
       active_section: current_path,
@@ -100,6 +102,7 @@ fn view(model: Model) -> Element(Msg) {
   app_shell.admin(
     current_path: model.shared_state.active_section,
     dark_mode: model.shared_state.dark_mode,
+    authentication_context: model.shared_state.authentication_context,
     on_dark_mode_change: DarkModeChanged,
     content: pages.view(model.page) |> element.map(PageMsg),
   )
@@ -113,4 +116,22 @@ fn apply_dark_mode(dark_mode: Bool) -> Effect(Msg) {
 @target(javascript)
 fn persist_dark_mode(dark_mode: Bool) -> Effect(Msg) {
   effect.from(fn(_dispatch) { browser.persist_dark_mode(dark_mode) })
+}
+
+@target(javascript)
+fn boot_authentication_context() -> Option(AuthenticationContext) {
+  case browser.boot_auth_user_id() {
+    0 -> None
+    user_id -> {
+      let display_name = case browser.boot_auth_display_name() {
+        "" -> None
+        value -> Some(value)
+      }
+      Some(AuthenticationContext(
+        user_id:,
+        email: browser.boot_auth_email(),
+        display_name:,
+      ))
+    }
+  }
 }

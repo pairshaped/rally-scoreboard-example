@@ -1,3 +1,5 @@
+import authentication_context.{type AuthenticationContext}
+import gleam/option.{type Option, None, Some}
 import gleam/string
 import lustre/attribute
 import lustre/element.{type Element}
@@ -8,6 +10,8 @@ import lustre/event
 pub fn public(
   current_path current_path: String,
   dark_mode dark_mode: Bool,
+  authentication_context authentication_context: Option(AuthenticationContext),
+  can_access_admin can_access_admin: Bool,
   on_dark_mode_change on_dark_mode_change: fn(Bool) -> msg,
   content content: Element(msg),
 ) -> Element(msg) {
@@ -16,8 +20,9 @@ pub fn public(
       subtitle: "Public scores",
       current_path:,
       dark_mode:,
+      authentication_context:,
+      can_access_admin:,
       on_dark_mode_change:,
-      show_sign_in: True,
     ),
     content,
   ])
@@ -26,6 +31,7 @@ pub fn public(
 pub fn admin(
   current_path current_path: String,
   dark_mode dark_mode: Bool,
+  authentication_context authentication_context: Option(AuthenticationContext),
   on_dark_mode_change on_dark_mode_change: fn(Bool) -> msg,
   content content: Element(msg),
 ) -> Element(msg) {
@@ -34,8 +40,9 @@ pub fn admin(
       subtitle: "Admin score desk",
       current_path:,
       dark_mode:,
+      authentication_context:,
+      can_access_admin: True,
       on_dark_mode_change:,
-      show_sign_in: False,
     ),
     content,
   ])
@@ -45,8 +52,9 @@ fn topbar(
   subtitle subtitle: String,
   current_path current_path: String,
   dark_mode dark_mode: Bool,
+  authentication_context authentication_context: Option(AuthenticationContext),
+  can_access_admin can_access_admin: Bool,
   on_dark_mode_change on_dark_mode_change: fn(Bool) -> msg,
-  show_sign_in show_sign_in: Bool,
 ) -> Element(msg) {
   html.header([attribute.class("topbar")], [
     html.div([attribute.class("brand")], [
@@ -59,14 +67,24 @@ fn topbar(
     html.nav([attribute.class("nav")], [
       nav_link("/games", "Games", is_games_path(current_path)),
       nav_link("/standings", "Standings", current_path == "/standings"),
-      nav_link("/admin/games", "Admin", is_admin_path(current_path)),
-      case show_sign_in {
-        True -> nav_link("/sign_in", "Sign In", current_path == "/sign_in")
+      case can_access_admin {
+        True -> nav_link("/admin/games", "Admin", is_admin_path(current_path))
         False -> html.text("")
       },
+      session_link(authentication_context, current_path),
       theme_switch(dark_mode:, on_change: on_dark_mode_change),
     ]),
   ])
+}
+
+fn session_link(
+  authentication_context: Option(AuthenticationContext),
+  current_path: String,
+) -> Element(msg) {
+  case authentication_context {
+    Some(_) -> nav_link("/sign_out?return_to=/games", "Sign Out", False)
+    None -> nav_link("/sign_in", "Sign In", current_path == "/sign_in")
+  }
 }
 
 fn nav_link(href: String, label: String, active: Bool) -> Element(msg) {
