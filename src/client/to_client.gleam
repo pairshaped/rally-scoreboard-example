@@ -25,8 +25,10 @@ pub fn apply_public_frame(
   page page: public_pages.Page,
   frame frame: generated_client.ServerFrame,
 ) -> #(public_pages.Page, Effect(public_pages.Message)) {
-  let message = server_frame_message(frame)
-  apply_public(page: page, message: message)
+  case server_frame_message(frame) {
+    Ok(message) -> apply_public(page: page, message: message)
+    Error(Nil) -> #(page, effect.none())
+  }
 }
 
 // nolint: unused_exports -- called by the admin client shell once websocket frames are connected.
@@ -35,8 +37,10 @@ pub fn apply_admin_frame(
   page page: admin_pages.Page,
   frame frame: generated_client.ServerFrame,
 ) -> #(admin_pages.Page, Effect(admin_pages.Message)) {
-  let message = server_frame_message(frame)
-  apply_admin(page: page, message: message)
+  case server_frame_message(frame) {
+    Ok(message) -> apply_admin(page: page, message: message)
+    Error(Nil) -> #(page, effect.none())
+  }
 }
 
 @target(javascript)
@@ -157,16 +161,8 @@ pub fn apply_admin(
         effect.map(page_effect, admin_pages.AdminHomeMsg),
       )
     }
-    admin_pages.AdminHomePage(model), to_client.ScoreUpdateSaved(game) -> {
-      let #(model, page_effect) =
-        admin_games_page.score_update_saved(model, game)
-      #(
-        admin_pages.AdminHomePage(model),
-        effect.map(page_effect, admin_pages.AdminHomeMsg),
-      )
-    }
-    admin_pages.AdminHomePage(model), to_client.ResultSaved(game) -> {
-      let #(model, page_effect) = admin_games_page.result_saved(model, game)
+    admin_pages.AdminHomePage(model), to_client.GameUpdated(game) -> {
+      let #(model, page_effect) = admin_games_page.game_updated(model, game)
       #(
         admin_pages.AdminHomePage(model),
         effect.map(page_effect, admin_pages.AdminHomeMsg),
@@ -180,16 +176,8 @@ pub fn apply_admin(
         effect.map(page_effect, admin_pages.AdminGamesMsg),
       )
     }
-    admin_pages.AdminGamesPage(model), to_client.ScoreUpdateSaved(game) -> {
-      let #(model, page_effect) =
-        admin_games_page.score_update_saved(model, game)
-      #(
-        admin_pages.AdminGamesPage(model),
-        effect.map(page_effect, admin_pages.AdminGamesMsg),
-      )
-    }
-    admin_pages.AdminGamesPage(model), to_client.ResultSaved(game) -> {
-      let #(model, page_effect) = admin_games_page.result_saved(model, game)
+    admin_pages.AdminGamesPage(model), to_client.GameUpdated(game) -> {
+      let #(model, page_effect) = admin_games_page.game_updated(model, game)
       #(
         admin_pages.AdminGamesPage(model),
         effect.map(page_effect, admin_pages.AdminGamesMsg),
@@ -200,9 +188,11 @@ pub fn apply_admin(
 }
 
 @target(javascript)
-fn server_frame_message(frame: generated_client.ServerFrame) -> ToClient {
+fn server_frame_message(
+  frame: generated_client.ServerFrame,
+) -> Result(ToClient, Nil) {
   case frame {
-    generated_client.Response(message: message, ..) -> message
-    generated_client.Push(message: message, ..) -> message
+    generated_client.Response(message: message)
+    | generated_client.Push(message: message, ..) -> Ok(message)
   }
 }

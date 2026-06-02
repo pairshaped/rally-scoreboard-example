@@ -18,8 +18,10 @@ Live fanout uses an Erlang `pg` group through `server/topics.gleam` and
 operation produces a public live event such as `GameUpdated`, the WebSocket
 handler broadcasts a generated push frame to the group.
 
-The sender receives normal response frames for the request it sent. Other
-connected clients receive push frames. Both carry `ToClient` payloads.
+The sender receives normal response frames for the request it sent. A response
+frame may carry a load ack (`Result(Nil, List(ApiLoadError))`), a save ack
+(`Result(Nil, List(ApiSaveError))`), or `ToClient` app data. Other connected
+clients receive push frames carrying `ToClient` app data.
 
 The browser runtime is app-owned in `client/api.gleam` and
 `client/api_ffi.mjs`. It opens a WebSocket, queues outbound generated request

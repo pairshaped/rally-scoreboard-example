@@ -85,22 +85,26 @@ fn handle_client_frame(
   data data: BitArray,
 ) -> Nil {
   case generated_server.decode_request(data) {
-    Ok(generated_server.ClientRequest(
-      request_id: request_id,
-      message: message,
-      ..,
-    )) -> {
-      let replies =
-        api.dispatch(
+    Ok(generated_server.ClientRequest(message: request_message, ..)) -> {
+      let reply =
+        api.dispatch_reply(
           db: state.db,
-          message: message,
+          message: request_message,
           admin_authorized: state.admin_authorized,
         )
-      list.each(replies, fn(reply) {
-        let response = generated_server.encode_response(request_id, reply)
-        let _sent = mist.send_binary_frame(conn, response)
-        broadcast_if_live_update(request: message, reply: reply)
-      })
+      let _sent = mist.send_binary_frame(conn, api.reply_ack(reply))
+      case reply {
+        api.LoadReply(messages: messages, ..) ->
+          list.each(messages, fn(message) {
+            let response = generated_server.encode_response(message)
+            let _sent = mist.send_binary_frame(conn, response)
+            Nil
+          })
+        api.SaveReply(messages: messages, ..) ->
+          list.each(messages, fn(message) {
+            broadcast_if_live_update(request: request_message, reply: message)
+          })
+      }
     }
     Error(Nil) -> Nil
   }

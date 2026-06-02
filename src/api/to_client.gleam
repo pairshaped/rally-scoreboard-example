@@ -9,8 +9,8 @@
 //// handler across Mounts.
 
 import api/domain/game.{
-  type AdminGameDetail, type AdminGameSummary, type GameDetail,
-  type GameSnapshot, type PublicGameSummary,
+  type AdminGameSummary, type GameDetail, type GameSnapshot,
+  type PublicGameSummary,
 }
 import api/domain/standing.{type PowerRankingRow, type StandingRow}
 import api/domain/team.{type TeamDetail}
@@ -22,11 +22,7 @@ pub type ToClient {
   // Exercises same-shape different-constructor wire types alongside StandingsLoaded.
   // No server handler emits this yet; kept as a placeholder for the generator.
   PowerRankingsLoaded(rows: List(PowerRankingRow))
-  GamesLoadFailed(reason: String)
   TeamLoaded(team: TeamDetail)
   AdminGamesLoaded(games: List(AdminGameSummary))
   GameUpdated(game: GameSnapshot)
-  ScoreUpdateSaved(game: AdminGameDetail)
-  ResultSaved(game: AdminGameDetail)
-  AdminError(reason: String)
 }

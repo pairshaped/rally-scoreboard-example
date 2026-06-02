@@ -161,7 +161,9 @@ A page module may own:
 
 Local page messages do not cross the wire. They represent browser-originated events such as clicks, input changes, timers, subscriptions, and JavaScript callbacks.
 
-Server results, boot data, and live events cross the wire as `ToClient`.
+Server app data crosses the wire as `ToClient`. No-data load and save acks cross
+the wire as `Result(Nil, List(ApiLoadError))` or
+`Result(Nil, List(ApiSaveError))`.
 
 Browser commands cross the wire as `ToServer`.
 

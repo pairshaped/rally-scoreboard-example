@@ -1,7 +1,7 @@
-# Use ToClient For Server Emissions
+# Use ToClient For Server App Data
 
 `ToServer` is the browser-to-server command vocabulary. `ToClient` is the
-server-to-browser result, boot data, and event vocabulary.
+server-to-browser app-data vocabulary.
 
 Any public custom type named `ToServer` under `api` contributes command
 messages. Any public custom type named `ToClient` under `api` contributes
@@ -10,17 +10,35 @@ wire-visible domain types.
 
 ## Decision
 
-Every app-visible server emission is a `ToClient` value.
+Server app data is a `ToClient` value.
 
-Operation result constructors carry the data the client needs to update local
-state. Operations that only need confirmation carry an app-defined confirmation
-constructor such as `ScoreUpdateSaved` or `ResultSaved`. Failure outcomes use
-app-defined `ToClient` constructors such as `AdminError`.
+Load data, boot data, and live update data use `ToClient` constructors. For
+example, `GamesLoaded` and `GameUpdated` are `ToClient` values.
 
-Request frames may produce response frames. Response frames carry a request id
-for transport correlation, but the app payload is still a `ToClient` value.
-Live pushes also carry `ToClient` values. After decode, clients apply both
-response and push messages through the same reducer path.
+No-data load and save acks use Gleam's built-in `Result` directly:
+
+```gleam
+Result(Nil, List(ApiLoadError))
+Result(Nil, List(ApiSaveError))
+```
+
+Libero generates the ack error types:
+
+```gleam
+pub type ApiLoadError {
+  ApiLoadError(message: String)
+}
+
+pub type ApiSaveError {
+  ApiSaveError(field: Option(String), message: String)
+}
+```
+
+Successful load and save acks are `Ok(Nil)`. Load data and changed domain data
+still travel as `ToClient` values.
+
+Request and ack helper surfaces do not expose a request id. The app treats acks
+as messages in the client and server update flow, not as correlated RPC promises.
 
 Local page `Msg` types are for browser-originated page events such as clicks,
 input changes, timers, subscriptions, and JavaScript callbacks. They do not
@@ -31,8 +49,9 @@ not in the API contract.
 
 ## Consequences
 
-The wire protocol has one server emission vocabulary.
+The wire protocol separates no-data load/save acks from app data.
 
-Operation responses and live events reuse the same page update code.
+Client `ToClient` handlers only apply app data.
 
-Transport correlation stays outside the API domain types.
+Operation success and failure can be handled without adding confirmation or
+failure constructors to `ToClient`, and without adding user-authored ack types.

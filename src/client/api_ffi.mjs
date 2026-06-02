@@ -1,4 +1,3 @@
-let requestId = 0;
 let socket = null;
 let socketUrl = null;
 let pending = [];
@@ -7,12 +6,6 @@ let reconnectTimer = null;
 let reconnectAttempts = 0;
 
 import { BitArray } from "../gleam.mjs";
-
-export function next_request_id() {
-  requestId = (requestId + 1) >>> 0;
-  if (requestId === 0) requestId = 1;
-  return requestId;
-}
 
 export function connect(url, onFrame) {
   socketUrl = url;

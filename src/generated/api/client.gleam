@@ -3,13 +3,15 @@ import api/to_client.{type ToClient}
 @target(javascript)
 import api/to_server.{type ToServer}
 @target(javascript)
+import generated/api/ack.{type ApiLoadError, type ApiSaveError}
+@target(javascript)
 import generated/api/to_client_codec
 @target(javascript)
 import generated/api/to_server_codec
 
 @target(javascript)
 pub type ServerFrame {
-  Response(request_id: Int, message: ToClient)
+  Response(message: ToClient)
   Push(module: String, message: ToClient)
 }
 
@@ -27,11 +29,9 @@ pub fn send(message: ToServer) -> BitArray {
 @target(javascript)
 pub fn encode_request(
   module module: String,
-  request_id request_id: Int,
   message message: ToServer,
 ) -> BitArray {
-  let assert True = request_id >= 0 && request_id <= 4_294_967_295
-  encode_any(#(module, request_id, message))
+  encode_any(#(module, message))
 }
 
 @target(javascript)
@@ -42,9 +42,9 @@ pub fn receive(bytes: BitArray) -> Result(ToClient, Nil) {
 @target(javascript)
 pub fn decode_server_frame(bytes: BitArray) -> Result(ServerFrame, Nil) {
   case bytes {
-    <<0, request_id:32, payload:bits>> -> {
+    <<0, payload:bits>> -> {
       case to_client_codec.decode(payload) {
-        Ok(message) -> Ok(Response(request_id:, message:))
+        Ok(message) -> Ok(Response(message:))
         Error(Nil) -> Error(Nil)
       }
     }
@@ -54,6 +54,28 @@ pub fn decode_server_frame(bytes: BitArray) -> Result(ServerFrame, Nil) {
         Error(Nil) -> Error(Nil)
       }
     }
+    _ -> Error(Nil)
+  }
+}
+
+@target(javascript)
+pub fn decode_load_ack(
+  bytes: BitArray,
+) -> Result(Result(Nil, List(ApiLoadError)), Nil) {
+  decode_ack(bytes)
+}
+
+@target(javascript)
+pub fn decode_save_ack(
+  bytes: BitArray,
+) -> Result(Result(Nil, List(ApiSaveError)), Nil) {
+  decode_ack(bytes)
+}
+
+@target(javascript)
+fn decode_ack(bytes: BitArray) -> Result(a, Nil) {
+  case bytes {
+    <<0, payload:bits>> -> decode_any(payload)
     _ -> Error(Nil)
   }
 }

@@ -18,16 +18,9 @@ pub fn connect(
 @target(javascript)
 pub fn send(module module: String, message message: ToServer) -> Effect(msg) {
   effect.from(fn(_dispatch) {
-    let request_id = next_request_id()
-    let frame = generated_client.encode_request(module, request_id, message)
+    let frame = generated_client.encode_request(module, message)
     send_frame(frame)
   })
-}
-
-@target(javascript)
-@external(javascript, "./api_ffi.mjs", "next_request_id")
-fn next_request_id() -> Int {
-  0
 }
 
 @target(javascript)

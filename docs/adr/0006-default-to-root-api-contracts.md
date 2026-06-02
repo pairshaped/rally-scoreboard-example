@@ -42,7 +42,7 @@ pub type ToServer {
 }
 ```
 
-Any public custom type named `ToClient` under `api` contributes server-to-browser result, boot data, and event constructors. Constructor fields are the delivered payload.
+Any public custom type named `ToClient` under `api` contributes server-to-browser app-data constructors. Constructor fields are the delivered payload.
 
 ```gleam
 pub type ToClient {
@@ -52,6 +52,27 @@ pub type ToClient {
 ```
 
 Other public custom types under `api` are reusable wire-visible domain shapes. They do not define one wrapper type per message just to make handlers receive a message-shaped value. The `ToServer` and `ToClient` unions are the message-shaped values.
+
+No-data load and save acks use Gleam's built-in `Result` directly:
+
+```gleam
+Result(Nil, List(ApiLoadError))
+Result(Nil, List(ApiSaveError))
+```
+
+Libero generates the ack error types:
+
+```gleam
+pub type ApiLoadError {
+  ApiLoadError(message: String)
+}
+
+pub type ApiSaveError {
+  ApiSaveError(field: Option(String), message: String)
+}
+```
+
+Do not add custom `Ack`, `Outcome`, `LoadResult`, `SaveResult`, `ApiLoadError`, or `ApiSaveError` API types for this shape. The error types are generated.
 
 The generator uses client/server language for transport messages. `ToServer` and `ToClient` match the generator's package and runtime vocabulary.
 
@@ -128,7 +149,7 @@ Page modules may import `api` domain and protocol types. They do not define wire
 
 Local page messages do not cross the wire. They are reserved for browser-originated page events such as clicks, input changes, timers, subscriptions, and JavaScript callbacks.
 
-Server results and pushed events cross the wire as `ToClient` values. Client `ToClient` handlers apply those values directly to page models. They do not mirror `ToClient` constructors into local page messages.
+Server app data crosses the wire as `ToClient` values. Client `ToClient` handlers apply those values directly to page models. They do not mirror `ToClient` constructors into local page messages.
 
 Browser-originated commands cross the wire as `ToServer` values. Libero's
 generated API modules encode and decode the ETF frames. App-owned browser and

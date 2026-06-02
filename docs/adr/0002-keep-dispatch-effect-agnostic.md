@@ -1,7 +1,7 @@
 # Keep Dispatch Effect Agnostic
 
 Scoreboard's server API dispatch maps decoded `ToServer` values to app-owned
-handlers and returns `ToClient` values.
+handlers and returns a no-data ack plus any `ToClient` app-data values.
 
 The dispatch layer should not own sockets, process groups, request framing,
 response framing, or browser delivery. It should be usable from a WebSocket
@@ -25,9 +25,9 @@ The WebSocket runtime owns frame decode, response frame encode, socket writes,
 and live fanout. Libero's generated modules own only ETF codec and frame helper
 code.
 
-`dispatch_request` is a convenience boundary for tests and simple frame-driven
-callers. It decodes one generated request frame and returns response frames. It
-does not own long-lived socket behavior.
+Frame decode and encode live outside dispatch. The WebSocket runtime decodes one
+generated request frame, calls dispatch, sends the no-data ack, and routes
+any `ToClient` app-data values.
 
 ## Consequences
 
@@ -35,5 +35,5 @@ Handlers stay small and easy to test.
 
 Transport code can change without rewriting app behavior.
 
-The app can reuse the same `ToServer -> List(ToClient)` flow for page boot,
-socket requests, and operation responses.
+The app can reuse the same `ToServer` handler flow for page boot, socket
+requests, and operation acks.

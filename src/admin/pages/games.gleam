@@ -1,6 +1,6 @@
 import admin/views/games as shared_admin_games_page
 import api/domain/game.{
-  type AdminGameDetail, type AdminGameSummary, AdminGameSummary,
+  type AdminGameSummary, type GameSnapshot, AdminGameSummary,
 }
 @target(javascript)
 import api/to_server
@@ -51,18 +51,11 @@ pub fn admin_games_loaded(
   #(Model(games: games), effect.none())
 }
 
-pub fn score_update_saved(
+pub fn game_updated(
   model model: Model,
-  game game: AdminGameDetail,
+  game game: GameSnapshot,
 ) -> #(Model, Effect(Message)) {
-  #(upsert_game(model, admin_summary(game)), effect.none())
-}
-
-pub fn result_saved(
-  model model: Model,
-  game game: AdminGameDetail,
-) -> #(Model, Effect(Message)) {
-  #(upsert_game(model, admin_summary(game)), effect.none())
+  #(upsert_game(model, snapshot_summary(game)), effect.none())
 }
 
 pub fn view(model model: Model) -> Element(Message) {
@@ -90,11 +83,11 @@ fn upsert_game(model: Model, game: AdminGameSummary) -> Model {
   Model(games: games)
 }
 
-fn admin_summary(game: AdminGameDetail) -> AdminGameSummary {
+fn snapshot_summary(game: GameSnapshot) -> AdminGameSummary {
   AdminGameSummary(
     id: game.id,
-    home_code: game.home_code,
-    away_code: game.away_code,
+    home_code: game.home.code,
+    away_code: game.away.code,
     home_score: game.home_score,
     away_score: game.away_score,
     status: game.status,

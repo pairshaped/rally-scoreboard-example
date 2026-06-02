@@ -3,13 +3,15 @@ import api/to_client.{type ToClient}
 @target(erlang)
 import api/to_server.{type ToServer}
 @target(erlang)
+import generated/api/ack.{type ApiLoadError, type ApiSaveError}
+@target(erlang)
 import generated/api/to_client_codec
 @target(erlang)
 import generated/api/to_server_codec
 
 @target(erlang)
 pub type ClientRequest {
-  ClientRequest(module: String, request_id: Int, message: ToServer)
+  ClientRequest(module: String, message: ToServer)
 }
 
 @target(erlang)
@@ -26,9 +28,7 @@ pub fn decode(bytes: BitArray) -> Result(ToServer, Nil) {
 @target(erlang)
 pub fn decode_request(bytes: BitArray) -> Result(ClientRequest, Nil) {
   case decode_any(bytes) {
-    Ok(#(module, request_id, message))
-      if request_id >= 0 && request_id <= 4_294_967_295
-    -> Ok(ClientRequest(module:, request_id:, message:))
+    Ok(#(module, message)) -> Ok(ClientRequest(module:, message:))
     _ -> Error(Nil)
   }
 }
@@ -39,13 +39,25 @@ pub fn encode(message: ToClient) -> BitArray {
 }
 
 @target(erlang)
-pub fn encode_response(
-  request_id request_id: Int,
-  message message: ToClient,
-) -> BitArray {
-  let assert True = request_id >= 0 && request_id <= 4_294_967_295
+pub fn encode_response(message message: ToClient) -> BitArray {
   let payload = to_client_codec.encode(message)
-  <<0, request_id:32, payload:bits>>
+  <<0, payload:bits>>
+}
+
+@target(erlang)
+pub fn encode_load_ack(ack ack: Result(Nil, List(ApiLoadError))) -> BitArray {
+  encode_ack(ack)
+}
+
+@target(erlang)
+pub fn encode_save_ack(ack ack: Result(Nil, List(ApiSaveError))) -> BitArray {
+  encode_ack(ack)
+}
+
+@target(erlang)
+fn encode_ack(ack: a) -> BitArray {
+  let payload = encode_any(ack)
+  <<0, payload:bits>>
 }
 
 @target(erlang)

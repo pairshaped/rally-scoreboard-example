@@ -35,18 +35,18 @@ pub fn normalize_display_name_test() {
 }
 
 @target(erlang)
-pub fn mark_final_returns_result_saved_and_game_update_test() {
+pub fn mark_final_returns_save_ack_and_game_update_test() {
   let db = live_game_db()
 
-  let replies =
-    api.dispatch(
+  let reply =
+    api.dispatch_reply(
       db: db,
       message: to_server.MarkFinal(1),
       admin_authorized: True,
     )
 
-  case replies {
-    [to_client.ResultSaved(_), to_client.GameUpdated(updated)] ->
+  case reply {
+    api.SaveReply(ack: Ok(Nil), messages: [to_client.GameUpdated(updated)]) ->
       updated.status == game.Final
     _ -> False
   }
@@ -56,18 +56,18 @@ pub fn mark_final_returns_result_saved_and_game_update_test() {
 }
 
 @target(erlang)
-pub fn update_score_returns_score_saved_and_game_update_test() {
+pub fn update_score_returns_save_ack_and_game_update_test() {
   let db = final_game_db()
 
-  let replies =
-    api.dispatch(
+  let reply =
+    api.dispatch_reply(
       db: db,
       message: to_server.UpdateScore(1, 5, 2, "Live"),
       admin_authorized: True,
     )
 
-  case replies {
-    [to_client.ScoreUpdateSaved(_), to_client.GameUpdated(updated)] ->
+  case reply {
+    api.SaveReply(ack: Ok(Nil), messages: [to_client.GameUpdated(updated)]) ->
       updated.status == game.Live("Live")
     _ -> False
   }
@@ -94,20 +94,21 @@ pub fn only_game_updates_are_global_mutation_broadcasts_test() {
   )
   |> should.equal(True)
 
-  let result_saved =
-    to_client.ResultSaved(game.AdminGameDetail(
-      id: 1,
-      home_code: "TOR",
-      away_code: "MTL",
-      home_score: 4,
-      away_score: 2,
-      status: game.Final,
-      period: "Final",
-    ))
+  let games_loaded =
+    to_client.GamesLoaded([
+      game.PublicGameSummary(
+        id: 1,
+        home: game.Team("TOR", "Toronto Towers", "toronto-towers"),
+        away: game.Team("MTL", "Montreal Meteors", "montréal-meteors"),
+        home_score: 4,
+        away_score: 2,
+        status: game.Final,
+      ),
+    ])
 
   ws.should_broadcast_live_update(
     request: to_server.MarkFinal(1),
-    reply: result_saved,
+    reply: games_loaded,
   )
   |> should.equal(False)
 }

@@ -515,24 +515,16 @@ fn apply_admin_message(
       let #(model, _) = admin_games_page.admin_games_loaded(model, games)
       admin_pages.AdminHomePage(model)
     }
-    admin_pages.AdminHomePage(model), to_client.ScoreUpdateSaved(game) -> {
-      let #(model, _) = admin_games_page.score_update_saved(model, game)
-      admin_pages.AdminHomePage(model)
-    }
-    admin_pages.AdminHomePage(model), to_client.ResultSaved(game) -> {
-      let #(model, _) = admin_games_page.result_saved(model, game)
+    admin_pages.AdminHomePage(model), to_client.GameUpdated(game) -> {
+      let #(model, _) = admin_games_page.game_updated(model, game)
       admin_pages.AdminHomePage(model)
     }
     admin_pages.AdminGamesPage(model), to_client.AdminGamesLoaded(games) -> {
       let #(model, _) = admin_games_page.admin_games_loaded(model, games)
       admin_pages.AdminGamesPage(model)
     }
-    admin_pages.AdminGamesPage(model), to_client.ScoreUpdateSaved(game) -> {
-      let #(model, _) = admin_games_page.score_update_saved(model, game)
-      admin_pages.AdminGamesPage(model)
-    }
-    admin_pages.AdminGamesPage(model), to_client.ResultSaved(game) -> {
-      let #(model, _) = admin_games_page.result_saved(model, game)
+    admin_pages.AdminGamesPage(model), to_client.GameUpdated(game) -> {
+      let #(model, _) = admin_games_page.game_updated(model, game)
       admin_pages.AdminGamesPage(model)
     }
     _, _ -> page

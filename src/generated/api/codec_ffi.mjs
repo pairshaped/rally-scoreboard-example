@@ -1,4 +1,5 @@
 import { Ok, Error as ResultError, CustomType, Empty, NonEmpty, BitArray } from "../../../gleam_stdlib/gleam.mjs";
+import { Some, None } from "../../../gleam_stdlib/gleam/option.mjs";
 import { LoadGames } from "../../api/to_server.mjs";
 import { LoadGame } from "../../api/to_server.mjs";
 import { LoadStandings } from "../../api/to_server.mjs";
@@ -11,13 +12,9 @@ import { GamesLoaded } from "../../api/to_client.mjs";
 import { GameLoaded } from "../../api/to_client.mjs";
 import { StandingsLoaded } from "../../api/to_client.mjs";
 import { PowerRankingsLoaded } from "../../api/to_client.mjs";
-import { GamesLoadFailed } from "../../api/to_client.mjs";
 import { TeamLoaded } from "../../api/to_client.mjs";
 import { AdminGamesLoaded } from "../../api/to_client.mjs";
 import { GameUpdated } from "../../api/to_client.mjs";
-import { ScoreUpdateSaved } from "../../api/to_client.mjs";
-import { ResultSaved } from "../../api/to_client.mjs";
-import { AdminError } from "../../api/to_client.mjs";
 import { TeamDetail } from "../../api/domain/team.mjs";
 import { PowerRankingRow } from "../../api/domain/standing.mjs";
 import { StandingRow } from "../../api/domain/standing.mjs";
@@ -30,6 +27,7 @@ import { Team } from "../../api/domain/game.mjs";
 import { Scheduled } from "../../api/domain/game.mjs";
 import { Live } from "../../api/domain/game.mjs";
 import { Final } from "../../api/domain/game.mjs";
+import { ApiLoadError, ApiSaveError } from "./ack.mjs";
 
 const constructorRegistry = new Map();
 
@@ -172,6 +170,7 @@ class Decoder {
     if (atom === "true") return true;
     if (atom === "false") return false;
     if (atom === "nil" || atom === "undefined") return undefined;
+    if (atom === "none") return new None();
     const registered = constructorRegistry.get(atom);
     if (registered && registered.fieldCount === 0) return new registered.ctor();
     return atom;
@@ -195,10 +194,22 @@ class Decoder {
       fields.length = registered.fieldCount;
       return new registered.ctor(...fields);
     }
+    if (atom === "some") {
+      const innerHint = typeHint?.kind === "option" ? typeHint.element : undefined;
+      const value = arity >= 2 ? this.decodeTerm(innerHint) : undefined;
+      for (let i = 2; i < arity; i += 1) this.decodeTerm();
+      return new Some(value);
+    }
+    if (atom === "ok") {
+      const hint = typeHint?.kind === "result" ? typeHint.ok : tupleHints?.[1];
+      return new Ok(this.decodeTerm(hint));
+    }
+    if (atom === "error") {
+      const hint = typeHint?.kind === "result" ? typeHint.error : tupleHints?.[1];
+      return new ResultError(this.decodeTerm(hint));
+    }
     const items = [atom];
     for (let i = 1; i < arity; i += 1) items.push(this.decodeTerm(tupleHints?.[i]));
-    if (atom === "ok") return new Ok(items[1]);
-    if (atom === "error") return new ResultError(items[1]);
     return items;
   }
 
@@ -402,7 +413,7 @@ class Encoder {
     const registered = constructorRegistry.get(atom);
     const fields = Object.keys(value).map(key => value[key]);
     if (fields.length === 0) return this.writeAtom(atom);
-    const fieldTypes = optionFieldTypes(value, typeHint) ?? registered?.fieldTypes ?? [];
+    const fieldTypes = optionFieldTypes(value, typeHint) ?? resultFieldTypes(value, typeHint) ?? registered?.fieldTypes ?? [];
     if (fields.length + 1 <= 255) {
       this.writeUint8(104);
       this.writeUint8(fields.length + 1);
@@ -417,10 +428,23 @@ class Encoder {
 
 function customTypeAtom(value) {
   if (value.constructor.__wireAtom !== undefined) return value.constructor.__wireAtom;
+  if (value instanceof Ok) return "ok";
+  if (value instanceof ResultError) return "error";
+  if (value instanceof Some) return "some";
+  if (value instanceof None) return "none";
   throw new Error("ETF encode unsupported custom type " + value.constructor.name);
 }
 
 function optionFieldTypes(value, typeHint) {
+  if (value instanceof Some && typeHint?.kind === "option") return [typeHint.element];
+  if (value instanceof None) return [];
+  return undefined;
+}
+
+function resultFieldTypes(value, typeHint) {
+  if (typeHint?.kind !== "result") return undefined;
+  if (value instanceof Ok) return [typeHint.ok];
+  if (value instanceof ResultError) return [typeHint.error];
   return undefined;
 }
 
@@ -446,6 +470,10 @@ let installed = false;
 export function ensure() {
   if (installed) return undefined;
   installed = true;
+  ApiLoadError.__wireAtom = "api_load_error";
+  registerConstructor("api_load_error", ApiLoadError, 1, ["string"]);
+  ApiSaveError.__wireAtom = "api_save_error";
+  registerConstructor("api_save_error", ApiSaveError, 2, [{ kind: "option", element: "string" }, "string"]);
   Scheduled.__wireAtom = "scheduled";
   registerConstructor("scheduled", Scheduled, 0, []);
   Live.__wireAtom = "live";
@@ -478,20 +506,12 @@ export function ensure() {
   registerConstructor("standings_loaded", StandingsLoaded, 1, [{ kind: "list", element: undefined }]);
   PowerRankingsLoaded.__wireAtom = "power_rankings_loaded";
   registerConstructor("power_rankings_loaded", PowerRankingsLoaded, 1, [{ kind: "list", element: undefined }]);
-  GamesLoadFailed.__wireAtom = "games_load_failed";
-  registerConstructor("games_load_failed", GamesLoadFailed, 1, ["string"]);
   TeamLoaded.__wireAtom = "team_loaded";
   registerConstructor("team_loaded", TeamLoaded, 1, [undefined]);
   AdminGamesLoaded.__wireAtom = "admin_games_loaded";
   registerConstructor("admin_games_loaded", AdminGamesLoaded, 1, [{ kind: "list", element: undefined }]);
   GameUpdated.__wireAtom = "game_updated";
   registerConstructor("game_updated", GameUpdated, 1, [undefined]);
-  ScoreUpdateSaved.__wireAtom = "score_update_saved";
-  registerConstructor("score_update_saved", ScoreUpdateSaved, 1, [undefined]);
-  ResultSaved.__wireAtom = "result_saved";
-  registerConstructor("result_saved", ResultSaved, 1, [undefined]);
-  AdminError.__wireAtom = "admin_error";
-  registerConstructor("admin_error", AdminError, 1, ["string"]);
   LoadGames.__wireAtom = "load_games";
   registerConstructor("load_games", LoadGames, 0, []);
   LoadGame.__wireAtom = "load_game";
