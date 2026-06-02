@@ -161,29 +161,30 @@ commands.
 
 Page boot requests are the first-render data convention.
 
-Shared page modules declare normal first-render server requests for a route:
+Generated-shaped boot modules declare normal first-render server requests for a route:
 
 ```gleam
-/// First-render server requests for this route.
-///
-/// Generated SSR executes these locally and embeds the returned ToClient
-/// values for hydration. Generated client init sends these over WebSocket
-/// only when hydration has not already populated the page model.
-pub fn init_requests() -> List(to_server.ToServer) {
-  [to_server.LoadGames]
+pub fn requests(route: routes.Route) -> List(to_server.ToServer) {
+  case route {
+    routes.Games -> [to_server.LoadGames]
+    routes.GamesId(id) -> ...
+    routes.SignIn | routes.NotFound -> []
+  }
 }
 ```
 
-`init_requests` is shared boot wiring for the route. It takes no page model, `RequestContext`, `ServerContext`, or `ClientSharedState`. It does not decide whether data is already present and it does not load data itself.
+The boot plan is shared boot wiring for the route. It takes no page model,
+`RequestContext`, `ServerContext`, or `ClientSharedState`. It does not decide
+whether data is already present and it does not load data itself.
 
-SSR execution may run the route's `init_requests`, map each `ToServer` value to
-its server handler, and embed the returned `ToClient` values as page-data
-hydration flags.
+SSR execution runs the route's boot requests, maps each `ToServer` value to its
+server handler, and embeds the returned `ToClient` values as page-data
+hydration.
 
-Client init sends `init_requests` over the app-owned API transport path when
-hydration has not already populated the page model.
+Client init sends the same boot requests over the app-owned API transport path
+when hydration has not already populated the page model.
 
-Static pages can omit `init_requests`.
+Static pages have no boot requests.
 
 ## Server Handlers
 

@@ -10,13 +10,11 @@ tags:
 created_at: 2026-06-02T10:04:23Z
 updated_at: 2026-06-02T10:04:23Z
 parent: scoreboard-d0g1
-blocked_by:
-    - scoreboard-c8d8
 ---
 
 ## Problem
 
-src/scoreboard_unified.gleam is carrying too many responsibilities: process startup, HTTP routing, static files, auth redirects, document shell rendering, CSS, SSR page rendering, hydration payload encoding, route boot mapping, and duplicated ToClient application.
+src/scoreboard_unified.gleam is carrying too many responsibilities: process startup, HTTP routing, static files, auth redirects, document shell rendering, CSS, SSR page rendering, hydration payload encoding, and SSR/hydration orchestration.
 
 The file works, but it is too large to be the long-term app shape.
 

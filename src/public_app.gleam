@@ -17,6 +17,8 @@ import generated_soon/client_transport as api_client
 @target(javascript)
 import generated_soon/hydration
 @target(javascript)
+import generated_soon/public_boot
+@target(javascript)
 import gleam/int
 @target(javascript)
 import gleam/list
@@ -117,7 +119,7 @@ fn initial_page(
         )
       #(page, effect.none())
     }
-    Error(Nil) -> pages.load(PageContext, query_params, route)
+    Error(Nil) -> public_boot.load_client(PageContext, query_params, route)
   }
 }
 
@@ -208,7 +210,7 @@ fn navigate(
 ) -> #(Model, Effect(Msg)) {
   let path = routes.route_to_path(route)
   let #(page, page_effect) =
-    pages.load(PageContext, page_input.empty_query_params(), route)
+    public_boot.load_client(PageContext, page_input.empty_query_params(), route)
   let shared_state =
     PublicClientSharedState(..model.shared_state, active_section: path)
   let history_effect = case push_history {

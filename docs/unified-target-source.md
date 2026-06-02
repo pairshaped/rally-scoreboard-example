@@ -70,6 +70,8 @@ Each generator owns a namespace under `src/generated`:
 - `generated/proute`: route and page glue from Proute
 - `generated/api`: ETF codecs, generated result error types, and browser/server transport glue generated around `ToServer`, `ToClient`, and load/save results
 
+`src/generated_soon` holds generated-shaped runtime code that has not moved to a real generator yet. Its current boot modules own route-to-`ToServer` load planning and `ToClient` page application for both SSR hydration and browser startup. Hydration stays ETF `ToClient` data.
+
 ## Wire Contract
 
 Only `src/api/**` defines user-authored types that cross the wire. Libero may

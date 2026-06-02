@@ -32,16 +32,16 @@ The generator derives the route from the root page path and wires the unified pa
 
 Normal pages use one first-render data convention across targets:
 
-- shared page modules may declare `init_requests() -> List(ToServer)`
+- generated-shaped boot modules declare route requests with `requests(route) -> List(ToServer)`
 - client page modules may define `init(...)` for custom browser startup decisions
 - client page modules define constructor-named `ToClient` handlers as mini-updates over their page model
 - server page modules may define `init(...) -> List(ToServer)` for custom SSR request selection
 - server `ToServer` handlers still use constructor-derived snake_case names such as `load_games`
 
-For normal data-backed pages, shared `init_requests` is enough. SSR can execute
-it, and client init sends it when hydration data is absent. Server and client
-`init` functions are optional customization hooks, and custom hooks for a route
-with non-empty shared `init_requests` must call shared `init_requests`.
+For normal data-backed pages, the generated-shaped boot plan owns the route's
+first-render `ToServer` requests. SSR executes those requests and embeds the
+resulting `ToClient` values for hydration. Browser startup uses the same boot
+plan when hydration data is absent.
 
 The generator maps those files to route constructors, URL parsing, and path builders. Dynamic path segments come from bracketed file or directory names.
 

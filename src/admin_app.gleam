@@ -15,6 +15,8 @@ import generated/proute/admin/pages
 @target(javascript)
 import generated/proute/admin/routes
 @target(javascript)
+import generated_soon/admin_boot
+@target(javascript)
 import generated_soon/browser
 @target(javascript)
 import generated_soon/client_transport as api_client
@@ -103,7 +105,7 @@ fn initial_page(
         )
       #(page, effect.none())
     }
-    Error(Nil) -> pages.load(PageContext, query_params, route)
+    Error(Nil) -> admin_boot.load_client(PageContext, query_params, route)
   }
 }
 
@@ -169,7 +171,7 @@ fn navigate(
 ) -> #(Model, Effect(Msg)) {
   let path = routes.route_to_path(route)
   let #(page, page_effect) =
-    pages.load(PageContext, page_input.empty_query_params(), route)
+    admin_boot.load_client(PageContext, page_input.empty_query_params(), route)
   let shared_state =
     AdminClientSharedState(..model.shared_state, active_section: path)
   let history_effect = case push_history {
