@@ -16,6 +16,7 @@ glinter = ">= 2.19.0 and < 3.0.0"
 libero = { path = "../libero" }
 marmot = "1.7.1"
 proute = { path = "../proute" }
+birdie = ">= 2.0.0 and < 3.0.0"
 
 [tools.glinter]
 stats = true

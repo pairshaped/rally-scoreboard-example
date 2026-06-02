@@ -1,0 +1,332 @@
+---
+version: 2.0.0
+title: ssr admin home
+file: ./test/ssr_snapshot_test.gleam
+test_name: ssr_admin_home_snapshot_test
+---
+hydration_count: 1
+
+<div class="scoreboard-app admin-shell">
+<header class="topbar">
+<div class="brand">
+<span class="brand-mark">S</span>
+<div>
+<strong>Scoreboard</strong>
+<p class="muted">Admin score desk</p>
+</div>
+</div>
+<nav class="nav">
+<a href="/games">Games</a>
+<a href="/standings">Standings</a>
+<a class="active" data-scoreboard-spa-nav="1" href="/admin/games">Admin</a>
+<a href="/sign_out?return_to=/games">Sign Out</a>
+<label class="theme-switch">
+<svg xmlns="http://www.w3.org/2000/svg" aria-label="Light mode" class="theme-icon" fill="none" height="16" role="img" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="16">
+<circle cx="12" cy="12" r="5">
+</circle>
+<line x1="12" x2="12" y1="1" y2="3">
+</line>
+<line x1="12" x2="12" y1="21" y2="23">
+</line>
+<line x1="4.22" x2="5.64" y1="4.22" y2="5.64">
+</line>
+<line x1="18.36" x2="19.78" y1="18.36" y2="19.78">
+</line>
+<line x1="1" x2="3" y1="12" y2="12">
+</line>
+<line x1="21" x2="23" y1="12" y2="12">
+</line>
+<line x1="4.22" x2="5.64" y1="19.78" y2="18.36">
+</line>
+<line x1="18.36" x2="19.78" y1="5.64" y2="4.22">
+</line>
+</svg>
+<input role="switch" type="checkbox">
+<svg xmlns="http://www.w3.org/2000/svg" aria-label="Dark mode" class="theme-icon" fill="none" height="16" role="img" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="16">
+<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z">
+</path>
+</svg>
+</label>
+</nav>
+</header>
+<!-- lustre:map -->
+<div class="game-grid">
+<article class="game-card">
+<div class="admin-score-row">
+<strong>MTL</strong>
+<button class="small score-control">-</button>
+<button class="small score-control">+</button>
+<span class="score">2</span>
+</div>
+<div class="admin-score-row">
+<strong>TOR</strong>
+<button class="small score-control">-</button>
+<button class="small score-control">+</button>
+<span class="score">4</span>
+</div>
+<div class="score-line admin-status-row">
+<span class="badge live">3rd</span>
+<button class="small secondary">Finalize</button>
+</div>
+</article>
+<article class="game-card">
+<div class="admin-score-row">
+<strong>NYC</strong>
+<button class="small score-control">-</button>
+<button class="small score-control">+</button>
+<span class="score">1</span>
+</div>
+<div class="admin-score-row">
+<strong>VAN</strong>
+<button class="small score-control">-</button>
+<button class="small score-control">+</button>
+<span class="score">1</span>
+</div>
+<div class="score-line admin-status-row">
+<span class="badge final">Final</span>
+<span>
+</span>
+</div>
+</article>
+<article class="game-card">
+<div class="admin-score-row">
+<strong>LAK</strong>
+<button class="small score-control">-</button>
+<button class="small score-control">+</button>
+<span class="score">0</span>
+</div>
+<div class="admin-score-row">
+<strong>BOS</strong>
+<button class="small score-control">-</button>
+<button class="small score-control">+</button>
+<span class="score">0</span>
+</div>
+<div class="score-line admin-status-row">
+<span class="badge">Scheduled</span>
+<button class="small secondary">Finalize</button>
+</div>
+</article>
+<article class="game-card">
+<div class="admin-score-row">
+<strong>VAN</strong>
+<button class="small score-control">-</button>
+<button class="small score-control">+</button>
+<span class="score">3</span>
+</div>
+<div class="admin-score-row">
+<strong>TOR</strong>
+<button class="small score-control">-</button>
+<button class="small score-control">+</button>
+<span class="score">5</span>
+</div>
+<div class="score-line admin-status-row">
+<span class="badge final">Final</span>
+<span>
+</span>
+</div>
+</article>
+<article class="game-card">
+<div class="admin-score-row">
+<strong>NYC</strong>
+<button class="small score-control">-</button>
+<button class="small score-control">+</button>
+<span class="score">0</span>
+</div>
+<div class="admin-score-row">
+<strong>TOR</strong>
+<button class="small score-control">-</button>
+<button class="small score-control">+</button>
+<span class="score">0</span>
+</div>
+<div class="score-line admin-status-row">
+<span class="badge">Scheduled</span>
+<button class="small secondary">Finalize</button>
+</div>
+</article>
+<article class="game-card">
+<div class="admin-score-row">
+<strong>BOS</strong>
+<button class="small score-control">-</button>
+<button class="small score-control">+</button>
+<span class="score">4</span>
+</div>
+<div class="admin-score-row">
+<strong>TOR</strong>
+<button class="small score-control">-</button>
+<button class="small score-control">+</button>
+<span class="score">6</span>
+</div>
+<div class="score-line admin-status-row">
+<span class="badge final">Final</span>
+<span>
+</span>
+</div>
+</article>
+<article class="game-card">
+<div class="admin-score-row">
+<strong>LAK</strong>
+<button class="small score-control">-</button>
+<button class="small score-control">+</button>
+<span class="score">0</span>
+</div>
+<div class="admin-score-row">
+<strong>TOR</strong>
+<button class="small score-control">-</button>
+<button class="small score-control">+</button>
+<span class="score">0</span>
+</div>
+<div class="score-line admin-status-row">
+<span class="badge">Scheduled</span>
+<button class="small secondary">Finalize</button>
+</div>
+</article>
+<article class="game-card">
+<div class="admin-score-row">
+<strong>VAN</strong>
+<button class="small score-control">-</button>
+<button class="small score-control">+</button>
+<span class="score">0</span>
+</div>
+<div class="admin-score-row">
+<strong>MTL</strong>
+<button class="small score-control">-</button>
+<button class="small score-control">+</button>
+<span class="score">0</span>
+</div>
+<div class="score-line admin-status-row">
+<span class="badge">Scheduled</span>
+<button class="small secondary">Finalize</button>
+</div>
+</article>
+<article class="game-card">
+<div class="admin-score-row">
+<strong>NYC</strong>
+<button class="small score-control">-</button>
+<button class="small score-control">+</button>
+<span class="score">5</span>
+</div>
+<div class="admin-score-row">
+<strong>MTL</strong>
+<button class="small score-control">-</button>
+<button class="small score-control">+</button>
+<span class="score">2</span>
+</div>
+<div class="score-line admin-status-row">
+<span class="badge final">Final</span>
+<span>
+</span>
+</div>
+</article>
+<article class="game-card">
+<div class="admin-score-row">
+<strong>BOS</strong>
+<button class="small score-control">-</button>
+<button class="small score-control">+</button>
+<span class="score">0</span>
+</div>
+<div class="admin-score-row">
+<strong>MTL</strong>
+<button class="small score-control">-</button>
+<button class="small score-control">+</button>
+<span class="score">0</span>
+</div>
+<div class="score-line admin-status-row">
+<span class="badge">Scheduled</span>
+<button class="small secondary">Finalize</button>
+</div>
+</article>
+<article class="game-card">
+<div class="admin-score-row">
+<strong>LAK</strong>
+<button class="small score-control">-</button>
+<button class="small score-control">+</button>
+<span class="score">4</span>
+</div>
+<div class="admin-score-row">
+<strong>MTL</strong>
+<button class="small score-control">-</button>
+<button class="small score-control">+</button>
+<span class="score">3</span>
+</div>
+<div class="score-line admin-status-row">
+<span class="badge final">Final</span>
+<span>
+</span>
+</div>
+</article>
+<article class="game-card">
+<div class="admin-score-row">
+<strong>BOS</strong>
+<button class="small score-control">-</button>
+<button class="small score-control">+</button>
+<span class="score">0</span>
+</div>
+<div class="admin-score-row">
+<strong>VAN</strong>
+<button class="small score-control">-</button>
+<button class="small score-control">+</button>
+<span class="score">0</span>
+</div>
+<div class="score-line admin-status-row">
+<span class="badge">Scheduled</span>
+<button class="small secondary">Finalize</button>
+</div>
+</article>
+<article class="game-card">
+<div class="admin-score-row">
+<strong>LAK</strong>
+<button class="small score-control">-</button>
+<button class="small score-control">+</button>
+<span class="score">6</span>
+</div>
+<div class="admin-score-row">
+<strong>VAN</strong>
+<button class="small score-control">-</button>
+<button class="small score-control">+</button>
+<span class="score">7</span>
+</div>
+<div class="score-line admin-status-row">
+<span class="badge final">Final</span>
+<span>
+</span>
+</div>
+</article>
+<article class="game-card">
+<div class="admin-score-row">
+<strong>BOS</strong>
+<button class="small score-control">-</button>
+<button class="small score-control">+</button>
+<span class="score">0</span>
+</div>
+<div class="admin-score-row">
+<strong>NYC</strong>
+<button class="small score-control">-</button>
+<button class="small score-control">+</button>
+<span class="score">0</span>
+</div>
+<div class="score-line admin-status-row">
+<span class="badge">Scheduled</span>
+<button class="small secondary">Finalize</button>
+</div>
+</article>
+<article class="game-card">
+<div class="admin-score-row">
+<strong>LAK</strong>
+<button class="small score-control">-</button>
+<button class="small score-control">+</button>
+<span class="score">2</span>
+</div>
+<div class="admin-score-row">
+<strong>NYC</strong>
+<button class="small score-control">-</button>
+<button class="small score-control">+</button>
+<span class="score">5</span>
+</div>
+<div class="score-line admin-status-row">
+<span class="badge final">Final</span>
+<span>
+</span>
+</div>
+</article>
+</div>
+</div>

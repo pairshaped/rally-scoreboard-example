@@ -1,0 +1,5 @@
+{
+  "scripts": {
+    "test:browser": "gleam build --target javascript && node test/browser_smoke.mjs"
+  }
+}

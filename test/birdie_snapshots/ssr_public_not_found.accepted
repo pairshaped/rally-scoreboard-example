@@ -1,0 +1,58 @@
+---
+version: 2.0.0
+title: ssr public not found
+file: ./test/ssr_snapshot_test.gleam
+test_name: ssr_public_not_found_snapshot_test
+---
+hydration_count: 0
+
+<div class="scoreboard-app">
+<header class="topbar">
+<div class="brand">
+<span class="brand-mark">S</span>
+<div>
+<strong>Scoreboard</strong>
+<p class="muted">Public scores</p>
+</div>
+</div>
+<nav class="nav">
+<a data-scoreboard-spa-nav="1" href="/games">Games</a>
+<a data-scoreboard-spa-nav="1" href="/standings">Standings</a>
+<a href="/sign_in">Sign In</a>
+<label class="theme-switch">
+<svg xmlns="http://www.w3.org/2000/svg" aria-label="Light mode" class="theme-icon" fill="none" height="16" role="img" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="16">
+<circle cx="12" cy="12" r="5">
+</circle>
+<line x1="12" x2="12" y1="1" y2="3">
+</line>
+<line x1="12" x2="12" y1="21" y2="23">
+</line>
+<line x1="4.22" x2="5.64" y1="4.22" y2="5.64">
+</line>
+<line x1="18.36" x2="19.78" y1="18.36" y2="19.78">
+</line>
+<line x1="1" x2="3" y1="12" y2="12">
+</line>
+<line x1="21" x2="23" y1="12" y2="12">
+</line>
+<line x1="4.22" x2="5.64" y1="19.78" y2="18.36">
+</line>
+<line x1="18.36" x2="19.78" y1="5.64" y2="4.22">
+</line>
+</svg>
+<input role="switch" type="checkbox">
+<svg xmlns="http://www.w3.org/2000/svg" aria-label="Dark mode" class="theme-icon" fill="none" height="16" role="img" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="16">
+<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z">
+</path>
+</svg>
+</label>
+</nav>
+</header>
+<!-- lustre:map -->
+<main>
+<section class="panel">
+<h1>Not found</h1>
+<p class="muted">Unified source projection placeholder.</p>
+</section>
+</main>
+</div>

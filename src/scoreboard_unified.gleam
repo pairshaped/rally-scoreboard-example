@@ -191,7 +191,7 @@ fn html_response(body: String) -> Response(ResponseData) {
 }
 
 @target(erlang)
-type SsrApp {
+pub type SsrApp {
   SsrApp(html: String, hydration: List(String))
 }
 
@@ -258,14 +258,34 @@ fn public_ssr_app(
   dark_mode dark_mode: Bool,
   session session: session.Session,
 ) -> SsrApp {
-  let route = public_routes.parse_path(path)
   let query_params = public_query_params(req)
+  let #(authentication_context, can_access_admin) =
+    boot_identity(req: req, db: db, session: session)
+
+  public_ssr_render(
+    path:,
+    db:,
+    query_params:,
+    dark_mode:,
+    authentication_context:,
+    can_access_admin:,
+  )
+}
+
+@target(erlang)
+pub fn public_ssr_render(
+  path path: String,
+  db db: sqlight.Connection,
+  query_params query_params: public_page_input.QueryParams,
+  dark_mode dark_mode: Bool,
+  authentication_context authentication_context: Option(AuthenticationContext),
+  can_access_admin can_access_admin: Bool,
+) -> SsrApp {
+  let route = public_routes.parse_path(path)
   let messages = public_hydration_messages(db, route)
   let page =
     public_pages.load_sync(PageContext, query_params, route)
     |> apply_public_hydration(messages)
-  let #(authentication_context, can_access_admin) =
-    boot_identity(req: req, db: db, session: session)
 
   SsrApp(
     html: app_shell.public(
@@ -289,14 +309,32 @@ fn admin_ssr_app(
   dark_mode dark_mode: Bool,
   session session: session.Session,
 ) -> SsrApp {
-  let route = admin_routes.parse_path(path)
   let query_params = admin_query_params(req)
+  let #(authentication_context, _) =
+    boot_identity(req: req, db: db, session: session)
+
+  admin_ssr_render(
+    path:,
+    db:,
+    query_params:,
+    dark_mode:,
+    authentication_context:,
+  )
+}
+
+@target(erlang)
+pub fn admin_ssr_render(
+  path path: String,
+  db db: sqlight.Connection,
+  query_params query_params: admin_page_input.QueryParams,
+  dark_mode dark_mode: Bool,
+  authentication_context authentication_context: Option(AuthenticationContext),
+) -> SsrApp {
+  let route = admin_routes.parse_path(path)
   let messages = admin_hydration_messages(db, route)
   let page =
     admin_pages.load_sync(PageContext, query_params, route)
     |> apply_admin_hydration(messages)
-  let #(authentication_context, _) =
-    boot_identity(req: req, db: db, session: session)
 
   SsrApp(
     html: app_shell.admin(
