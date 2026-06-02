@@ -1,5 +1,5 @@
-import api/to_server.{type ToServer}
 import gleam/bit_array
+import api/to_server.{type ToServer}
 
 pub fn ensure() -> Nil {
   ffi_ensure()

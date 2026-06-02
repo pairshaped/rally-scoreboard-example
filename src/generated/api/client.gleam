@@ -1,7 +1,7 @@
 @target(javascript)
-import api/to_client.{type ToClient}
-@target(javascript)
 import api/to_server.{type ToServer}
+@target(javascript)
+import api/to_client.{type ToClient}
 @target(javascript)
 import generated/api/to_client_codec
 @target(javascript)
