@@ -11,8 +11,6 @@ tags:
 created_at: 2026-06-02T10:04:13Z
 updated_at: 2026-06-02T10:04:13Z
 parent: scoreboard-d0g1
-blocked_by:
-    - scoreboard-kqjf
 ---
 
 ## Problem

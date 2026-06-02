@@ -5,12 +5,15 @@ import api/domain/game.{
 import api/to_server
 @target(javascript)
 import client/api as api_client
+import components/game_card
+import components/ui
 import generated/proute/public/page_input
 import gleam/list
+import lustre/attribute
 import lustre/effect.{type Effect}
 import lustre/element.{type Element}
+import lustre/element/html
 import page_context.{type PageContext}
-import public/views/games as shared_games_page
 
 pub type Model {
   Model(games: List(PublicGameSummary))
@@ -65,9 +68,32 @@ pub fn game_updated(
 }
 
 pub fn view(model model: Model) -> Element(Message) {
-  shared_games_page.view(model.games, fn(slug) { NavigateTeam(slug:) }, fn(id) {
-    NavigateGame(id:)
-  })
+  html.main([], [
+    html.section([attribute.class("panel")], [
+      ui.section_head("Today", ""),
+      view_game_grid(model.games, fn(slug) { NavigateTeam(slug:) }, fn(id) {
+        NavigateGame(id:)
+      }),
+    ]),
+  ])
+}
+
+fn view_game_grid(
+  games: List(PublicGameSummary),
+  on_navigate_team: fn(String) -> msg,
+  on_navigate_game: fn(Int) -> msg,
+) -> Element(msg) {
+  case games {
+    [] ->
+      html.p([attribute.class("muted")], [html.text("Waiting for scores...")])
+    _ ->
+      html.div(
+        [attribute.class("game-grid")],
+        list.map(games, fn(game) {
+          game_card.public_summary(game, on_navigate_team, on_navigate_game)
+        }),
+      )
+  }
 }
 
 fn update_summary(

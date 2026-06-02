@@ -3,14 +3,17 @@ import api/domain/game.{type GameDetail, type GameSnapshot, GameDetail}
 import api/to_server
 @target(javascript)
 import client/api as api_client
+import components/ui
 import generated/proute/public/page_input
-@target(javascript)
 import gleam/int
+import gleam/list
 import gleam/option.{type Option, None, Some}
+import lustre/attribute
 import lustre/effect.{type Effect}
 import lustre/element.{type Element}
+import lustre/element/html
+import lustre/event
 import page_context.{type PageContext}
-import public/views/games/id_ as shared_game_detail_page
 
 pub type Model {
   Model(game: Option(GameDetail))
@@ -67,7 +70,60 @@ pub fn game_updated(
 }
 
 pub fn view(model model: Model) -> Element(Message) {
-  shared_game_detail_page.view(model.game, fn(slug) { NavigateTeam(slug:) })
+  html.main([], [
+    html.section([attribute.class("panel")], [
+      ui.section_head("Game detail", ""),
+      view_game_detail(model.game, fn(slug) { NavigateTeam(slug:) }),
+    ]),
+  ])
+}
+
+fn view_game_detail(
+  game: Option(GameDetail),
+  on_navigate_team: fn(String) -> msg,
+) -> Element(msg) {
+  case game {
+    None -> html.p([attribute.class("muted")], [html.text("Loading game...")])
+    Some(game) ->
+      html.div([], [
+        html.div([attribute.class("game-card")], [
+          html.div([attribute.class("team-row")], [
+            html.a(
+              [
+                attribute.href("/teams/" <> game.away.slug),
+                event.on_click(on_navigate_team(game.away.slug))
+                  |> event.prevent_default,
+              ],
+              [html.strong([], [html.text(game.away.name)])],
+            ),
+            html.span([attribute.class("score")], [
+              html.text(int.to_string(game.away_score)),
+            ]),
+          ]),
+          html.div([attribute.class("team-row")], [
+            html.a(
+              [
+                attribute.href("/teams/" <> game.home.slug),
+                event.on_click(on_navigate_team(game.home.slug))
+                  |> event.prevent_default,
+              ],
+              [html.strong([], [html.text(game.home.name)])],
+            ),
+            html.span([attribute.class("score")], [
+              html.text(int.to_string(game.home_score)),
+            ]),
+          ]),
+          ui.status_badge(game.status),
+        ]),
+        html.h2([], [html.text("Scoring summary")]),
+        html.ul(
+          [],
+          list.map(game.scoring_summary, fn(item) {
+            html.li([], [html.text(item)])
+          }),
+        ),
+      ])
+  }
 }
 
 fn update_detail(detail: GameDetail, game: GameSnapshot) -> GameDetail {

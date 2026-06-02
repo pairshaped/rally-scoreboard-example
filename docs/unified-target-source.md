@@ -48,11 +48,9 @@ src/api/to_client.gleam
 src/api/domain/**/*.gleam
 
 src/public/pages/**/*.gleam
-src/public/views/**/*.gleam
 src/public/client_shared_state.gleam
 
 src/admin/pages/**/*.gleam
-src/admin/views/**/*.gleam
 src/admin/client_shared_state.gleam
 
 src/components/**/*.gleam

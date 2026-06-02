@@ -6,17 +6,14 @@ The generated routing contract follows an Elm Land style convention: the file pa
 
 ## File Routes
 
-Normal page modules use the `.gleam` suffix and are mounted through the Mount shell. The root source page module declares the route file path. Target-neutral view code lives beside the Mount under `views`.
+Normal page modules use the `.gleam` suffix and are mounted through the Mount shell. The root source page module declares the route file path. Target-neutral page view code lives in the page module. Reusable view helpers live under `components`.
 
 ```text
 src/public/pages/games.gleam
 src/public/pages/games/[id].gleam
 src/public/pages/teams/[slug].gleam
 src/admin/pages/games.gleam
-src/public/views/games.gleam
-src/public/views/games/[id].gleam
-src/public/views/teams/[slug].gleam
-src/admin/views/games.gleam
+src/components/game_card.gleam
 ```
 
 The generator keeps those root modules in the unified source tree. Target-specific page declarations and imports carry target annotations. Generated route and page glue lives under `src/generated/proute`:
@@ -31,7 +28,7 @@ src/generated/proute/admin/page_input.gleam
 src/generated/proute/admin/pages.gleam
 ```
 
-The generator derives the route from the root page path and wires the unified page module into generated route/page glue. Client-only behavior stays behind JavaScript target annotations. Server-only behavior stays behind Erlang target annotations. Target-neutral views and page helpers stay unannotated when they compile for both targets.
+The generator derives the route from the root page path and wires the unified page module into generated route/page glue. Client-only behavior stays behind JavaScript target annotations. Server-only behavior stays behind Erlang target annotations. Target-neutral view and page helpers stay unannotated when they compile for both targets.
 
 Normal pages use one first-render data convention across targets:
 

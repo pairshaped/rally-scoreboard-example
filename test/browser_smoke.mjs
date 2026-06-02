@@ -55,7 +55,7 @@ try {
     "hydrated direct /games load should not send an initial websocket load request",
   );
 
-  await step("navigate from games to standings with one response", async () => {
+  await step("navigate from games to standings with result and data", async () => {
     sentFrames.length = 0;
     receivedFrames.length = 0;
 
@@ -72,13 +72,13 @@ try {
     );
     assert.equal(
       receivedFrames.length,
-      1,
-      "SPA standings navigation should receive only GamesLoaded: "
+      2,
+      "SPA standings navigation should receive load result and GamesLoaded: "
         + receivedFrames.map(frameSummary).join(", "),
     );
   });
 
-  await step("navigate from standings to games with one response", async () => {
+  await step("navigate from standings to games with result and data", async () => {
     sentFrames.length = 0;
     receivedFrames.length = 0;
 
@@ -95,8 +95,8 @@ try {
     );
     assert.equal(
       receivedFrames.length,
-      1,
-      "SPA games navigation should receive only GamesLoaded: "
+      2,
+      "SPA games navigation should receive load result and GamesLoaded: "
         + receivedFrames.map(frameSummary).join(", "),
     );
   });
