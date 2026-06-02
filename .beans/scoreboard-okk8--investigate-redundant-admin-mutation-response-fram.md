@@ -32,6 +32,8 @@ Example observed frames from a + click:
 
 Trace UpdateScore and MarkFinal handling through server/api.gleam, server/ws.gleam, and client/to_client.gleam. Decide whether the initiating admin can rely on the broadcast payload, or whether admin-specific confirmation/error payloads need to remain separate.
 
+Important note: errors should not travel through the broadcast push path. The direct response frame is probably fine if it is the request-scoped channel for admin confirmation and errors, while the broadcast push remains the shared state update channel.
+
 ## Acceptance criteria
 
 - The message sequence is decoded and documented in completion notes.
