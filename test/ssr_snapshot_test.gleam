@@ -1,4 +1,6 @@
 @target(erlang)
+import app_ssr.{type SsrApp}
+@target(erlang)
 import authentication_context.{type AuthenticationContext, AuthenticationContext}
 @target(erlang)
 import birdie
@@ -15,8 +17,6 @@ import gleam/option.{None, Some}
 @target(erlang)
 import gleam/string
 @target(erlang)
-import scoreboard_unified.{type SsrApp}
-@target(erlang)
 import sqlight
 @target(erlang)
 import support/test_db
@@ -25,7 +25,7 @@ import support/test_db
 pub fn ssr_public_home_snapshot_test() -> Nil {
   let assert Ok(db) = test_db.setup(name: "ssr-public-home")
 
-  scoreboard_unified.public_ssr_render(
+  app_ssr.public_render(
     path: "/",
     db:,
     query_params: public_page_input.empty_query_params(),
@@ -43,7 +43,7 @@ pub fn ssr_public_home_snapshot_test() -> Nil {
 pub fn ssr_public_games_snapshot_test() -> Nil {
   let assert Ok(db) = test_db.setup(name: "ssr-public-games")
 
-  scoreboard_unified.public_ssr_render(
+  app_ssr.public_render(
     path: "/games",
     db:,
     query_params: public_page_input.empty_query_params(),
@@ -61,7 +61,7 @@ pub fn ssr_public_games_snapshot_test() -> Nil {
 pub fn ssr_public_game_detail_snapshot_test() -> Nil {
   let assert Ok(db) = test_db.setup(name: "ssr-public-game-detail")
 
-  scoreboard_unified.public_ssr_render(
+  app_ssr.public_render(
     path: "/games/1",
     db:,
     query_params: public_page_input.empty_query_params(),
@@ -79,7 +79,7 @@ pub fn ssr_public_game_detail_snapshot_test() -> Nil {
 pub fn ssr_public_standings_snapshot_test() -> Nil {
   let assert Ok(db) = test_db.setup(name: "ssr-public-standings")
 
-  scoreboard_unified.public_ssr_render(
+  app_ssr.public_render(
     path: "/standings",
     db:,
     query_params: public_page_input.empty_query_params(),
@@ -97,7 +97,7 @@ pub fn ssr_public_standings_snapshot_test() -> Nil {
 pub fn ssr_public_team_snapshot_test() -> Nil {
   let assert Ok(db) = test_db.setup(name: "ssr-public-team")
 
-  scoreboard_unified.public_ssr_render(
+  app_ssr.public_render(
     path: "/teams/toronto-towers",
     db:,
     query_params: public_page_input.empty_query_params(),
@@ -115,7 +115,7 @@ pub fn ssr_public_team_snapshot_test() -> Nil {
 pub fn ssr_public_sign_in_snapshot_test() -> Nil {
   let assert Ok(db) = test_db.setup(name: "ssr-public-sign-in")
 
-  scoreboard_unified.public_ssr_render(
+  app_ssr.public_render(
     path: "/sign_in",
     db:,
     query_params: public_page_input.QueryParams([
@@ -136,7 +136,7 @@ pub fn ssr_public_sign_in_snapshot_test() -> Nil {
 pub fn ssr_public_not_found_snapshot_test() -> Nil {
   let assert Ok(db) = test_db.setup(name: "ssr-public-not-found")
 
-  scoreboard_unified.public_ssr_render(
+  app_ssr.public_render(
     path: "/missing",
     db:,
     query_params: public_page_input.empty_query_params(),
@@ -154,7 +154,7 @@ pub fn ssr_public_not_found_snapshot_test() -> Nil {
 pub fn ssr_admin_home_snapshot_test() -> Nil {
   let assert Ok(db) = test_db.setup(name: "ssr-admin-home")
 
-  scoreboard_unified.admin_ssr_render(
+  app_ssr.admin_render(
     path: "/admin",
     db:,
     query_params: admin_page_input.empty_query_params(),
@@ -171,7 +171,7 @@ pub fn ssr_admin_home_snapshot_test() -> Nil {
 pub fn ssr_admin_games_snapshot_test() -> Nil {
   let assert Ok(db) = test_db.setup(name: "ssr-admin-games")
 
-  scoreboard_unified.admin_ssr_render(
+  app_ssr.admin_render(
     path: "/admin/games",
     db:,
     query_params: admin_page_input.empty_query_params(),
@@ -188,7 +188,7 @@ pub fn ssr_admin_games_snapshot_test() -> Nil {
 pub fn ssr_admin_not_found_snapshot_test() -> Nil {
   let assert Ok(db) = test_db.setup(name: "ssr-admin-not-found")
 
-  scoreboard_unified.admin_ssr_render(
+  app_ssr.admin_render(
     path: "/admin/missing",
     db:,
     query_params: admin_page_input.empty_query_params(),

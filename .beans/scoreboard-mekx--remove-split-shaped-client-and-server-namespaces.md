@@ -10,8 +10,6 @@ tags:
 created_at: 2026-06-02T10:04:31Z
 updated_at: 2026-06-02T10:04:31Z
 parent: scoreboard-d0g1
-blocked_by:
-    - scoreboard-lh45
 ---
 
 ## Problem

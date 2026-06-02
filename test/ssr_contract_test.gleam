@@ -1,4 +1,6 @@
 @target(erlang)
+import app_ssr
+@target(erlang)
 import authentication_context
 @target(erlang)
 import generated/proute/admin/page_input as admin_page_input
@@ -13,8 +15,6 @@ import gleam/string
 @target(erlang)
 import gleeunit/should
 @target(erlang)
-import scoreboard_unified
-@target(erlang)
 import sqlight
 @target(erlang)
 import support/test_db
@@ -23,7 +23,7 @@ import support/test_db
 pub fn public_games_ssr_loads_data_and_hydration_test() -> Nil {
   let assert Ok(db) = test_db.setup(name: "contract-public-games")
   let app =
-    scoreboard_unified.public_ssr_render(
+    app_ssr.public_render(
       path: "/games",
       db:,
       query_params: public_page_input.empty_query_params(),
@@ -48,7 +48,7 @@ pub fn public_games_ssr_loads_data_and_hydration_test() -> Nil {
 pub fn public_team_ssr_loads_recent_games_test() -> Nil {
   let assert Ok(db) = test_db.setup(name: "contract-public-team")
   let app =
-    scoreboard_unified.public_ssr_render(
+    app_ssr.public_render(
       path: "/teams/toronto-towers",
       db:,
       query_params: public_page_input.empty_query_params(),
@@ -73,7 +73,7 @@ pub fn public_team_ssr_loads_recent_games_test() -> Nil {
 pub fn public_sign_in_ssr_does_not_emit_hydration_test() -> Nil {
   let assert Ok(db) = test_db.setup(name: "contract-public-sign-in")
   let app =
-    scoreboard_unified.public_ssr_render(
+    app_ssr.public_render(
       path: "/sign_in",
       db:,
       query_params: public_page_input.QueryParams([#("error", "invalid")]),
@@ -94,7 +94,7 @@ pub fn public_sign_in_ssr_does_not_emit_hydration_test() -> Nil {
 pub fn admin_games_ssr_loads_score_desk_and_hydration_test() -> Nil {
   let assert Ok(db) = test_db.setup(name: "contract-admin-games")
   let app =
-    scoreboard_unified.admin_ssr_render(
+    app_ssr.admin_render(
       path: "/admin/games",
       db:,
       query_params: admin_page_input.empty_query_params(),
