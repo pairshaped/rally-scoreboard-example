@@ -1,10 +1,10 @@
 import api/domain/game.{type GameDetail, type GameSnapshot, GameDetail}
 @target(javascript)
 import api/to_server
-@target(javascript)
-import client/api as api_client
 import components/ui
 import generated/proute/public/page_input
+@target(javascript)
+import generated_soon/client_transport as api_client
 import gleam/int
 import gleam/list
 import gleam/option.{type Option, None, Some}

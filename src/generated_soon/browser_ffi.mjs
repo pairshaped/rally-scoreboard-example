@@ -13,27 +13,23 @@ function bootData() {
   return globalThis.document?.querySelector?.("#app")?.dataset ?? {};
 }
 
-export function boot_auth_user_id() {
-  const value = Number.parseInt(bootData().authUserId ?? "0", 10);
-  return Number.isFinite(value) ? value : 0;
+export function boot_int(name, fallback) {
+  const value = Number.parseInt(bootData()[name] ?? String(fallback), 10);
+  return Number.isFinite(value) ? value : fallback;
 }
 
-export function boot_auth_email() {
-  return bootData().authEmail ?? "";
+export function boot_string(name) {
+  return bootData()[name] ?? "";
 }
 
-export function boot_auth_display_name() {
-  return bootData().authDisplayName ?? "";
+export function boot_bool(name) {
+  return bootData()[name] === "1";
 }
 
-export function boot_can_access_admin() {
-  return bootData().canAccessAdmin === "1";
-}
-
-export function boot_hydration() {
+export function take_boot_string(name) {
   const data = bootData();
-  const value = data.hydration ?? "";
-  delete data.hydration;
+  const value = data[name] ?? "";
+  delete data[name];
   return value;
 }
 
@@ -83,10 +79,8 @@ export function listen_spa_navigation(dispatch) {
   });
 }
 
-const DEVICE_COOKIE_NAME = "_scoreboard_device";
-
-export function device_dark_mode() {
-  const raw = getCookie(DEVICE_COOKIE_NAME);
+export function device_dark_mode(cookieName) {
+  const raw = getCookie(cookieName);
   if (raw) {
     const params = new URLSearchParams(raw);
     return params.get("dark_mode") === "1";
@@ -103,9 +97,9 @@ export function apply_dark_mode(darkMode) {
   document.documentElement.dataset.theme = darkMode ? "dark" : "light";
 }
 
-export function persist_dark_mode(darkMode) {
+export function persist_dark_mode(cookieName, darkMode) {
   const value = "v=1&dark_mode=" + (darkMode ? "1" : "0");
-  setCookie(DEVICE_COOKIE_NAME, value, 365);
+  setCookie(cookieName, value, 365);
 }
 
 function getCookie(name) {

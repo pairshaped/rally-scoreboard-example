@@ -11,32 +11,26 @@ pub fn websocket_url() -> String {
 }
 
 @target(javascript)
-@external(javascript, "./browser_ffi.mjs", "boot_auth_user_id")
-pub fn boot_auth_user_id() -> Int {
+@external(javascript, "./browser_ffi.mjs", "boot_int")
+pub fn boot_int(_name: String, _fallback: Int) -> Int {
   0
 }
 
 @target(javascript)
-@external(javascript, "./browser_ffi.mjs", "boot_auth_email")
-pub fn boot_auth_email() -> String {
+@external(javascript, "./browser_ffi.mjs", "boot_string")
+pub fn boot_string(_name: String) -> String {
   ""
 }
 
 @target(javascript)
-@external(javascript, "./browser_ffi.mjs", "boot_auth_display_name")
-pub fn boot_auth_display_name() -> String {
-  ""
-}
-
-@target(javascript)
-@external(javascript, "./browser_ffi.mjs", "boot_can_access_admin")
-pub fn boot_can_access_admin() -> Bool {
+@external(javascript, "./browser_ffi.mjs", "boot_bool")
+pub fn boot_bool(_name: String) -> Bool {
   False
 }
 
 @target(javascript)
-@external(javascript, "./browser_ffi.mjs", "boot_hydration")
-pub fn boot_hydration() -> String {
+@external(javascript, "./browser_ffi.mjs", "take_boot_string")
+pub fn take_boot_string(_name: String) -> String {
   ""
 }
 
@@ -66,7 +60,7 @@ pub fn listen_spa_navigation(_dispatch: fn(String) -> Nil) -> Nil {
 
 @target(javascript)
 @external(javascript, "./browser_ffi.mjs", "device_dark_mode")
-pub fn device_dark_mode() -> Bool {
+pub fn device_dark_mode(_cookie_name: String) -> Bool {
   False
 }
 
@@ -78,6 +72,6 @@ pub fn apply_dark_mode(_dark_mode: Bool) -> Nil {
 
 @target(javascript)
 @external(javascript, "./browser_ffi.mjs", "persist_dark_mode")
-pub fn persist_dark_mode(_dark_mode: Bool) -> Nil {
+pub fn persist_dark_mode(_cookie_name: String, _dark_mode: Bool) -> Nil {
   Nil
 }

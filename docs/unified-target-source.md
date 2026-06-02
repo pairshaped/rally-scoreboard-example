@@ -54,6 +54,7 @@ src/admin/pages/**/*.gleam
 src/admin/client_shared_state.gleam
 
 src/components/**/*.gleam
+src/generated_soon/**/*.gleam
 src/sql/**/*.sql
 
 src/generated/sql/**/*.gleam

@@ -24,13 +24,13 @@ pub fn send(module module: String, message message: ToServer) -> Effect(msg) {
 }
 
 @target(javascript)
-@external(javascript, "./api_ffi.mjs", "connect")
+@external(javascript, "./client_transport_ffi.mjs", "connect")
 fn connect_socket(_url: String, _on_frame: fn(BitArray) -> Nil) -> Nil {
   Nil
 }
 
 @target(javascript)
-@external(javascript, "./api_ffi.mjs", "send_frame")
+@external(javascript, "./client_transport_ffi.mjs", "send_frame")
 fn send_frame(_frame: BitArray) -> Nil {
   Nil
 }

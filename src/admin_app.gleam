@@ -7,12 +7,6 @@ import app_shell
 @target(javascript)
 import authentication_context.{type AuthenticationContext, AuthenticationContext}
 @target(javascript)
-import browser
-@target(javascript)
-import client/api as api_client
-@target(javascript)
-import client/hydration
-@target(javascript)
 import client/to_client
 @target(javascript)
 import generated/proute/admin/page_input
@@ -20,6 +14,12 @@ import generated/proute/admin/page_input
 import generated/proute/admin/pages
 @target(javascript)
 import generated/proute/admin/routes
+@target(javascript)
+import generated_soon/browser
+@target(javascript)
+import generated_soon/client_transport as api_client
+@target(javascript)
+import generated_soon/hydration
 @target(javascript)
 import gleam/list
 @target(javascript)
@@ -32,6 +32,9 @@ import lustre/effect.{type Effect}
 import lustre/element.{type Element}
 @target(javascript)
 import page_context.{PageContext}
+
+@target(javascript)
+const device_cookie_name = "_scoreboard_device"
 
 @target(javascript)
 type Model {
@@ -58,7 +61,7 @@ pub fn main() -> Nil {
 fn init(_flags: Nil) -> #(Model, Effect(Msg)) {
   let current_path = browser.path()
   let route = routes.parse_path(current_path)
-  let dark_mode = browser.device_dark_mode()
+  let dark_mode = browser.device_dark_mode(device_cookie_name)
   let #(page, page_effect) = initial_page(route: route)
   let shared_state =
     AdminClientSharedState(
@@ -153,7 +156,9 @@ fn apply_dark_mode(dark_mode: Bool) -> Effect(Msg) {
 
 @target(javascript)
 fn persist_dark_mode(dark_mode: Bool) -> Effect(Msg) {
-  effect.from(fn(_dispatch) { browser.persist_dark_mode(dark_mode) })
+  effect.from(fn(_dispatch) {
+    browser.persist_dark_mode(device_cookie_name, dark_mode)
+  })
 }
 
 @target(javascript)
@@ -199,16 +204,16 @@ fn listen_for_shell_navigation() -> Effect(Msg) {
 
 @target(javascript)
 fn boot_authentication_context() -> Option(AuthenticationContext) {
-  case browser.boot_auth_user_id() {
+  case browser.boot_int("authUserId", 0) {
     0 -> None
     user_id -> {
-      let display_name = case browser.boot_auth_display_name() {
+      let display_name = case browser.boot_string("authDisplayName") {
         "" -> None
         value -> Some(value)
       }
       Some(AuthenticationContext(
         user_id:,
-        email: browser.boot_auth_email(),
+        email: browser.boot_string("authEmail"),
         display_name:,
       ))
     }

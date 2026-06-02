@@ -1,9 +1,9 @@
 @target(javascript)
 import api/to_client.{type ToClient}
 @target(javascript)
-import browser
-@target(javascript)
 import generated/api/to_client_codec
+@target(javascript)
+import generated_soon/browser
 @target(javascript)
 import gleam/bit_array
 @target(javascript)
@@ -13,7 +13,7 @@ import gleam/string
 
 @target(javascript)
 pub fn messages() -> Result(List(ToClient), Nil) {
-  case browser.boot_hydration() {
+  case browser.take_boot_string("hydration") {
     "" -> Error(Nil)
     raw -> decode_all(string.split(raw, ","), [])
   }

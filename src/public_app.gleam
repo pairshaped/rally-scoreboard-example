@@ -3,12 +3,6 @@ import app_shell
 @target(javascript)
 import authentication_context.{type AuthenticationContext, AuthenticationContext}
 @target(javascript)
-import browser
-@target(javascript)
-import client/api as api_client
-@target(javascript)
-import client/hydration
-@target(javascript)
 import client/to_client
 @target(javascript)
 import generated/proute/public/page_input
@@ -16,6 +10,12 @@ import generated/proute/public/page_input
 import generated/proute/public/pages
 @target(javascript)
 import generated/proute/public/routes
+@target(javascript)
+import generated_soon/browser
+@target(javascript)
+import generated_soon/client_transport as api_client
+@target(javascript)
+import generated_soon/hydration
 @target(javascript)
 import gleam/int
 @target(javascript)
@@ -46,6 +46,9 @@ import public/pages/standings as standings_page
 import public/pages/teams/slug_ as teams_slug_page
 
 @target(javascript)
+const device_cookie_name = "_scoreboard_device"
+
+@target(javascript)
 type Model {
   Model(page: pages.Page, shared_state: PublicClientSharedState)
 }
@@ -71,7 +74,7 @@ fn init(_flags: Nil) -> #(Model, Effect(Msg)) {
   let current_path = browser.path()
   let route = routes.parse_path(current_path)
   let query_params = query_params_from_browser()
-  let dark_mode = browser.device_dark_mode()
+  let dark_mode = browser.device_dark_mode(device_cookie_name)
   let #(page, page_effect) =
     initial_page(route: route, query_params: query_params)
   let shared_state =
@@ -80,7 +83,7 @@ fn init(_flags: Nil) -> #(Model, Effect(Msg)) {
       active_section: current_path,
       dark_mode:,
       authentication_context: boot_authentication_context(),
-      can_access_admin: browser.boot_can_access_admin(),
+      can_access_admin: browser.boot_bool("canAccessAdmin"),
     )
 
   #(
@@ -173,7 +176,9 @@ fn apply_dark_mode(dark_mode: Bool) -> Effect(Msg) {
 
 @target(javascript)
 fn persist_dark_mode(dark_mode: Bool) -> Effect(Msg) {
-  effect.from(fn(_dispatch) { browser.persist_dark_mode(dark_mode) })
+  effect.from(fn(_dispatch) {
+    browser.persist_dark_mode(device_cookie_name, dark_mode)
+  })
 }
 
 @target(javascript)
@@ -238,16 +243,16 @@ fn listen_for_shell_navigation() -> Effect(Msg) {
 
 @target(javascript)
 fn boot_authentication_context() -> Option(AuthenticationContext) {
-  case browser.boot_auth_user_id() {
+  case browser.boot_int("authUserId", 0) {
     0 -> None
     user_id -> {
-      let display_name = case browser.boot_auth_display_name() {
+      let display_name = case browser.boot_string("authDisplayName") {
         "" -> None
         value -> Some(value)
       }
       Some(AuthenticationContext(
         user_id:,
-        email: browser.boot_auth_email(),
+        email: browser.boot_string("authEmail"),
         display_name:,
       ))
     }

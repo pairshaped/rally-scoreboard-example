@@ -4,11 +4,11 @@ import api/domain/game.{
 import api/domain/team.{type TeamDetail, TeamDetail}
 @target(javascript)
 import api/to_server
-@target(javascript)
-import client/api as api_client
 import components/game_card
 import components/ui
 import generated/proute/public/page_input
+@target(javascript)
+import generated_soon/client_transport as api_client
 import gleam/bool
 import gleam/int
 import gleam/list

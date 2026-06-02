@@ -3,10 +3,10 @@ import api/domain/game.{
 }
 @target(javascript)
 import api/to_server
-@target(javascript)
-import client/api as api_client
 import components/ui
 import generated/proute/admin/page_input
+@target(javascript)
+import generated_soon/client_transport as api_client
 import gleam/int
 import gleam/list
 import lustre/attribute

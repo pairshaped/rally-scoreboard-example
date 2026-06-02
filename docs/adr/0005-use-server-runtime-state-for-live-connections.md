@@ -23,10 +23,10 @@ frame may carry a load result (`Result(Nil, List(ApiLoadError))`), a save result
 (`Result(Nil, List(ApiSaveError))`), or `ToClient` app data. Other connected
 clients receive push frames carrying `ToClient` app data.
 
-The browser runtime is app-owned in `client/api.gleam` and
-`client/api_ffi.mjs`. It opens a WebSocket, queues outbound generated request
-frames until the socket is open, reconnects after close, and delivers inbound
-frames to the app shell.
+The browser socket transport lives in `generated_soon/client_transport.gleam`
+and `generated_soon/client_transport_ffi.mjs`. It opens a WebSocket, queues
+outbound generated request frames until the socket is open, reconnects after
+close, and delivers inbound frames to the app shell.
 
 There is no generated per-page socket handler, page-local server component, or
 generated JavaScript embedding lane. Browser-only code lives in app-owned
