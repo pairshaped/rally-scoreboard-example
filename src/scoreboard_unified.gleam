@@ -89,7 +89,7 @@ pub fn main() -> Nil {
   let assert Ok(db) = sqlight.open(db_path)
   let assert Ok(key) = session_key()
   let session = session.new(key)
-  let port = 8080
+  let port = config.http_port(default: 8080)
 
   let handler = fn(req: Request(Connection)) {
     let Request(path: path, method: method, ..) = req
@@ -406,7 +406,7 @@ fn public_hydration_messages(
     public_routes.Standings ->
       server_api.dispatch(
         db: db,
-        message: to_server.LoadStandings,
+        message: to_server.LoadGames,
         admin_authorized: False,
       )
     public_routes.TeamsSlug(slug) ->
@@ -485,8 +485,12 @@ fn apply_public_message(
       let #(model, _) = games_id_page.game_updated(model, game)
       public_pages.GamesIdPage(model)
     }
-    public_pages.StandingsPage(model), to_client.StandingsLoaded(rows) -> {
-      let #(model, _) = standings_page.standings_loaded(model, rows)
+    public_pages.StandingsPage(model), to_client.GamesLoaded(games) -> {
+      let #(model, _) = standings_page.games_loaded(model, games)
+      public_pages.StandingsPage(model)
+    }
+    public_pages.StandingsPage(model), to_client.GameUpdated(game) -> {
+      let #(model, _) = standings_page.game_updated(model, game)
       public_pages.StandingsPage(model)
     }
     public_pages.TeamsSlugPage(model), to_client.TeamLoaded(team) -> {

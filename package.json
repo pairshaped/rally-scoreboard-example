@@ -1,5 +1,5 @@
 {
   "scripts": {
-    "test:browser": "gleam build --target javascript && node test/browser_smoke.mjs"
+    "test:browser": "gleam build --target erlang && gleam build --target javascript && node test/browser_smoke.mjs"
   }
 }

@@ -6,9 +6,7 @@ import api/domain/game.{
   Scheduled, Team,
 }
 @target(erlang)
-import api/domain/standing.{
-  type PowerRankingRow, type StandingRow, PowerRankingRow, StandingRow,
-}
+import api/domain/standing.{type StandingRow, StandingRow}
 @target(erlang)
 import api/domain/team.{TeamDetail}
 @target(erlang)
@@ -121,7 +119,6 @@ fn load_standings(db: sqlight.Connection) -> List(ToClient) {
   case standings_sql.list_standings(db) {
     Ok(rows) -> [
       to_client.StandingsLoaded(list.map(rows, standing_from_row)),
-      to_client.PowerRankingsLoaded(list.map(rows, power_ranking_from_row)),
     ]
     Error(sqlight.SqlightError(..)) -> [
       to_client.GamesLoadFailed("Could not load standings."),
@@ -187,18 +184,11 @@ fn update_score(
   away_score: Int,
   period: String,
 ) -> List(ToClient) {
-  let standings_should_refresh = game_is_final(db, game_id)
-
   case
     games_sql.update_game_score(db, home_score, away_score, period, game_id)
   {
     Ok([row, ..]) ->
-      updated_game_messages(
-        db,
-        game_id,
-        score_update_detail(row),
-        standings_should_refresh,
-      )
+      updated_game_messages(db, game_id, score_update_detail(row))
     Ok([]) -> [to_client.AdminError("Game not found.")]
     Error(sqlight.SqlightError(..)) -> [
       to_client.AdminError("Could not update score."),
@@ -242,19 +232,13 @@ fn updated_game_messages(
   db: sqlight.Connection,
   game_id: Int,
   detail: AdminGameDetail,
-  standings_should_refresh: Bool,
 ) -> List(ToClient) {
-  let messages = case game_snapshot(db, game_id) {
+  case game_snapshot(db, game_id) {
     Ok(snapshot) -> [
       to_client.ScoreUpdateSaved(detail),
       to_client.GameUpdated(snapshot),
     ]
     Error(Nil) -> [to_client.ScoreUpdateSaved(detail)]
-  }
-
-  case standings_should_refresh {
-    True -> list.append(messages, load_standings(db))
-    False -> messages
   }
 }
 
@@ -266,13 +250,11 @@ fn final_game_messages(
   detail: AdminGameDetail,
 ) -> List(ToClient) {
   case game_snapshot(db, game_id) {
-    Ok(snapshot) ->
-      list.append(
-        [to_client.ResultSaved(detail), to_client.GameUpdated(snapshot)],
-        load_standings(db),
-      )
-    Error(Nil) ->
-      list.append([to_client.ResultSaved(detail)], load_standings(db))
+    Ok(snapshot) -> [
+      to_client.ResultSaved(detail),
+      to_client.GameUpdated(snapshot),
+    ]
+    Error(Nil) -> [to_client.ResultSaved(detail)]
   }
 }
 
@@ -284,14 +266,6 @@ fn game_snapshot(
   case games_sql.get_game(db: db, game_id: game_id) {
     Ok([row, ..]) -> Ok(game_snapshot_from_row(row))
     _ -> Error(Nil)
-  }
-}
-
-@target(erlang)
-fn game_is_final(db: sqlight.Connection, game_id: Int) -> Bool {
-  case games_sql.get_game(db: db, game_id: game_id) {
-    Ok([row, ..]) -> row.final == 1
-    _ -> False
   }
 }
 
@@ -378,21 +352,6 @@ fn final_detail(row: games_sql.UpdateGameFinalRow) -> AdminGameDetail {
 @target(erlang)
 fn standing_from_row(row: standings_sql.ListStandingsRow) -> StandingRow {
   StandingRow(
-    team_code: optional_string(row.team_code),
-    team_name: row.team_name,
-    slug: row.team_slug,
-    wins: row.wins,
-    losses: row.losses,
-    points_for: row.points_for,
-    points_against: row.points_against,
-  )
-}
-
-@target(erlang)
-fn power_ranking_from_row(
-  row: standings_sql.ListStandingsRow,
-) -> PowerRankingRow {
-  PowerRankingRow(
     team_code: optional_string(row.team_code),
     team_name: row.team_name,
     slug: row.team_slug,

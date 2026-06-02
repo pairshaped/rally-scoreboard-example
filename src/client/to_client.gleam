@@ -110,8 +110,15 @@ pub fn apply_public(
         effect.map(page_effect, public_pages.GamesIdMsg),
       )
     }
-    public_pages.StandingsPage(model), to_client.StandingsLoaded(rows) -> {
-      let #(model, page_effect) = standings_page.standings_loaded(model, rows)
+    public_pages.StandingsPage(model), to_client.GamesLoaded(games) -> {
+      let #(model, page_effect) = standings_page.games_loaded(model, games)
+      #(
+        public_pages.StandingsPage(model),
+        effect.map(page_effect, public_pages.StandingsMsg),
+      )
+    }
+    public_pages.StandingsPage(model), to_client.GameUpdated(game) -> {
+      let #(model, page_effect) = standings_page.game_updated(model, game)
       #(
         public_pages.StandingsPage(model),
         effect.map(page_effect, public_pages.StandingsMsg),

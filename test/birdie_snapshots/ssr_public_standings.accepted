@@ -4,7 +4,7 @@ title: ssr public standings
 file: ./test/ssr_snapshot_test.gleam
 test_name: ssr_public_standings_snapshot_test
 ---
-hydration_count: 2
+hydration_count: 1
 
 <div class="scoreboard-app">
 <header class="topbar">

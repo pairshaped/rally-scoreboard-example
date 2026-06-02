@@ -125,9 +125,6 @@ pub fn should_broadcast_live_update(
 ) -> Bool {
   case request, reply {
     _, to_client.GameUpdated(_) -> True
-    to_server.UpdateScore(_, _, _, _), to_client.StandingsLoaded(_) -> True
-    to_server.MarkFinal(_), to_client.StandingsLoaded(_) -> True
-    to_server.CorrectResult(_, _, _), to_client.StandingsLoaded(_) -> True
     _, _ -> False
   }
 }

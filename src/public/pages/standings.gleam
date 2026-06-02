@@ -1,16 +1,19 @@
-import api/domain/standing.{type StandingRow}
+import api/domain/game.{
+  type GameSnapshot, type PublicGameSummary, PublicGameSummary,
+}
 @target(javascript)
 import api/to_server
 @target(javascript)
 import client/api as api_client
 import generated/proute/public/page_input
+import gleam/list
 import lustre/effect.{type Effect}
 import lustre/element.{type Element}
 import page_context.{type PageContext}
 import public/views/standings as shared_standings_page
 
 pub type Model {
-  Model(rows: List(StandingRow))
+  Model(games: List(PublicGameSummary))
 }
 
 pub type Message {
@@ -28,7 +31,7 @@ pub fn initial_model(
   _page_context: PageContext,
   _query_params: page_input.QueryParams,
 ) -> Model {
-  Model(rows: [])
+  Model(games: [])
 }
 
 pub fn update(
@@ -38,20 +41,50 @@ pub fn update(
   #(model, effect.none())
 }
 
-pub fn standings_loaded(
+pub fn games_loaded(
   model _model: Model,
-  rows rows: List(StandingRow),
+  games games: List(PublicGameSummary),
 ) -> #(Model, Effect(Message)) {
-  #(Model(rows: rows), effect.none())
+  #(Model(games: games), effect.none())
+}
+
+pub fn game_updated(
+  model model: Model,
+  game game: GameSnapshot,
+) -> #(Model, Effect(Message)) {
+  let games =
+    list.map(model.games, fn(summary) {
+      case summary.id == game.id {
+        True -> update_summary(summary, game)
+        False -> summary
+      }
+    })
+
+  #(Model(games: games), effect.none())
 }
 
 pub fn view(model model: Model) -> Element(Message) {
-  shared_standings_page.view(model.rows, fn(slug) { NavigateTeam(slug:) })
+  shared_standings_page.view(
+    shared_standings_page.from_games(model.games),
+    fn(slug) { NavigateTeam(slug:) },
+  )
+}
+
+fn update_summary(
+  summary: PublicGameSummary,
+  game: GameSnapshot,
+) -> PublicGameSummary {
+  PublicGameSummary(
+    ..summary,
+    home_score: game.home_score,
+    away_score: game.away_score,
+    status: game.status,
+  )
 }
 
 @target(javascript)
 fn init_effect() -> Effect(Message) {
-  api_client.send(module: "public/standings", message: to_server.LoadStandings)
+  api_client.send(module: "public/standings", message: to_server.LoadGames)
 }
 
 @target(erlang)

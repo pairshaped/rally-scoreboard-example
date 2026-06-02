@@ -1,4 +1,6 @@
 @target(erlang)
+import api/domain/game
+@target(erlang)
 import api/to_client.{type ToClient}
 @target(erlang)
 import api/to_server
@@ -33,52 +35,107 @@ pub fn normalize_display_name_test() {
 }
 
 @target(erlang)
-pub fn mark_final_returns_fresh_standings_test() {
+pub fn mark_final_returns_result_saved_and_game_update_test() {
   let db = live_game_db()
 
-  api.dispatch(db: db, message: to_server.MarkFinal(1), admin_authorized: True)
-  |> has_toronto_standing(wins: 1, losses: 0, points_for: 4, points_against: 2)
+  let replies =
+    api.dispatch(
+      db: db,
+      message: to_server.MarkFinal(1),
+      admin_authorized: True,
+    )
+
+  case replies {
+    [to_client.ResultSaved(_), to_client.GameUpdated(updated)] ->
+      updated.status == game.Final
+    _ -> False
+  }
   |> should.equal(True)
 
   let assert Ok(_) = sqlight.close(db)
 }
 
 @target(erlang)
-pub fn update_score_on_final_game_returns_fresh_standings_test() {
+pub fn update_score_returns_score_saved_and_game_update_test() {
   let db = final_game_db()
 
-  api.dispatch(
-    db: db,
-    message: to_server.UpdateScore(1, 5, 2, "Live"),
-    admin_authorized: True,
-  )
-  |> has_toronto_standing(wins: 0, losses: 0, points_for: 0, points_against: 0)
+  let replies =
+    api.dispatch(
+      db: db,
+      message: to_server.UpdateScore(1, 5, 2, "Live"),
+      admin_authorized: True,
+    )
+
+  case replies {
+    [to_client.ScoreUpdateSaved(_), to_client.GameUpdated(updated)] ->
+      updated.status == game.Live("Live")
+    _ -> False
+  }
   |> should.equal(True)
 
   let assert Ok(_) = sqlight.close(db)
 }
 
 @target(erlang)
-pub fn final_standings_are_mutation_broadcasts_test() {
+pub fn only_game_updates_are_global_mutation_broadcasts_test() {
   let standings = to_client.StandingsLoaded([])
+  let game_update =
+    to_client.GameUpdated(game.GameSnapshot(
+      id: 1,
+      home: game.Team("TOR", "Toronto Towers", "toronto-towers"),
+      away: game.Team("MTL", "Montreal Meteors", "montréal-meteors"),
+      home_score: 4,
+      away_score: 2,
+      status: game.Final,
+    ))
+
+  ws.should_broadcast_live_update(
+    request: to_server.MarkFinal(1),
+    reply: game_update,
+  )
+  |> should.equal(True)
 
   ws.should_broadcast_live_update(
     request: to_server.MarkFinal(1),
     reply: standings,
   )
-  |> should.equal(True)
+  |> should.equal(False)
 
   ws.should_broadcast_live_update(
     request: to_server.UpdateScore(1, 5, 2, "Live"),
     reply: standings,
   )
-  |> should.equal(True)
+  |> should.equal(False)
 
   ws.should_broadcast_live_update(
-    request: to_server.LoadStandings,
+    request: to_server.CorrectResult(1, 5, 2),
     reply: standings,
   )
   |> should.equal(False)
+}
+
+@target(erlang)
+pub fn load_standings_returns_only_standings_test() {
+  let db = live_game_db()
+
+  let replies =
+    api.dispatch(
+      db: db,
+      message: to_server.LoadStandings,
+      admin_authorized: False,
+    )
+
+  case replies {
+    [to_client.StandingsLoaded(rows)] -> list.length(rows)
+    _ -> 0
+  }
+  |> should.equal(2)
+
+  replies
+  |> has_toronto_standing(wins: 0, losses: 0, points_for: 0, points_against: 0)
+  |> should.equal(True)
+
+  let assert Ok(_) = sqlight.close(db)
 }
 
 @target(erlang)

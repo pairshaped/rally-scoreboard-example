@@ -7,6 +7,9 @@ import gleam/int
 const secret_key_base = "SCOREBOARD_SECRET_KEY_BASE"
 
 @target(erlang)
+const port = "PORT"
+
+@target(erlang)
 pub type SecretKeyError {
   MissingSecret
   InvalidSecretEncoding
@@ -38,6 +41,18 @@ pub fn secret_key_error_message(error: SecretKeyError) -> String {
       secret_key_base
       <> " must decode to exactly 32 bytes, got "
       <> int.to_string(bytes)
+  }
+}
+
+@target(erlang)
+pub fn http_port(default default: Int) -> Int {
+  case getenv(port) {
+    Ok(value) ->
+      case int.parse(value) {
+        Ok(parsed) -> parsed
+        Error(Nil) -> default
+      }
+    Error(Nil) -> default
   }
 }
 
