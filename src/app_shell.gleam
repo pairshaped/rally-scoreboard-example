@@ -16,7 +16,7 @@ pub fn public(
   content content: Element(msg),
 ) -> Element(msg) {
   html.div([attribute.class("scoreboard-app")], [
-    topbar(
+    public_topbar(
       subtitle: "Public scores",
       current_path:,
       dark_mode:,
@@ -36,19 +36,18 @@ pub fn admin(
   content content: Element(msg),
 ) -> Element(msg) {
   html.div([attribute.class("scoreboard-app admin-shell")], [
-    topbar(
+    admin_topbar(
       subtitle: "Admin score desk",
       current_path:,
       dark_mode:,
       authentication_context:,
-      can_access_admin: True,
       on_dark_mode_change:,
     ),
     content,
   ])
 }
 
-fn topbar(
+fn public_topbar(
   subtitle subtitle: String,
   current_path current_path: String,
   dark_mode dark_mode: Bool,
@@ -65,12 +64,62 @@ fn topbar(
       ]),
     ]),
     html.nav([attribute.class("nav")], [
-      nav_link("/games", "Games", is_games_path(current_path)),
-      nav_link("/standings", "Standings", current_path == "/standings"),
+      nav_link(
+        href: "/games",
+        label: "Games",
+        active: is_games_path(current_path),
+      ),
+      nav_link(
+        href: "/standings",
+        label: "Standings",
+        active: current_path == "/standings",
+      ),
       case can_access_admin {
-        True -> nav_link("/admin/games", "Admin", is_admin_path(current_path))
+        True ->
+          doc_link(
+            href: "/admin/games",
+            label: "Admin",
+            active: is_admin_path(current_path),
+          )
         False -> html.text("")
       },
+      session_link(authentication_context, current_path),
+      theme_switch(dark_mode:, on_change: on_dark_mode_change),
+    ]),
+  ])
+}
+
+fn admin_topbar(
+  subtitle subtitle: String,
+  current_path current_path: String,
+  dark_mode dark_mode: Bool,
+  authentication_context authentication_context: Option(AuthenticationContext),
+  on_dark_mode_change on_dark_mode_change: fn(Bool) -> msg,
+) -> Element(msg) {
+  html.header([attribute.class("topbar")], [
+    html.div([attribute.class("brand")], [
+      html.span([attribute.class("brand-mark")], [html.text("S")]),
+      html.div([], [
+        html.strong([], [html.text("Scoreboard")]),
+        html.p([attribute.class("muted")], [html.text(subtitle)]),
+      ]),
+    ]),
+    html.nav([attribute.class("nav")], [
+      doc_link(
+        href: "/games",
+        label: "Games",
+        active: is_games_path(current_path),
+      ),
+      doc_link(
+        href: "/standings",
+        label: "Standings",
+        active: current_path == "/standings",
+      ),
+      nav_link(
+        href: "/admin/games",
+        label: "Admin",
+        active: is_admin_path(current_path),
+      ),
       session_link(authentication_context, current_path),
       theme_switch(dark_mode:, on_change: on_dark_mode_change),
     ]),
@@ -82,22 +131,55 @@ fn session_link(
   current_path: String,
 ) -> Element(msg) {
   case authentication_context {
-    Some(_) -> nav_link("/sign_out?return_to=/games", "Sign Out", False)
-    None -> nav_link("/sign_in", "Sign In", current_path == "/sign_in")
+    Some(_) ->
+      doc_link(
+        href: "/sign_out?return_to=/games",
+        label: "Sign Out",
+        active: False,
+      )
+    None ->
+      doc_link(
+        href: "/sign_in",
+        label: "Sign In",
+        active: current_path == "/sign_in",
+      )
   }
 }
 
-fn nav_link(href: String, label: String, active: Bool) -> Element(msg) {
+fn nav_link(
+  href href: String,
+  label label: String,
+  active active: Bool,
+) -> Element(msg) {
   html.a(
     [
       attribute.href(href),
-      attribute.class(case active {
-        True -> "active"
-        False -> ""
-      }),
+      attribute.attribute("data-scoreboard-spa-nav", "1"),
+      active_class(active),
     ],
     [html.text(label)],
   )
+}
+
+fn doc_link(
+  href href: String,
+  label label: String,
+  active active: Bool,
+) -> Element(msg) {
+  html.a(
+    [
+      attribute.href(href),
+      active_class(active),
+    ],
+    [html.text(label)],
+  )
+}
+
+fn active_class(active: Bool) -> attribute.Attribute(msg) {
+  attribute.class(case active {
+    True -> "active"
+    False -> ""
+  })
 }
 
 fn theme_switch(

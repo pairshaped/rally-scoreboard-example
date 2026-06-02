@@ -59,6 +59,12 @@ pub fn listen_popstate(_dispatch: fn(String) -> Nil) -> Nil {
 }
 
 @target(javascript)
+@external(javascript, "./browser_ffi.mjs", "listen_spa_navigation")
+pub fn listen_spa_navigation(_dispatch: fn(String) -> Nil) -> Nil {
+  Nil
+}
+
+@target(javascript)
 @external(javascript, "./browser_ffi.mjs", "device_dark_mode")
 pub fn device_dark_mode() -> Bool {
   False

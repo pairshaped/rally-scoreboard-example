@@ -58,6 +58,31 @@ export function listen_popstate(dispatch) {
   });
 }
 
+export function listen_spa_navigation(dispatch) {
+  globalThis.document?.addEventListener?.("click", event => {
+    if (event.defaultPrevented || event.button !== 0) return;
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+
+    const link = event.target?.closest?.("a[data-scoreboard-spa-nav]");
+    if (!link) return;
+
+    const location = globalThis.location;
+    if (!location) return;
+
+    const url = new URL(link.href, location.href);
+    if (url.origin !== location.origin) return;
+
+    const destination = url.pathname + url.search;
+    if (destination === location.pathname + location.search) {
+      event.preventDefault();
+      return;
+    }
+
+    event.preventDefault();
+    dispatch(destination);
+  });
+}
+
 const DEVICE_COOKIE_NAME = "_scoreboard_device";
 
 export function device_dark_mode() {

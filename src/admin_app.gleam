@@ -43,6 +43,8 @@ type Msg {
   PageMsg(pages.Message)
   ServerFrame(BitArray)
   DarkModeChanged(Bool)
+  ShellNavigate(String)
+  BrowserPathChanged(String)
 }
 
 @target(javascript)
@@ -73,6 +75,8 @@ fn init(_flags: Nil) -> #(Model, Effect(Msg)) {
       effect.map(page_effect, PageMsg),
       apply_dark_mode(dark_mode),
       api_client.connect(url: browser.websocket_url(), on_frame: ServerFrame),
+      listen_for_shell_navigation(),
+      listen_for_browser_navigation(),
     ]),
   )
 }
@@ -120,6 +124,14 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
         effect.batch([persist_dark_mode(dark_mode), apply_dark_mode(dark_mode)]),
       )
     }
+    ShellNavigate(path) -> {
+      let route = routes.parse_path(path)
+      navigate(model: model, route: route, push_history: True)
+    }
+    BrowserPathChanged(path) -> {
+      let route = routes.parse_path(path)
+      navigate(model: model, route: route, push_history: False)
+    }
   }
 }
 
@@ -142,6 +154,47 @@ fn apply_dark_mode(dark_mode: Bool) -> Effect(Msg) {
 @target(javascript)
 fn persist_dark_mode(dark_mode: Bool) -> Effect(Msg) {
   effect.from(fn(_dispatch) { browser.persist_dark_mode(dark_mode) })
+}
+
+@target(javascript)
+fn navigate(
+  model model: Model,
+  route route: routes.Route,
+  push_history push_history: Bool,
+) -> #(Model, Effect(Msg)) {
+  let path = routes.route_to_path(route)
+  let #(page, page_effect) =
+    pages.load(PageContext, page_input.empty_query_params(), route)
+  let shared_state =
+    AdminClientSharedState(..model.shared_state, active_section: path)
+  let history_effect = case push_history {
+    True -> push_path(path)
+    False -> effect.none()
+  }
+
+  #(
+    Model(page: page, shared_state:),
+    effect.batch([history_effect, effect.map(page_effect, PageMsg)]),
+  )
+}
+
+@target(javascript)
+fn push_path(path: String) -> Effect(Msg) {
+  effect.from(fn(_dispatch) { browser.push_path(path) })
+}
+
+@target(javascript)
+fn listen_for_browser_navigation() -> Effect(Msg) {
+  effect.from(fn(dispatch) {
+    browser.listen_popstate(fn(path) { dispatch(BrowserPathChanged(path)) })
+  })
+}
+
+@target(javascript)
+fn listen_for_shell_navigation() -> Effect(Msg) {
+  effect.from(fn(dispatch) {
+    browser.listen_spa_navigation(fn(path) { dispatch(ShellNavigate(path)) })
+  })
 }
 
 @target(javascript)
