@@ -1,6 +1,8 @@
 @target(erlang)
 import api/to_client.{type ToClient}
 @target(erlang)
+import api/to_server.{type ToServer}
+@target(erlang)
 import generated/api/server as generated_server
 @target(erlang)
 import gleam/dynamic/decode
@@ -97,7 +99,7 @@ fn handle_client_frame(
       list.each(replies, fn(reply) {
         let response = generated_server.encode_response(request_id, reply)
         let _sent = mist.send_binary_frame(conn, response)
-        broadcast_if_live_update(reply)
+        broadcast_if_live_update(request: message, reply: reply)
       })
     }
     Error(Nil) -> Nil
@@ -105,10 +107,27 @@ fn handle_client_frame(
 }
 
 @target(erlang)
-fn broadcast_if_live_update(message: ToClient) -> Nil {
-  case message {
-    to_client.GameUpdated(_) ->
-      topics.broadcast("app", api.push(module: "app", message: message))
-    _ -> Nil
+fn broadcast_if_live_update(
+  request request: ToServer,
+  reply reply: ToClient,
+) -> Nil {
+  case should_broadcast_live_update(request: request, reply: reply) {
+    True -> topics.broadcast("app", api.push(module: "app", message: reply))
+    False -> Nil
+  }
+}
+
+// nolint: unused_exports -- tests lock down the mutation-only broadcast policy.
+@target(erlang)
+pub fn should_broadcast_live_update(
+  request request: ToServer,
+  reply reply: ToClient,
+) -> Bool {
+  case request, reply {
+    _, to_client.GameUpdated(_) -> True
+    to_server.UpdateScore(_, _, _, _), to_client.StandingsLoaded(_) -> True
+    to_server.MarkFinal(_), to_client.StandingsLoaded(_) -> True
+    to_server.CorrectResult(_, _, _), to_client.StandingsLoaded(_) -> True
+    _, _ -> False
   }
 }
