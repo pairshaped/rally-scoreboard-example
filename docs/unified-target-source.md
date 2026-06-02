@@ -83,7 +83,7 @@ Each generator owns a namespace under `src/generated`:
 - `generated/proute`: route and page glue from Proute
 - `generated/api`: ETF codecs, generated result error types, and browser/server transport glue generated around `ToServer`, `ToClient`, and load/save results
 
-`src/generated_soon` holds generated-shaped runtime code that has not moved to a real generator yet. Its current boot modules own route-to-`ToServer` load planning and `ToClient` page application for both SSR hydration and browser startup. Hydration stays ETF `ToClient` data.
+`src/generated_soon` holds generated-shaped runtime code that has not moved to a real generator yet. Its current boot modules own route-to-`ToServer` load planning and `ToClient` page application for both SSR hydration and browser startup. `browser_mount.gleam` owns shared browser mount mechanics such as boot auth parsing, dark-mode effects, websocket startup, history push, and navigation listeners. Hydration stays ETF `ToClient` data.
 
 The Erlang entrypoint is intentionally thin:
 

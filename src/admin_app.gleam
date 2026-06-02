@@ -5,8 +5,6 @@ import admin/client_shared_state.{
 @target(javascript)
 import app_shell
 @target(javascript)
-import authentication_context.{type AuthenticationContext, AuthenticationContext}
-@target(javascript)
 import generated/proute/admin/page_input
 @target(javascript)
 import generated/proute/admin/pages
@@ -17,7 +15,7 @@ import generated_soon/admin_boot
 @target(javascript)
 import generated_soon/browser
 @target(javascript)
-import generated_soon/client_transport as api_client
+import generated_soon/browser_mount
 @target(javascript)
 import generated_soon/hydration
 @target(javascript)
@@ -25,7 +23,7 @@ import generated_soon/to_client_application
 @target(javascript)
 import gleam/list
 @target(javascript)
-import gleam/option.{type Option, None, Some}
+import gleam/option.{None}
 @target(javascript)
 import lustre
 @target(javascript)
@@ -34,9 +32,6 @@ import lustre/effect.{type Effect}
 import lustre/element.{type Element}
 @target(javascript)
 import page_context.{PageContext}
-
-@target(javascript)
-const device_cookie_name = "_scoreboard_device"
 
 @target(javascript)
 type Model {
@@ -63,11 +58,11 @@ pub fn main() -> Nil {
 fn init(_flags: Nil) -> #(Model, Effect(Msg)) {
   let current_path = browser.path()
   let route = routes.parse_path(current_path)
-  let dark_mode = browser.device_dark_mode(device_cookie_name)
+  let dark_mode = browser_mount.device_dark_mode()
   let #(page, page_effect) = initial_page(route: route)
   let shared_state =
     AdminClientSharedState(
-      authentication_context: boot_authentication_context(),
+      authentication_context: browser_mount.boot_authentication_context(),
       league_name: "Scoreboard",
       dark_mode:,
       active_section: current_path,
@@ -78,10 +73,12 @@ fn init(_flags: Nil) -> #(Model, Effect(Msg)) {
     Model(page: page, shared_state:),
     effect.batch([
       effect.map(page_effect, PageMsg),
-      apply_dark_mode(dark_mode),
-      api_client.connect(url: browser.websocket_url(), on_frame: ServerFrame),
-      listen_for_shell_navigation(),
-      listen_for_browser_navigation(),
+      browser_mount.startup_effects(
+        dark_mode: dark_mode,
+        on_frame: ServerFrame,
+        on_shell_navigation: ShellNavigate,
+        on_browser_navigation: BrowserPathChanged,
+      ),
     ]),
   )
 }
@@ -130,7 +127,7 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
         AdminClientSharedState(..model.shared_state, dark_mode: dark_mode)
       #(
         Model(..model, shared_state:),
-        effect.batch([persist_dark_mode(dark_mode), apply_dark_mode(dark_mode)]),
+        browser_mount.dark_mode_changed_effects(dark_mode),
       )
     }
     ShellNavigate(path) -> {
@@ -156,18 +153,6 @@ fn view(model: Model) -> Element(Msg) {
 }
 
 @target(javascript)
-fn apply_dark_mode(dark_mode: Bool) -> Effect(Msg) {
-  effect.from(fn(_dispatch) { browser.apply_dark_mode(dark_mode) })
-}
-
-@target(javascript)
-fn persist_dark_mode(dark_mode: Bool) -> Effect(Msg) {
-  effect.from(fn(_dispatch) {
-    browser.persist_dark_mode(device_cookie_name, dark_mode)
-  })
-}
-
-@target(javascript)
 fn navigate(
   model model: Model,
   route route: routes.Route,
@@ -179,7 +164,7 @@ fn navigate(
   let shared_state =
     AdminClientSharedState(..model.shared_state, active_section: path)
   let history_effect = case push_history {
-    True -> push_path(path)
+    True -> browser_mount.push_path(path)
     False -> effect.none()
   }
 
@@ -187,41 +172,4 @@ fn navigate(
     Model(page: page, shared_state:),
     effect.batch([history_effect, effect.map(page_effect, PageMsg)]),
   )
-}
-
-@target(javascript)
-fn push_path(path: String) -> Effect(Msg) {
-  effect.from(fn(_dispatch) { browser.push_path(path) })
-}
-
-@target(javascript)
-fn listen_for_browser_navigation() -> Effect(Msg) {
-  effect.from(fn(dispatch) {
-    browser.listen_popstate(fn(path) { dispatch(BrowserPathChanged(path)) })
-  })
-}
-
-@target(javascript)
-fn listen_for_shell_navigation() -> Effect(Msg) {
-  effect.from(fn(dispatch) {
-    browser.listen_spa_navigation(fn(path) { dispatch(ShellNavigate(path)) })
-  })
-}
-
-@target(javascript)
-fn boot_authentication_context() -> Option(AuthenticationContext) {
-  case browser.boot_int("authUserId", 0) {
-    0 -> None
-    user_id -> {
-      let display_name = case browser.boot_string("authDisplayName") {
-        "" -> None
-        value -> Some(value)
-      }
-      Some(AuthenticationContext(
-        user_id:,
-        email: browser.boot_string("authEmail"),
-        display_name:,
-      ))
-    }
-  }
 }

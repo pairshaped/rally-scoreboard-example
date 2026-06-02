@@ -1,8 +1,6 @@
 @target(javascript)
 import app_shell
 @target(javascript)
-import authentication_context.{type AuthenticationContext, AuthenticationContext}
-@target(javascript)
 import generated/proute/public/page_input
 @target(javascript)
 import generated/proute/public/pages
@@ -11,7 +9,7 @@ import generated/proute/public/routes
 @target(javascript)
 import generated_soon/browser
 @target(javascript)
-import generated_soon/client_transport as api_client
+import generated_soon/browser_mount
 @target(javascript)
 import generated_soon/hydration
 @target(javascript)
@@ -24,8 +22,6 @@ import gleam/int
 import gleam/list
 @target(javascript)
 import gleam/option.{type Option, None, Some}
-@target(javascript)
-import gleam/string
 @target(javascript)
 import lustre
 @target(javascript)
@@ -46,9 +42,6 @@ import public/pages/games/id_ as games_id_page
 import public/pages/standings as standings_page
 @target(javascript)
 import public/pages/teams/slug_ as teams_slug_page
-
-@target(javascript)
-const device_cookie_name = "_scoreboard_device"
 
 @target(javascript)
 type Model {
@@ -76,7 +69,7 @@ fn init(_flags: Nil) -> #(Model, Effect(Msg)) {
   let current_path = browser.path()
   let route = routes.parse_path(current_path)
   let query_params = query_params_from_browser()
-  let dark_mode = browser.device_dark_mode(device_cookie_name)
+  let dark_mode = browser_mount.device_dark_mode()
   let #(page, page_effect) =
     initial_page(route: route, query_params: query_params)
   let shared_state =
@@ -84,7 +77,7 @@ fn init(_flags: Nil) -> #(Model, Effect(Msg)) {
       league_name: "Scoreboard",
       active_section: current_path,
       dark_mode:,
-      authentication_context: boot_authentication_context(),
+      authentication_context: browser_mount.boot_authentication_context(),
       can_access_admin: browser.boot_bool("canAccessAdmin"),
     )
 
@@ -92,10 +85,12 @@ fn init(_flags: Nil) -> #(Model, Effect(Msg)) {
     Model(page: page, shared_state:),
     effect.batch([
       effect.map(page_effect, PageMsg),
-      apply_dark_mode(dark_mode),
-      api_client.connect(url: browser.websocket_url(), on_frame: ServerFrame),
-      listen_for_shell_navigation(),
-      listen_for_browser_navigation(),
+      browser_mount.startup_effects(
+        dark_mode: dark_mode,
+        on_frame: ServerFrame,
+        on_shell_navigation: ShellNavigate,
+        on_browser_navigation: BrowserPathChanged,
+      ),
     ]),
   )
 }
@@ -148,7 +143,7 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
         PublicClientSharedState(..model.shared_state, dark_mode: dark_mode)
       #(
         Model(..model, shared_state:),
-        effect.batch([persist_dark_mode(dark_mode), apply_dark_mode(dark_mode)]),
+        browser_mount.dark_mode_changed_effects(dark_mode),
       )
     }
     ShellNavigate(path) -> {
@@ -172,18 +167,6 @@ fn view(model: Model) -> Element(Msg) {
     on_dark_mode_change: DarkModeChanged,
     content: pages.view(model.page) |> element.map(PageMsg),
   )
-}
-
-@target(javascript)
-fn apply_dark_mode(dark_mode: Bool) -> Effect(Msg) {
-  effect.from(fn(_dispatch) { browser.apply_dark_mode(dark_mode) })
-}
-
-@target(javascript)
-fn persist_dark_mode(dark_mode: Bool) -> Effect(Msg) {
-  effect.from(fn(_dispatch) {
-    browser.persist_dark_mode(device_cookie_name, dark_mode)
-  })
 }
 
 @target(javascript)
@@ -217,7 +200,7 @@ fn navigate(
   let shared_state =
     PublicClientSharedState(..model.shared_state, active_section: path)
   let history_effect = case push_history {
-    True -> push_path(path)
+    True -> browser_mount.push_path(path)
     False -> effect.none()
   }
 
@@ -228,52 +211,6 @@ fn navigate(
 }
 
 @target(javascript)
-fn push_path(path: String) -> Effect(Msg) {
-  effect.from(fn(_dispatch) { browser.push_path(path) })
-}
-
-@target(javascript)
-fn listen_for_browser_navigation() -> Effect(Msg) {
-  effect.from(fn(dispatch) {
-    browser.listen_popstate(fn(path) { dispatch(BrowserPathChanged(path)) })
-  })
-}
-
-@target(javascript)
-fn listen_for_shell_navigation() -> Effect(Msg) {
-  effect.from(fn(dispatch) {
-    browser.listen_spa_navigation(fn(path) { dispatch(ShellNavigate(path)) })
-  })
-}
-
-@target(javascript)
-fn boot_authentication_context() -> Option(AuthenticationContext) {
-  case browser.boot_int("authUserId", 0) {
-    0 -> None
-    user_id -> {
-      let display_name = case browser.boot_string("authDisplayName") {
-        "" -> None
-        value -> Some(value)
-      }
-      Some(AuthenticationContext(
-        user_id:,
-        email: browser.boot_string("authEmail"),
-        display_name:,
-      ))
-    }
-  }
-}
-
-@target(javascript)
 fn query_params_from_browser() -> page_input.QueryParams {
-  let values =
-    browser.query_string()
-    |> string.split("&")
-    |> list.filter_map(fn(pair) {
-      case string.split(pair, "=") {
-        [key, value] -> Ok(#(key, value))
-        _ -> Error(Nil)
-      }
-    })
-  page_input.QueryParams(values:)
+  page_input.QueryParams(values: browser_mount.query_pairs())
 }
