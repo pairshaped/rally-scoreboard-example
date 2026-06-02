@@ -7,8 +7,6 @@ import app_shell
 @target(javascript)
 import authentication_context.{type AuthenticationContext, AuthenticationContext}
 @target(javascript)
-import client/to_client
-@target(javascript)
 import generated/proute/admin/page_input
 @target(javascript)
 import generated/proute/admin/pages
@@ -22,6 +20,8 @@ import generated_soon/browser
 import generated_soon/client_transport as api_client
 @target(javascript)
 import generated_soon/hydration
+@target(javascript)
+import generated_soon/to_client_application
 @target(javascript)
 import gleam/list
 @target(javascript)
@@ -99,7 +99,8 @@ fn initial_page(
           messages,
           pages.load_sync(PageContext, query_params, route),
           fn(page, message) {
-            let #(page, _) = to_client.apply_admin(page: page, message: message)
+            let #(page, _) =
+              to_client_application.apply_admin(page: page, message: message)
             page
           },
         )
@@ -118,7 +119,10 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
     }
     ServerFrame(bytes) -> {
       let #(page, page_effect) =
-        to_client.decode_and_apply_admin(page: model.page, bytes: bytes)
+        to_client_application.decode_and_apply_admin(
+          page: model.page,
+          bytes: bytes,
+        )
       #(Model(..model, page: page), effect.map(page_effect, PageMsg))
     }
     DarkModeChanged(dark_mode) -> {

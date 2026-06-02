@@ -55,9 +55,15 @@ src/admin/pages/**/*.gleam
 src/admin/client_shared_state.gleam
 
 src/app_assets.gleam
+src/app_api.gleam
+src/app_auth.gleam
 src/app_auth_http.gleam
+src/app_config.gleam
 src/app_document.gleam
+src/app_session.gleam
 src/app_ssr.gleam
+src/app_topics.gleam
+src/app_ws.gleam
 src/scoreboard_unified.gleam
 
 src/components/**/*.gleam
@@ -82,9 +88,15 @@ Each generator owns a namespace under `src/generated`:
 The Erlang entrypoint is intentionally thin:
 
 - `scoreboard_unified.gleam`: process startup, top-level HTTP routing, websocket handoff
+- `app_api.gleam`: app-owned `ToServer` dispatch and load/save results
+- `app_auth.gleam`: authentication lookup and admin policy
 - `app_auth_http.gleam`: sign-in, sign-out, session cookies, authenticated-user lookup, admin access checks
+- `app_config.gleam`: Erlang runtime configuration
 - `app_document.gleam`: HTML document shell, boot attributes, theme resolution, hydration attributes
+- `app_session.gleam`: encrypted session cookie encoding and decoding
 - `app_ssr.gleam`: public/admin SSR rendering and hydration payload generation
+- `app_topics.gleam`: live update process-group boundary
+- `app_ws.gleam`: WebSocket frame handling and live fanout
 - `app_assets.gleam`: build artifact responses and inline CSS text
 
 This differs from the server-component example in `../scoreboard-sc`, where the server owns component mounts and websocket transport for server-rendered component state. Scoreboard Unified keeps a real browser client, so the server entrypoint stays closer to ordinary HTTP routing while SSR and hydration are app boundaries.

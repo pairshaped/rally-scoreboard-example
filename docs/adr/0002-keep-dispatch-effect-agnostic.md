@@ -9,7 +9,7 @@ handler, an SSR boot path, a test, or a future HTTP endpoint.
 
 ## Decision
 
-`server/api.gleam` owns app dispatch:
+`app_api.gleam` owns app dispatch:
 
 ```gleam
 pub fn dispatch(

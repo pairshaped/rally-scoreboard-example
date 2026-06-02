@@ -1,4 +1,4 @@
--module(server_config_ffi).
+-module(app_config_ffi).
 -export([getenv/1]).
 
 getenv(Name) ->

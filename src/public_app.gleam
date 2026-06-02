@@ -3,8 +3,6 @@ import app_shell
 @target(javascript)
 import authentication_context.{type AuthenticationContext, AuthenticationContext}
 @target(javascript)
-import client/to_client
-@target(javascript)
 import generated/proute/public/page_input
 @target(javascript)
 import generated/proute/public/pages
@@ -18,6 +16,8 @@ import generated_soon/client_transport as api_client
 import generated_soon/hydration
 @target(javascript)
 import generated_soon/public_boot
+@target(javascript)
+import generated_soon/to_client_application
 @target(javascript)
 import gleam/int
 @target(javascript)
@@ -113,7 +113,7 @@ fn initial_page(
           pages.load_sync(PageContext, query_params, route),
           fn(page, message) {
             let #(page, _) =
-              to_client.apply_public(page: page, message: message)
+              to_client_application.apply_public(page: page, message: message)
             page
           },
         )
@@ -137,7 +137,10 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
     }
     ServerFrame(bytes) -> {
       let #(page, page_effect) =
-        to_client.decode_and_apply_public(page: model.page, bytes: bytes)
+        to_client_application.decode_and_apply_public(
+          page: model.page,
+          bytes: bytes,
+        )
       #(Model(..model, page: page), effect.map(page_effect, PageMsg))
     }
     DarkModeChanged(dark_mode) -> {

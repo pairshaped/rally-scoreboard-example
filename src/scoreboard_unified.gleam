@@ -3,7 +3,13 @@ import app_assets
 @target(erlang)
 import app_auth_http
 @target(erlang)
+import app_config
+@target(erlang)
 import app_document
+@target(erlang)
+import app_session
+@target(erlang)
+import app_ws
 @target(erlang)
 import gleam/crypto
 @target(erlang)
@@ -25,12 +31,6 @@ import gleam/string
 @target(erlang)
 import mist.{type Connection, type ResponseData}
 @target(erlang)
-import server/config
-@target(erlang)
-import server/session
-@target(erlang)
-import server/ws
-@target(erlang)
 import sqlight
 
 @target(erlang)
@@ -40,8 +40,8 @@ const db_path = "db/scoreboard.db"
 pub fn main() -> Nil {
   let assert Ok(db) = sqlight.open(db_path)
   let assert Ok(key) = session_key()
-  let session = session.new(key)
-  let port = config.http_port(default: 8080)
+  let session = app_session.new(key)
+  let port = app_config.http_port(default: 8080)
 
   let handler = fn(req: Request(Connection)) {
     let Request(path: path, method: method, ..) = req
@@ -56,9 +56,9 @@ pub fn main() -> Nil {
           |> result.is_ok
         mist.websocket(
           req,
-          ws.handler,
-          fn(conn) { ws.on_init(conn, db, admin_authorized) },
-          ws.on_close,
+          app_ws.handler,
+          fn(conn) { app_ws.on_init(conn, db, admin_authorized) },
+          app_ws.on_close,
         )
       }
       _, _ ->
@@ -88,18 +88,18 @@ pub fn main() -> Nil {
 }
 
 @target(erlang)
-fn session_key() -> Result(BitArray, config.SecretKeyError) {
-  case config.secret_key() {
+fn session_key() -> Result(BitArray, app_config.SecretKeyError) {
+  case app_config.secret_key() {
     Ok(key) -> Ok(key)
-    Error(config.MissingSecret) -> {
+    Error(app_config.MissingSecret) -> {
       io.println_error(
-        config.secret_key_error_message(config.MissingSecret)
+        app_config.secret_key_error_message(app_config.MissingSecret)
         <> "; using an in-memory development key",
       )
       Ok(crypto.strong_random_bytes(32))
     }
     Error(error) -> {
-      io.println_error(config.secret_key_error_message(error))
+      io.println_error(app_config.secret_key_error_message(error))
       Error(error)
     }
   }
@@ -109,7 +109,7 @@ fn session_key() -> Result(BitArray, config.SecretKeyError) {
 fn handle_admin_path(
   req req: Request(Connection),
   db db: sqlight.Connection,
-  session session: session.Session,
+  session session: app_session.Session,
 ) -> Response(ResponseData) {
   case app_auth_http.check_admin_session(req: req, db: db, session: session) {
     Ok(_) ->

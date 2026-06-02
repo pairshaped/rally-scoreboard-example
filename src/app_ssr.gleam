@@ -3,7 +3,13 @@ import api/to_client
 @target(erlang)
 import api/to_server.{type ToServer}
 @target(erlang)
+import app_api
+@target(erlang)
+import app_auth
+@target(erlang)
 import app_auth_http
+@target(erlang)
+import app_session
 @target(erlang)
 import app_shell
 @target(erlang)
@@ -41,12 +47,6 @@ import mist.{type Connection}
 @target(erlang)
 import page_context.{PageContext}
 @target(erlang)
-import server/api as server_api
-@target(erlang)
-import server/auth
-@target(erlang)
-import server/session
-@target(erlang)
 import sqlight
 
 @target(erlang)
@@ -61,7 +61,7 @@ pub fn public(
   db db: sqlight.Connection,
   query_params query_params: public_page_input.QueryParams,
   dark_mode dark_mode: Bool,
-  session session: session.Session,
+  session session: app_session.Session,
 ) -> SsrApp {
   let #(authentication_context, can_access_admin) =
     boot_identity(req: req, db: db, session: session)
@@ -112,7 +112,7 @@ pub fn admin(
   db db: sqlight.Connection,
   query_params query_params: admin_page_input.QueryParams,
   dark_mode dark_mode: Bool,
-  session session: session.Session,
+  session session: app_session.Session,
 ) -> SsrApp {
   let #(authentication_context, _) =
     boot_identity(req: req, db: db, session: session)
@@ -151,10 +151,10 @@ pub fn admin_render(
 fn boot_identity(
   req req: Request(Connection),
   db db: sqlight.Connection,
-  session session: session.Session,
+  session session: app_session.Session,
 ) -> #(Option(AuthenticationContext), Bool) {
   case app_auth_http.authenticated_user(req: req, db: db, session: session) {
-    Ok(user) -> #(Some(user.context), auth.can_access_admin(user))
+    Ok(user) -> #(Some(user.context), app_auth.can_access_admin(user))
     Error(Nil) -> #(None, False)
   }
 }
@@ -192,7 +192,7 @@ fn dispatch_requests(
   list.fold(requests, [], fn(messages, request) {
     list.append(
       messages,
-      server_api.dispatch(
+      app_api.dispatch(
         db: db,
         message: request,
         admin_authorized: admin_authorized,

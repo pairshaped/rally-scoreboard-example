@@ -83,7 +83,7 @@ Handlers own authorization policy. They decide whether the authenticated user
 may perform a command, update a row, or view a resource.
 
 For the current websocket path, server commands are dispatched by app code in
-`server/api.gleam`. Any user/session facts needed by those commands should be
+`app_api.gleam`. Any user/session facts needed by those commands should be
 added to app-owned request or connection state before handler dispatch.
 
 ## Navigation

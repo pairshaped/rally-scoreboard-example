@@ -1,7 +1,11 @@
 @target(erlang)
 import app_assets
 @target(erlang)
+import app_auth
+@target(erlang)
 import app_auth_http
+@target(erlang)
+import app_session
 @target(erlang)
 import app_ssr
 @target(erlang)
@@ -27,10 +31,6 @@ import gleam/string
 @target(erlang)
 import mist.{type Connection, type ResponseData}
 @target(erlang)
-import server/auth
-@target(erlang)
-import server/session
-@target(erlang)
 import sqlight
 
 @target(erlang)
@@ -38,7 +38,7 @@ pub fn response(
   req req: Request(Connection),
   path path: String,
   db db: sqlight.Connection,
-  session session: session.Session,
+  session session: app_session.Session,
 ) -> Response(ResponseData) {
   html(req: req, path: path, db: db, session: session)
   |> html_response
@@ -56,7 +56,7 @@ fn html(
   req req: Request(Connection),
   path path: String,
   db db: sqlight.Connection,
-  session session: session.Session,
+  session session: app_session.Session,
 ) -> String {
   let entrypoint = case string.starts_with(path, "/admin") {
     True -> "admin_app.mjs"
@@ -168,7 +168,7 @@ fn resolve_theme(req: Request(Connection)) -> String {
 fn app_boot_attrs(
   req req: Request(Connection),
   db db: sqlight.Connection,
-  session session: session.Session,
+  session session: app_session.Session,
 ) -> String {
   case app_auth_http.authenticated_user(req: req, db: db, session: session) {
     Ok(user) -> {
@@ -184,7 +184,7 @@ fn app_boot_attrs(
       <> "\" data-auth-display-name=\""
       <> html_attr_escape(display_name)
       <> "\" data-can-access-admin=\""
-      <> bool_attr(auth.can_access_admin(user))
+      <> bool_attr(app_auth.can_access_admin(user))
       <> "\""
     }
     Error(Nil) -> " data-can-access-admin=\"0\""

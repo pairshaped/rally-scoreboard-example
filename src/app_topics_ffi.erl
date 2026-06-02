@@ -1,4 +1,4 @@
--module(server_topics_ffi).
+-module(app_topics_ffi).
 -export([start/0, join/1, broadcast/2]).
 
 start() ->

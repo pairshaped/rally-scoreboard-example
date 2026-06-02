@@ -3,6 +3,10 @@ import api/to_client.{type ToClient}
 @target(erlang)
 import api/to_server.{type ToServer}
 @target(erlang)
+import app_api
+@target(erlang)
+import app_topics
+@target(erlang)
 import generated/api/server as generated_server
 @target(erlang)
 import gleam/dynamic/decode
@@ -19,10 +23,6 @@ import gleam/result
 @target(erlang)
 import mist.{type Next, type WebsocketConnection, type WebsocketMessage}
 @target(erlang)
-import server/api
-@target(erlang)
-import server/topics
-@target(erlang)
 import sqlight
 
 @target(erlang)
@@ -36,8 +36,8 @@ pub fn on_init(
   db: sqlight.Connection,
   admin_authorized: Bool,
 ) -> #(State, Option(Selector(BitArray))) {
-  topics.start()
-  topics.join("app")
+  app_topics.start()
+  app_topics.join("app")
   let selector =
     process.new_selector()
     |> process.select_record(
@@ -87,20 +87,20 @@ fn handle_client_frame(
   case generated_server.decode_request(data) {
     Ok(generated_server.ClientRequest(message: request_message, ..)) -> {
       let reply =
-        api.dispatch_reply(
+        app_api.dispatch_reply(
           db: state.db,
           message: request_message,
           admin_authorized: state.admin_authorized,
         )
-      let _sent = mist.send_binary_frame(conn, api.reply_result(reply))
+      let _sent = mist.send_binary_frame(conn, app_api.reply_result(reply))
       case reply {
-        api.LoadReply(messages: messages, ..) ->
+        app_api.LoadReply(messages: messages, ..) ->
           list.each(messages, fn(message) {
             let response = generated_server.encode_response(message)
             let _sent = mist.send_binary_frame(conn, response)
             Nil
           })
-        api.SaveReply(messages: messages, ..) ->
+        app_api.SaveReply(messages: messages, ..) ->
           list.each(messages, fn(message) {
             broadcast_if_live_update(request: request_message, reply: message)
           })
@@ -116,7 +116,8 @@ fn broadcast_if_live_update(
   reply reply: ToClient,
 ) -> Nil {
   case should_broadcast_live_update(request: request, reply: reply) {
-    True -> topics.broadcast("app", api.push(module: "app", message: reply))
+    True ->
+      app_topics.broadcast("app", app_api.push(module: "app", message: reply))
     False -> Nil
   }
 }

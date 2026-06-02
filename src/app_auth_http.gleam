@@ -1,4 +1,8 @@
 @target(erlang)
+import app_auth
+@target(erlang)
+import app_session
+@target(erlang)
 import gleam/bit_array
 @target(erlang)
 import gleam/bytes_tree
@@ -23,17 +27,13 @@ import gleam/uri
 @target(erlang)
 import mist.{type Connection, type ResponseData}
 @target(erlang)
-import server/auth
-@target(erlang)
-import server/session
-@target(erlang)
 import sqlight
 
 @target(erlang)
 pub fn handle_sign_in_post(
   req req: Request(Connection),
   db db: sqlight.Connection,
-  session session: session.Session,
+  session session: app_session.Session,
 ) -> response.Response(ResponseData) {
   case mist.read_body(req, max_body_limit: 4096) {
     Ok(req_with_body) ->
@@ -63,7 +63,10 @@ pub fn handle_sign_out(
 
   response.new(302)
   |> response.set_header("location", path)
-  |> response.expire_cookie(session.session_cookie, session_cookie_attributes())
+  |> response.expire_cookie(
+    app_session.session_cookie,
+    session_cookie_attributes(),
+  )
   |> response.set_body(mist.Bytes(bytes_tree.from_string("")))
 }
 
@@ -76,10 +79,10 @@ pub fn sign_in_redirect(return_to: String) -> response.Response(ResponseData) {
 pub fn check_admin_session(
   req req: Request(Connection),
   db db: sqlight.Connection,
-  session session: session.Session,
-) -> Result(auth.AuthenticatedUser, Nil) {
+  session session: app_session.Session,
+) -> Result(app_auth.AuthenticatedUser, Nil) {
   use user <- result.try(authenticated_user(req: req, db: db, session: session))
-  case auth.can_access_admin(user) {
+  case app_auth.can_access_admin(user) {
     True -> Ok(user)
     False -> Error(Nil)
   }
@@ -89,21 +92,21 @@ pub fn check_admin_session(
 pub fn authenticated_user(
   req req: Request(Connection),
   db db: sqlight.Connection,
-  session session: session.Session,
-) -> Result(auth.AuthenticatedUser, Nil) {
+  session session: app_session.Session,
+) -> Result(app_auth.AuthenticatedUser, Nil) {
   let cookies = request.get_cookies(req)
-  use cookie_value <- result.try(auth.find_session(cookies))
-  use user_id <- result.try(session.decode_user_id(
+  use cookie_value <- result.try(app_auth.find_session(cookies))
+  use user_id <- result.try(app_session.decode_user_id(
     encoded: cookie_value,
     session: session,
   ))
-  auth.user_by_id(db: db, user_id: user_id)
+  app_auth.user_by_id(db: db, user_id: user_id)
 }
 
 @target(erlang)
 fn process_sign_in_body(
   db db: sqlight.Connection,
-  session session: session.Session,
+  session session: app_session.Session,
   body body: String,
 ) -> response.Response(ResponseData) {
   case uri.parse_query(body) {
@@ -115,7 +118,7 @@ fn process_sign_in_body(
 @target(erlang)
 fn verify_credentials(
   db db: sqlight.Connection,
-  session session: session.Session,
+  session session: app_session.Session,
   pairs pairs: List(#(String, String)),
 ) -> response.Response(ResponseData) {
   let return_to =
@@ -124,7 +127,7 @@ fn verify_credentials(
 
   case find_pair(pairs, "code") {
     Ok(code) ->
-      case auth.verify_sign_in_code(db: db, code: code) {
+      case app_auth.verify_sign_in_code(db: db, code: code) {
         Ok(user_id) ->
           issue_session(
             session: session,
@@ -139,16 +142,16 @@ fn verify_credentials(
 
 @target(erlang)
 fn issue_session(
-  session session: session.Session,
+  session session: app_session.Session,
   return_to return_to: String,
   user_id user_id: Int,
 ) -> response.Response(ResponseData) {
-  case session.encode_user_id(user_id: user_id, session: session) {
+  case app_session.encode_user_id(user_id: user_id, session: session) {
     Ok(encoded) ->
       response.new(302)
       |> response.set_header("location", return_to)
       |> response.set_cookie(
-        session.session_cookie,
+        app_session.session_cookie,
         encoded,
         session_cookie_attributes(),
       )

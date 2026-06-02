@@ -1,4 +1,4 @@
--module(session_crypto_ffi).
+-module(app_session_crypto_ffi).
 -export([encrypt/3, decrypt/3]).
 
 encrypt(Key, Plaintext, AAD) ->

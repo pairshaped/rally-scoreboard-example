@@ -121,7 +121,7 @@ fn require_version(pairs: List(#(String, String))) -> Result(Nil, Nil) {
 }
 
 @target(erlang)
-@external(erlang, "session_crypto_ffi", "encrypt")
+@external(erlang, "app_session_crypto_ffi", "encrypt")
 fn encrypt(
   key: BitArray,
   plaintext: BitArray,
@@ -129,7 +129,7 @@ fn encrypt(
 ) -> Result(Encrypted, Nil)
 
 @target(erlang)
-@external(erlang, "session_crypto_ffi", "decrypt")
+@external(erlang, "app_session_crypto_ffi", "decrypt")
 fn decrypt(
   key: BitArray,
   encrypted: Encrypted,

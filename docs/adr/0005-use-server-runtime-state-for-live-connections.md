@@ -8,13 +8,13 @@ or server handler dispatch.
 
 The Erlang runtime uses Mist for the HTTP and WebSocket server.
 
-Each WebSocket connection keeps a small `server/ws.State` with the shared
+Each WebSocket connection keeps a small `app_ws.State` with the shared
 database connection. Incoming binary frames are decoded by
-`generated/api/server`, dispatched through `server/api`, and encoded back as
+`generated/api/server`, dispatched through `app_api`, and encoded back as
 generated response frames.
 
-Live fanout uses an Erlang `pg` group through `server/topics.gleam` and
-`server_topics_ffi.erl`. Connected sockets join the app group. When a server
+Live fanout uses an Erlang `pg` group through `app_topics.gleam` and
+`app_topics_ffi.erl`. Connected sockets join the app group. When a server
 operation produces a public live event such as `GameUpdated`, the WebSocket
 handler broadcasts a generated push frame to the group.
 

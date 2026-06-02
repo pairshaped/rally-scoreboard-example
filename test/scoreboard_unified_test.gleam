@@ -4,16 +4,16 @@ import api/domain/game
 import api/to_client.{type ToClient}
 @target(erlang)
 import api/to_server
+@target(erlang)
+import app_api
+@target(erlang)
+import app_ws
 import authentication_context
 @target(erlang)
 import gleam/list
 import gleam/option.{None, Some}
 import gleeunit
 import gleeunit/should
-@target(erlang)
-import server/api
-@target(erlang)
-import server/ws
 @target(erlang)
 import sqlight
 
@@ -39,15 +39,17 @@ pub fn mark_final_returns_save_ack_and_game_update_test() {
   let db = live_game_db()
 
   let reply =
-    api.dispatch_reply(
+    app_api.dispatch_reply(
       db: db,
       message: to_server.MarkFinal(1),
       admin_authorized: True,
     )
 
   case reply {
-    api.SaveReply(result: Ok(Nil), messages: [to_client.GameUpdated(updated)]) ->
-      updated.status == game.Final
+    app_api.SaveReply(
+      result: Ok(Nil),
+      messages: [to_client.GameUpdated(updated)],
+    ) -> updated.status == game.Final
     _ -> False
   }
   |> should.equal(True)
@@ -60,15 +62,17 @@ pub fn update_score_returns_save_ack_and_game_update_test() {
   let db = final_game_db()
 
   let reply =
-    api.dispatch_reply(
+    app_api.dispatch_reply(
       db: db,
       message: to_server.UpdateScore(1, 5, 2, "Live"),
       admin_authorized: True,
     )
 
   case reply {
-    api.SaveReply(result: Ok(Nil), messages: [to_client.GameUpdated(updated)]) ->
-      updated.status == game.Live("Live")
+    app_api.SaveReply(
+      result: Ok(Nil),
+      messages: [to_client.GameUpdated(updated)],
+    ) -> updated.status == game.Live("Live")
     _ -> False
   }
   |> should.equal(True)
@@ -88,7 +92,7 @@ pub fn only_game_updates_are_global_mutation_broadcasts_test() {
       status: game.Final,
     ))
 
-  ws.should_broadcast_live_update(
+  app_ws.should_broadcast_live_update(
     request: to_server.MarkFinal(1),
     reply: game_update,
   )
@@ -106,7 +110,7 @@ pub fn only_game_updates_are_global_mutation_broadcasts_test() {
       ),
     ])
 
-  ws.should_broadcast_live_update(
+  app_ws.should_broadcast_live_update(
     request: to_server.MarkFinal(1),
     reply: games_loaded,
   )
@@ -118,7 +122,7 @@ pub fn load_standings_returns_only_standings_test() {
   let db = live_game_db()
 
   let replies =
-    api.dispatch(
+    app_api.dispatch(
       db: db,
       message: to_server.LoadStandings,
       admin_authorized: False,

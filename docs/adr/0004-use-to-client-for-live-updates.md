@@ -15,7 +15,7 @@ same transport and client reducer path whether they came from the current
 client's command or another server-side update:
 
 ```text
-ToClient -> client/to_client reducer -> page model
+ToClient -> generated_soon/to_client_application -> page model
 ```
 
 There are no separate live-update topic or payload types in the public API. The
@@ -24,8 +24,8 @@ value. The current runtime uses one app-level process group and lets client
 reducers ignore values that are irrelevant to their active page.
 
 Client `ToClient` handlers do not proxy server events into local page `Msg`
-values. In this app, `client/to_client.gleam` applies decoded `ToClient` values
-to the active page model and returns any client effect. Local page `Msg` values
-are reserved for browser-originated events.
+values. In this app, `generated_soon/to_client_application.gleam` applies
+decoded `ToClient` values to the active page model and returns any client
+effect. Local page `Msg` values are reserved for browser-originated events.
 
 Wire-visible `ToClient` constructors participate in the shared API codec graph. Their constructor names must be unique plain ETF atoms, just like `ToServer` and domain constructors.

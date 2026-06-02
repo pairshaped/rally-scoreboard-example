@@ -13,13 +13,13 @@ updated_at: 2026-06-02T10:03:33Z
 
 ## Problem
 
-The unified scoreboard app works, but it has drifted into split-shaped source boundaries and handwritten runtime glue. The codebase has too much app-level code for mount startup, SSR hydration, client hydration, websocket transport, route loading, and duplicated client/server reducers.
+The unified scoreboard app works, but it still has too much handwritten runtime glue. The codebase has too much app-level code for mount startup, browser hydration, websocket transport, route loading, and duplicated mount runtime.
 
 The working behavior is valuable. The cleanup should keep the app green while gradually moving generic code into an explicit generated-soon boundary and shrinking app-authored modules.
 
 ## Direction
 
-Use ../scoreboard-sc as an ergonomics reference, especially the way a page owns its model, data loading, update logic, and view. Keep the unified app architecture, but remove split-shaped namespaces and fossilized boundaries.
+Use ../scoreboard-sc as an ergonomics reference, especially the way a page owns its model, data loading, update logic, and view. Keep the unified app architecture, but keep shrinking fossilized runtime boundaries.
 
 Create src/generated_soon/ for generic code that should eventually be generated or owned by a library, but whose final generator/library boundary is not settled yet.
 

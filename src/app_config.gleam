@@ -57,5 +57,5 @@ pub fn http_port(default default: Int) -> Int {
 }
 
 @target(erlang)
-@external(erlang, "server_config_ffi", "getenv")
+@external(erlang, "app_config_ffi", "getenv")
 fn getenv(name: String) -> Result(String, Nil)
