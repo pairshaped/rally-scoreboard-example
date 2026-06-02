@@ -1,5 +1,29 @@
 @target(erlang)
+import admin/pages/games as admin_games_page
+@target(erlang)
+import api/to_client
+@target(erlang)
+import api/to_server
+@target(erlang)
+import app_shell
+@target(erlang)
+import authentication_context.{type AuthenticationContext}
+@target(erlang)
 import device_preferences
+@target(erlang)
+import generated/api/to_client_codec
+@target(erlang)
+import generated/proute/admin/page_input as admin_page_input
+@target(erlang)
+import generated/proute/admin/pages as admin_pages
+@target(erlang)
+import generated/proute/admin/routes as admin_routes
+@target(erlang)
+import generated/proute/public/page_input as public_page_input
+@target(erlang)
+import generated/proute/public/pages as public_pages
+@target(erlang)
+import generated/proute/public/routes as public_routes
 @target(erlang)
 import gleam/bit_array
 @target(erlang)
@@ -23,7 +47,7 @@ import gleam/io
 @target(erlang)
 import gleam/list
 @target(erlang)
-import gleam/option.{None, Some}
+import gleam/option.{type Option, None, Some}
 @target(erlang)
 import gleam/result
 @target(erlang)
@@ -31,7 +55,21 @@ import gleam/string
 @target(erlang)
 import gleam/uri
 @target(erlang)
+import lustre/element
+@target(erlang)
 import mist.{type Connection, type ResponseData}
+@target(erlang)
+import page_context.{PageContext}
+@target(erlang)
+import public/pages/games as games_page
+@target(erlang)
+import public/pages/games/id_ as games_id_page
+@target(erlang)
+import public/pages/standings as standings_page
+@target(erlang)
+import public/pages/teams/slug_ as teams_slug_page
+@target(erlang)
+import server/api as server_api
 @target(erlang)
 import server/auth
 @target(erlang)
@@ -153,6 +191,11 @@ fn html_response(body: String) -> Response(ResponseData) {
 }
 
 @target(erlang)
+type SsrApp {
+  SsrApp(html: String, hydration: List(String))
+}
+
+@target(erlang)
 fn app_html(
   req req: Request(Connection),
   path path: String,
@@ -164,7 +207,27 @@ fn app_html(
     False -> "public_app.mjs"
   }
   let theme = resolve_theme(req)
-  let app_attrs = app_boot_attrs(req: req, db: db, session: session)
+  let ssr_app = case string.starts_with(path, "/admin") {
+    True ->
+      admin_ssr_app(
+        req: req,
+        path: path,
+        db: db,
+        dark_mode: theme == "dark",
+        session: session,
+      )
+    False ->
+      public_ssr_app(
+        req: req,
+        path: path,
+        db: db,
+        dark_mode: theme == "dark",
+        session: session,
+      )
+  }
+  let app_attrs =
+    app_boot_attrs(req: req, db: db, session: session)
+    <> hydration_attr(ssr_app.hydration)
 
   "<!doctype html>
 <html data-theme=\"" <> theme <> "\">
@@ -178,13 +241,281 @@ fn app_html(
   </style>
 </head>
 <body>
-  <div id=\"app\"" <> app_attrs <> "></div>
+  <div id=\"app\"" <> app_attrs <> ">" <> ssr_app.html <> "</div>
   <script type=\"module\">
     import { main } from '/_build/scoreboard_unified/" <> entrypoint <> "';
     main();
   </script>
 </body>
 </html>"
+}
+
+@target(erlang)
+fn public_ssr_app(
+  req req: Request(Connection),
+  path path: String,
+  db db: sqlight.Connection,
+  dark_mode dark_mode: Bool,
+  session session: session.Session,
+) -> SsrApp {
+  let route = public_routes.parse_path(path)
+  let query_params = public_query_params(req)
+  let messages = public_hydration_messages(db, route)
+  let page =
+    public_pages.load_sync(PageContext, query_params, route)
+    |> apply_public_hydration(messages)
+  let #(authentication_context, can_access_admin) =
+    boot_identity(req: req, db: db, session: session)
+
+  SsrApp(
+    html: app_shell.public(
+      current_path: public_routes.route_to_path(route),
+      dark_mode: dark_mode,
+      authentication_context: authentication_context,
+      can_access_admin: can_access_admin,
+      on_dark_mode_change: fn(_) { Nil },
+      content: public_pages.view(page) |> element.map(fn(_) { Nil }),
+    )
+      |> element.to_string,
+    hydration: hydration_payloads(messages),
+  )
+}
+
+@target(erlang)
+fn admin_ssr_app(
+  req req: Request(Connection),
+  path path: String,
+  db db: sqlight.Connection,
+  dark_mode dark_mode: Bool,
+  session session: session.Session,
+) -> SsrApp {
+  let route = admin_routes.parse_path(path)
+  let query_params = admin_query_params(req)
+  let messages = admin_hydration_messages(db, route)
+  let page =
+    admin_pages.load_sync(PageContext, query_params, route)
+    |> apply_admin_hydration(messages)
+  let #(authentication_context, _) =
+    boot_identity(req: req, db: db, session: session)
+
+  SsrApp(
+    html: app_shell.admin(
+      current_path: admin_routes.route_to_path(route),
+      dark_mode: dark_mode,
+      authentication_context: authentication_context,
+      on_dark_mode_change: fn(_) { Nil },
+      content: admin_pages.view(page) |> element.map(fn(_) { Nil }),
+    )
+      |> element.to_string,
+    hydration: hydration_payloads(messages),
+  )
+}
+
+@target(erlang)
+fn boot_identity(
+  req req: Request(Connection),
+  db db: sqlight.Connection,
+  session session: session.Session,
+) -> #(Option(AuthenticationContext), Bool) {
+  case authenticated_user(req: req, db: db, session: session) {
+    Ok(user) -> #(Some(user.context), auth.can_access_admin(user))
+    Error(Nil) -> #(None, False)
+  }
+}
+
+@target(erlang)
+fn public_query_params(
+  req: Request(Connection),
+) -> public_page_input.QueryParams {
+  case request.get_query(req) {
+    Ok(values) -> public_page_input.QueryParams(values:)
+    Error(Nil) -> public_page_input.empty_query_params()
+  }
+}
+
+@target(erlang)
+fn admin_query_params(
+  req: Request(Connection),
+) -> admin_page_input.QueryParams {
+  case request.get_query(req) {
+    Ok(values) -> admin_page_input.QueryParams(values:)
+    Error(Nil) -> admin_page_input.empty_query_params()
+  }
+}
+
+@target(erlang)
+fn public_hydration_messages(
+  db: sqlight.Connection,
+  route: public_routes.Route,
+) -> List(to_client.ToClient) {
+  case route {
+    public_routes.Home | public_routes.Games ->
+      server_api.dispatch(
+        db: db,
+        message: to_server.LoadGames,
+        admin_authorized: False,
+      )
+    public_routes.GamesId(id) ->
+      case int.parse(id) {
+        Ok(game_id) ->
+          server_api.dispatch(
+            db: db,
+            message: to_server.LoadGame(game_id:),
+            admin_authorized: False,
+          )
+        Error(Nil) -> []
+      }
+    public_routes.Standings ->
+      server_api.dispatch(
+        db: db,
+        message: to_server.LoadStandings,
+        admin_authorized: False,
+      )
+    public_routes.TeamsSlug(slug) ->
+      server_api.dispatch(
+        db: db,
+        message: to_server.LoadTeam(slug:),
+        admin_authorized: False,
+      )
+    public_routes.SignIn | public_routes.NotFound -> []
+  }
+}
+
+@target(erlang)
+fn admin_hydration_messages(
+  db: sqlight.Connection,
+  route: admin_routes.Route,
+) -> List(to_client.ToClient) {
+  case route {
+    admin_routes.AdminHome | admin_routes.AdminGames ->
+      server_api.dispatch(
+        db: db,
+        message: to_server.LoadAdminGames,
+        admin_authorized: True,
+      )
+    admin_routes.NotFound -> []
+  }
+}
+
+@target(erlang)
+fn apply_public_hydration(
+  page: public_pages.Page,
+  messages: List(to_client.ToClient),
+) -> public_pages.Page {
+  list.fold(messages, page, fn(page, message) {
+    apply_public_message(page: page, message: message)
+  })
+}
+
+@target(erlang)
+fn apply_admin_hydration(
+  page: admin_pages.Page,
+  messages: List(to_client.ToClient),
+) -> admin_pages.Page {
+  list.fold(messages, page, fn(page, message) {
+    apply_admin_message(page: page, message: message)
+  })
+}
+
+@target(erlang)
+fn apply_public_message(
+  page page: public_pages.Page,
+  message message: to_client.ToClient,
+) -> public_pages.Page {
+  case page, message {
+    public_pages.HomePage(model), to_client.GamesLoaded(games) -> {
+      let #(model, _) = games_page.games_loaded(model, games)
+      public_pages.HomePage(model)
+    }
+    public_pages.HomePage(model), to_client.GameUpdated(game) -> {
+      let #(model, _) = games_page.game_updated(model, game)
+      public_pages.HomePage(model)
+    }
+    public_pages.GamesPage(model), to_client.GamesLoaded(games) -> {
+      let #(model, _) = games_page.games_loaded(model, games)
+      public_pages.GamesPage(model)
+    }
+    public_pages.GamesPage(model), to_client.GameUpdated(game) -> {
+      let #(model, _) = games_page.game_updated(model, game)
+      public_pages.GamesPage(model)
+    }
+    public_pages.GamesIdPage(model), to_client.GameLoaded(game) -> {
+      let #(model, _) = games_id_page.game_loaded(model, game)
+      public_pages.GamesIdPage(model)
+    }
+    public_pages.GamesIdPage(model), to_client.GameUpdated(game) -> {
+      let #(model, _) = games_id_page.game_updated(model, game)
+      public_pages.GamesIdPage(model)
+    }
+    public_pages.StandingsPage(model), to_client.StandingsLoaded(rows) -> {
+      let #(model, _) = standings_page.standings_loaded(model, rows)
+      public_pages.StandingsPage(model)
+    }
+    public_pages.TeamsSlugPage(model), to_client.TeamLoaded(team) -> {
+      let #(model, _) = teams_slug_page.team_loaded(model, team)
+      public_pages.TeamsSlugPage(model)
+    }
+    public_pages.TeamsSlugPage(model), to_client.GameUpdated(game) -> {
+      let #(model, _) = teams_slug_page.game_updated(model, game)
+      public_pages.TeamsSlugPage(model)
+    }
+    _, _ -> page
+  }
+}
+
+@target(erlang)
+fn apply_admin_message(
+  page page: admin_pages.Page,
+  message message: to_client.ToClient,
+) -> admin_pages.Page {
+  case page, message {
+    admin_pages.AdminHomePage(model), to_client.AdminGamesLoaded(games) -> {
+      let #(model, _) = admin_games_page.admin_games_loaded(model, games)
+      admin_pages.AdminHomePage(model)
+    }
+    admin_pages.AdminHomePage(model), to_client.ScoreUpdateSaved(game) -> {
+      let #(model, _) = admin_games_page.score_update_saved(model, game)
+      admin_pages.AdminHomePage(model)
+    }
+    admin_pages.AdminHomePage(model), to_client.ResultSaved(game) -> {
+      let #(model, _) = admin_games_page.result_saved(model, game)
+      admin_pages.AdminHomePage(model)
+    }
+    admin_pages.AdminGamesPage(model), to_client.AdminGamesLoaded(games) -> {
+      let #(model, _) = admin_games_page.admin_games_loaded(model, games)
+      admin_pages.AdminGamesPage(model)
+    }
+    admin_pages.AdminGamesPage(model), to_client.ScoreUpdateSaved(game) -> {
+      let #(model, _) = admin_games_page.score_update_saved(model, game)
+      admin_pages.AdminGamesPage(model)
+    }
+    admin_pages.AdminGamesPage(model), to_client.ResultSaved(game) -> {
+      let #(model, _) = admin_games_page.result_saved(model, game)
+      admin_pages.AdminGamesPage(model)
+    }
+    _, _ -> page
+  }
+}
+
+@target(erlang)
+fn hydration_payloads(messages: List(to_client.ToClient)) -> List(String) {
+  to_client_codec.ensure()
+  list.map(messages, fn(message) {
+    message
+    |> to_client_codec.encode
+    |> bit_array.base64_url_encode(False)
+  })
+}
+
+@target(erlang)
+fn hydration_attr(payloads: List(String)) -> String {
+  case payloads {
+    [] -> ""
+    _ ->
+      " data-hydration=\""
+      <> html_attr_escape(string.join(payloads, ","))
+      <> "\""
+  }
 }
 
 @target(erlang)

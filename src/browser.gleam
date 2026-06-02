@@ -35,6 +35,12 @@ pub fn boot_can_access_admin() -> Bool {
 }
 
 @target(javascript)
+@external(javascript, "./browser_ffi.mjs", "boot_hydration")
+pub fn boot_hydration() -> String {
+  ""
+}
+
+@target(javascript)
 @external(javascript, "./browser_ffi.mjs", "query_string")
 pub fn query_string() -> String {
   ""

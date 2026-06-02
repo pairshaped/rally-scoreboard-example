@@ -30,6 +30,13 @@ export function boot_can_access_admin() {
   return bootData().canAccessAdmin === "1";
 }
 
+export function boot_hydration() {
+  const data = bootData();
+  const value = data.hydration ?? "";
+  delete data.hydration;
+  return value;
+}
+
 export function query_string() {
   const search = globalThis.location?.search ?? "";
   const params = new URLSearchParams(search);

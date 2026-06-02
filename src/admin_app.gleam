@@ -11,6 +11,8 @@ import browser
 @target(javascript)
 import client/api as api_client
 @target(javascript)
+import client/hydration
+@target(javascript)
 import client/to_client
 @target(javascript)
 import generated/proute/admin/page_input
@@ -18,6 +20,8 @@ import generated/proute/admin/page_input
 import generated/proute/admin/pages
 @target(javascript)
 import generated/proute/admin/routes
+@target(javascript)
+import gleam/list
 @target(javascript)
 import gleam/option.{type Option, None, Some}
 @target(javascript)
@@ -53,8 +57,7 @@ fn init(_flags: Nil) -> #(Model, Effect(Msg)) {
   let current_path = browser.path()
   let route = routes.parse_path(current_path)
   let dark_mode = browser.device_dark_mode()
-  let #(page, page_effect) =
-    pages.load(PageContext, page_input.empty_query_params(), route)
+  let #(page, page_effect) = initial_page(route: route)
   let shared_state =
     AdminClientSharedState(
       authentication_context: boot_authentication_context(),
@@ -72,6 +75,29 @@ fn init(_flags: Nil) -> #(Model, Effect(Msg)) {
       api_client.connect(url: browser.websocket_url(), on_frame: ServerFrame),
     ]),
   )
+}
+
+@target(javascript)
+fn initial_page(
+  route route: routes.Route,
+) -> #(pages.Page, Effect(pages.Message)) {
+  let query_params = page_input.empty_query_params()
+
+  case hydration.messages() {
+    Ok(messages) -> {
+      let page =
+        list.fold(
+          messages,
+          pages.load_sync(PageContext, query_params, route),
+          fn(page, message) {
+            let #(page, _) = to_client.apply_admin(page: page, message: message)
+            page
+          },
+        )
+      #(page, effect.none())
+    }
+    Error(Nil) -> pages.load(PageContext, query_params, route)
+  }
 }
 
 @target(javascript)

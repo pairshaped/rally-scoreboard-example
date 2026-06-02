@@ -7,6 +7,8 @@ import browser
 @target(javascript)
 import client/api as api_client
 @target(javascript)
+import client/hydration
+@target(javascript)
 import client/to_client
 @target(javascript)
 import generated/proute/public/page_input
@@ -69,7 +71,8 @@ fn init(_flags: Nil) -> #(Model, Effect(Msg)) {
   let route = routes.parse_path(current_path)
   let query_params = query_params_from_browser()
   let dark_mode = browser.device_dark_mode()
-  let #(page, page_effect) = pages.load(PageContext, query_params, route)
+  let #(page, page_effect) =
+    initial_page(route: route, query_params: query_params)
   let shared_state =
     PublicClientSharedState(
       league_name: "Scoreboard",
@@ -88,6 +91,29 @@ fn init(_flags: Nil) -> #(Model, Effect(Msg)) {
       listen_for_browser_navigation(),
     ]),
   )
+}
+
+@target(javascript)
+fn initial_page(
+  route route: routes.Route,
+  query_params query_params: page_input.QueryParams,
+) -> #(pages.Page, Effect(pages.Message)) {
+  case hydration.messages() {
+    Ok(messages) -> {
+      let page =
+        list.fold(
+          messages,
+          pages.load_sync(PageContext, query_params, route),
+          fn(page, message) {
+            let #(page, _) =
+              to_client.apply_public(page: page, message: message)
+            page
+          },
+        )
+      #(page, effect.none())
+    }
+    Error(Nil) -> pages.load(PageContext, query_params, route)
+  }
 }
 
 @target(javascript)

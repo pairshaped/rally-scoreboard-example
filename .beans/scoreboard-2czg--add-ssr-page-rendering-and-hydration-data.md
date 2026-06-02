@@ -1,7 +1,7 @@
 ---
 # scoreboard-2czg
 title: Add SSR page rendering and hydration data
-status: todo
+status: completed
 type: task
 priority: normal
 tags:
@@ -10,7 +10,7 @@ tags:
     - erlang-target
     - javascript-target
 created_at: 2026-06-01T23:04:09Z
-updated_at: 2026-06-01T23:04:09Z
+updated_at: 2026-06-01T23:56:02Z
 ---
 
 ## Problem
