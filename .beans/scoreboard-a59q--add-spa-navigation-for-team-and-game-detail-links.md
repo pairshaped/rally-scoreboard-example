@@ -46,7 +46,7 @@ This should stay separate from dark-mode/device preference state. Both belong at
 - Clicking team links navigates to /teams/:slug without a full page reload.
 - Clicking game detail links navigates to /games/:id without a full page reload.
 - Back/forward navigation keeps the rendered page and browser URL in sync.
-- Destination page load effects still run and receive their ToClient responses.
+- Destination page load effects still run and receive their `ToClient` app data.
 - The implementation uses @target(javascript) only at real browser boundaries.
 - If modem is introduced, document why it earns the dependency.
 

@@ -69,13 +69,14 @@ Each generator owns a namespace under `src/generated`:
 
 - `generated/sql`: typed SQL modules from Marmot, Erlang-only when they touch SQLite
 - `generated/proute`: route and page glue from Proute
-- `generated/api`: ETF codecs and browser/server transport glue generated around `ToServer` and `ToClient`
+- `generated/api`: ETF codecs, generated result error types, and browser/server transport glue generated around `ToServer`, `ToClient`, and load/save results
 
 ## Wire Contract
 
-Only `src/api/**` defines types that cross the wire.
+Only `src/api/**` defines user-authored types that cross the wire. Libero may
+also generate protocol helper types under `src/generated/api/**`.
 
-That rule is intentionally strict. Types from pages, views, SQL modules, generated routes, runtime helpers, and server handlers do not cross the wire. If a value crosses the transport boundary, its type belongs under `src/api`.
+That rule is intentionally strict. Types from pages, views, SQL modules, generated routes, runtime helpers, and server handlers do not cross the wire. If a user-authored app or domain value crosses the transport boundary, its type belongs under `src/api`.
 
 The root protocol stays app-level and globally unique:
 
@@ -92,6 +93,8 @@ pub type ToClient {
 ```
 
 Domain models that cross the wire live under `src/api/domain/**`.
+
+Libero generates the load/save result error types under `src/generated/api/result.gleam`.
 
 The ETF codec graph is:
 
@@ -132,7 +135,7 @@ pub fn update(model: Model, msg: Message) -> Model {
 import generated/sql/games_sql
 
 @target(erlang)
-pub fn update_score(...) -> to_client.ToClient {
+pub fn update_score(...) -> DispatchReply {
   panic as "implemented by the app"
 }
 ```
@@ -157,11 +160,11 @@ A page module may own:
 - shared boot request declarations
 - JavaScript-only update paths
 - Erlang-only server handlers
-- constructor-named `ToClient` handlers where the client applies server emissions
+- constructor-named `ToClient` handlers where the client applies app data
 
 Local page messages do not cross the wire. They represent browser-originated events such as clicks, input changes, timers, subscriptions, and JavaScript callbacks.
 
-Server app data crosses the wire as `ToClient`. No-data load and save acks cross
+Server app data crosses the wire as `ToClient`. No-data load and save results cross
 the wire as `Result(Nil, List(ApiLoadError))` or
 `Result(Nil, List(ApiSaveError))`.
 
@@ -174,6 +177,7 @@ The first tracer should use checked-in generated modules:
 ```text
 src/generated/api/to_server_codec.gleam
 src/generated/api/to_client_codec.gleam
+src/generated/api/result.gleam
 src/generated/api/client.gleam
 src/generated/api/server.gleam
 ```
@@ -183,7 +187,7 @@ The codec modules exercise the real `api` types before ETF is fully implemented.
 The API transport modules are target annotated:
 
 - browser transport accepts `ToServer`, encodes it, and sends it
-- server transport decodes `ToServer`, dispatches to server handlers, and emits `ToClient`
+- server transport decodes `ToServer`, dispatches to server handlers, and emits a result plus any `ToClient` app data
 - transport details stay inside generated modules
 
 The tracer should demonstrate the whole intended flow:
@@ -195,7 +199,8 @@ browser page Message
   -> generated/api/to_server_codec
   -> generated/api/server
   -> server handler
-  -> ToClient
+  -> load/save result
+  -> optional ToClient app data
   -> generated/api/to_client_codec
   -> generated/api/client receive path
   -> page ToClient handler
@@ -272,6 +277,6 @@ For the tracer, both target builds must pass with generated API codec and transp
 
 The useful design is:
 
-> Write one Gleam app. Keep every wire type under `api`. Put target facts on target-specific declarations and imports. Generate codecs and API transport glue under `src/generated/api`. Let Gleam target builds catch cross-target mistakes.
+> Write one Gleam app. Keep user-authored wire types under `api`. Put generated protocol helpers under `src/generated/api`. Put target facts on target-specific declarations and imports. Let Gleam target builds catch cross-target mistakes.
 
 That keeps the hard boundary where the compiler can help, and it leaves generation focused on API codecs, route glue, transport glue, and clear diagnostics around the `api` wire graph.

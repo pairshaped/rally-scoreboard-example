@@ -3,7 +3,7 @@ import api/to_client.{type ToClient}
 @target(javascript)
 import api/to_server.{type ToServer}
 @target(javascript)
-import generated/api/ack.{type ApiLoadError, type ApiSaveError}
+import generated/api/result.{type ApiLoadError, type ApiSaveError}
 @target(javascript)
 import generated/api/to_client_codec
 @target(javascript)
@@ -59,21 +59,21 @@ pub fn decode_server_frame(bytes: BitArray) -> Result(ServerFrame, Nil) {
 }
 
 @target(javascript)
-pub fn decode_load_ack(
+pub fn decode_load_result(
   bytes: BitArray,
 ) -> Result(Result(Nil, List(ApiLoadError)), Nil) {
-  decode_ack(bytes)
+  decode_result_frame(bytes)
 }
 
 @target(javascript)
-pub fn decode_save_ack(
+pub fn decode_save_result(
   bytes: BitArray,
 ) -> Result(Result(Nil, List(ApiSaveError)), Nil) {
-  decode_ack(bytes)
+  decode_result_frame(bytes)
 }
 
 @target(javascript)
-fn decode_ack(bytes: BitArray) -> Result(a, Nil) {
+fn decode_result_frame(bytes: BitArray) -> Result(a, Nil) {
   case bytes {
     <<0, payload:bits>> -> decode_any(payload)
     _ -> Error(Nil)

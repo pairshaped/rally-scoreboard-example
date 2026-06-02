@@ -27,7 +27,7 @@ import { Team } from "../../api/domain/game.mjs";
 import { Scheduled } from "../../api/domain/game.mjs";
 import { Live } from "../../api/domain/game.mjs";
 import { Final } from "../../api/domain/game.mjs";
-import { ApiLoadError, ApiSaveError } from "./ack.mjs";
+import { ApiLoadError, ApiSaveError } from "./result.mjs";
 
 const constructorRegistry = new Map();
 

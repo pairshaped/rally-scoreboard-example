@@ -19,7 +19,7 @@ operation produces a public live event such as `GameUpdated`, the WebSocket
 handler broadcasts a generated push frame to the group.
 
 The sender receives normal response frames for the request it sent. A response
-frame may carry a load ack (`Result(Nil, List(ApiLoadError))`), a save ack
+frame may carry a load result (`Result(Nil, List(ApiLoadError))`), a save result
 (`Result(Nil, List(ApiSaveError))`), or `ToClient` app data. Other connected
 clients receive push frames carrying `ToClient` app data.
 

@@ -37,17 +37,18 @@ Generated modules use the same target annotation rules as user-authored modules.
 
 ## Wire Boundary
 
-Only public types under `src/api/**` may cross the wire.
+Only public user-authored app and domain types under `src/api/**` may cross the wire. Generated protocol helper types may live under `src/generated/api/**`.
 
 The API roots are:
 
 - `api/to_server.ToServer`: browser-to-server commands
-- `api/to_client.ToClient`: server-to-browser results, boot data, and live events
+- `api/to_client.ToClient`: server-to-browser app data
+- `generated/api/result`: generated load/save result error types
 - `api/domain/**`: domain models that cross the wire
 
-Types outside `src/api/**` are not wire-visible. This includes page models, page
-messages, route types, SQL row types, handler-local types, view input types, and
-runtime helper types.
+User-authored types outside `src/api/**` are not wire-visible. This includes
+page models, page messages, route types, SQL row types, handler-local types,
+view input types, and runtime helper types.
 
 Codec generation walks the `src/api/**` graph and enforces one global plain ETF constructor namespace.
 
@@ -67,9 +68,9 @@ Generated support modules cover the pieces the app should not hand-write:
 
 - ETF codecs for `ToServer`, `ToClient`, and `api/domain/**`
 - JavaScript frame helpers for encoding `ToServer` requests and decoding
-  `ToClient` response or push frames
+  `ToClient` frames and load/save result frames
 - Erlang frame helpers for decoding `ToServer` requests and encoding
-  `ToClient` response or push frames
+  `ToClient` frames and load/save result frames
 - route and page glue from file routes
 - SQL modules from SQL files
 
@@ -89,7 +90,7 @@ src/admin/pages/**/*.gleam
 
 A page module may contain target-neutral model and view code, JavaScript-only browser update code, and Erlang-only server handler code.
 
-Local page messages do not cross the wire. Browser commands cross as `ToServer`. Server outcomes and live events cross as `ToClient`.
+Local page messages do not cross the wire. Browser app messages cross as `ToServer`. Server app data crosses as `ToClient`. Load and save results cross as generated `Result(Nil, List(ApiLoadError))` or `Result(Nil, List(ApiSaveError))` payloads.
 
 ## Rules
 
@@ -99,8 +100,8 @@ Local page messages do not cross the wire. Browser commands cross as `ToServer`.
 4. Shared declarations are unannotated only when they compile for both targets.
 5. Generated support code lives under `src/generated`.
 6. Generated support code is checked in for this project.
-7. Only public types under `src/api/**` cross the wire.
+7. Only public user-authored app and domain types under `src/api/**` cross the wire.
 8. `ToServer` and `ToClient` are the root transport types.
 9. Domain types that cross the wire live under `src/api/domain/**`.
-10. Types outside `src/api/**` do not cross the wire.
+10. Other user-authored types outside `src/api/**` do not cross the wire.
 11. Codec generation validates the `src/api/**` graph.

@@ -46,7 +46,7 @@ pub fn mark_final_returns_save_ack_and_game_update_test() {
     )
 
   case reply {
-    api.SaveReply(ack: Ok(Nil), messages: [to_client.GameUpdated(updated)]) ->
+    api.SaveReply(result: Ok(Nil), messages: [to_client.GameUpdated(updated)]) ->
       updated.status == game.Final
     _ -> False
   }
@@ -67,7 +67,7 @@ pub fn update_score_returns_save_ack_and_game_update_test() {
     )
 
   case reply {
-    api.SaveReply(ack: Ok(Nil), messages: [to_client.GameUpdated(updated)]) ->
+    api.SaveReply(result: Ok(Nil), messages: [to_client.GameUpdated(updated)]) ->
       updated.status == game.Live("Live")
     _ -> False
   }

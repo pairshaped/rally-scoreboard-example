@@ -6,7 +6,7 @@ Pages own local UI state and rendering. Server handlers own server behavior. Gen
 
 ## Decision
 
-Only public types under `src/api/**` are wire-visible.
+Only public user-authored app and domain types under `src/api/**` are wire-visible. Libero-generated protocol helper types live under `src/generated/api/**`.
 
 The root API layout is:
 
@@ -27,9 +27,10 @@ src/api/domain/user.gleam
 src/api/domain/**/*.gleam
 ```
 
-Any type outside `src/api/**` is not a wire type. That includes page models,
-page messages, route types, SQL row types, handler-local types, view helper
-types, generated route types, runtime helper types, and database result types.
+Any user-authored type outside `src/api/**` is not a wire type. That includes
+page models, page messages, route types, SQL row types, handler-local types,
+view helper types, generated route types, runtime helper types, and database
+result types.
 
 ## Root Message Types
 
@@ -53,14 +54,14 @@ pub type ToClient {
 
 Other public custom types under `api` are reusable wire-visible domain shapes. They do not define one wrapper type per message just to make handlers receive a message-shaped value. The `ToServer` and `ToClient` unions are the message-shaped values.
 
-No-data load and save acks use Gleam's built-in `Result` directly:
+No-data load and save results use Gleam's built-in `Result` directly:
 
 ```gleam
 Result(Nil, List(ApiLoadError))
 Result(Nil, List(ApiSaveError))
 ```
 
-Libero generates the ack error types:
+Libero generates the result error types:
 
 ```gleam
 pub type ApiLoadError {
@@ -72,7 +73,7 @@ pub type ApiSaveError {
 }
 ```
 
-Do not add custom `Ack`, `Outcome`, `LoadResult`, `SaveResult`, `ApiLoadError`, or `ApiSaveError` API types for this shape. The error types are generated.
+Do not add custom operation-status wrapper types or app-authored `ApiLoadError` or `ApiSaveError` types for this shape. The error types are generated.
 
 The generator uses client/server language for transport messages. `ToServer` and `ToClient` match the generator's package and runtime vocabulary.
 
@@ -203,21 +204,22 @@ Handlers receive constructor fields, plus any app-owned context they need. The
 current app dispatches from the whole decoded `ToServer` value and delegates to
 constructor-specific private handlers.
 
-Page-data handlers return the `ToClient` values that populate the page:
+Page-data handlers return a load result plus the `ToClient` values that populate
+the page:
 
 ```gleam
-fn load_games(db: sqlight.Connection) -> List(to_client.ToClient) {
+fn load_games(db: sqlight.Connection) -> DispatchReply {
   panic as "implemented by the app"
 }
 ```
 
-Operation handlers may return one or more `ToClient` values so the current client and other active clients can update through the same server-emission path.
+Operation handlers return a save result plus zero or more `ToClient` values so the current client and other active clients can update through the same app-data path.
 
 Server-only handlers and imports carry Erlang target annotations in the unified source tree.
 
 ## Client ToClient Handlers
 
-`ToClient` is the server emission vocabulary. Pages and shared client state
+`ToClient` is the server app-data vocabulary. Pages and shared client state
 handle `ToClient` values through app-owned reducer modules.
 
 A client `ToClient` handler is a mini-update over the page model. Its function
@@ -240,7 +242,7 @@ Local page messages are for browser-originated events.
 
 ## Runtime Taxonomy
 
-Use these terms consistently:
+ADR 0010 is the canonical taxonomy record. Use these terms consistently:
 
 - `AuthenticationContext`: shared identity facts loaded from the browser session. It answers who the session represents.
 - `RequestContext`: per-request or per-socket facts when a runtime needs them.
@@ -249,52 +251,59 @@ Use these terms consistently:
 - `ServerContext`: server-side resources such as DB handles, config, clocks,
   service clients, and logging.
 - `ClientSharedState`: per-Mount browser state shared by the Mount shell, layouts, and pages.
-- SSR `ToClient` page data: boot-time server-emitted `ToClient` values produced
+- SSR `ToClient` page data: boot-time `ToClient` app data produced
   by executing the route's boot requests.
 - page `Model`: local UI state for a page or root client app.
 - live connection state: app-owned WebSocket state for one browser connection.
-- `ToServer`: browser-to-server command vocabulary.
-- `ToClient`: server-to-browser result, boot data, and event vocabulary.
+- `ToServer`: browser-to-server app message vocabulary.
+- `ToClient`: server-to-browser app data vocabulary.
+- load result: `Result(Nil, List(ApiLoadError))`.
+- save result: `Result(Nil, List(ApiSaveError))`.
 
 `ClientSharedState` and SSR `ToClient` page data are separate boot payloads. They must use separate runtime storage names so one cannot overwrite the other.
 
 ## Transport
 
-The transport lane selects the root type:
+The transport lane selects the payload shape:
 
 ```text
 ToServer
 ToClient
+Result(Nil, List(ApiLoadError))
+Result(Nil, List(ApiSaveError))
 ```
 
 The root type drives top-down encoding and decoding. The generator does not infer payload identity by trying every known type. ETF carries runtime values. The generated codec graph supplies the root type information needed by the JavaScript and BEAM bridge.
 
 Type aliases are transparent on the wire, as they are in Gleam. Domain identities that need runtime distinction use wrapper custom types.
 
-`ToServer` frames are commands. Server operation outcomes travel as `ToClient` values.
+`ToServer` frames are app messages. Server operation status travels as a load
+result or a save result. Server app data travels as `ToClient`.
 
-`ToClient` values are global server emissions. They may be delivered to any active client handler in any Mount that handles the constructor.
+`ToClient` values are app data. They may be delivered to any active client handler in any Mount that handles the constructor.
 
 ## Rules
 
-1. Wire-visible types live under `src/api/**`.
-2. No type outside `src/api/**` crosses the wire.
-3. Public custom types named `ToServer` under `api` define command constructors.
-4. Public custom types named `ToClient` under `api` define server-emitted result, boot data, and event constructors.
-5. Other public custom types under `api` are domain types.
-6. Live updates use `ToClient`.
-7. Codec generation validates the selected `api` graph.
-8. Module paths and directories under `api` are code organization only.
-9. Duplicate plain ETF constructor names inside the shared API graph are generation errors.
-10. Every `ToServer` constructor has exactly one server handler in the app.
-11. `ToServer` constructors carry command data only.
-12. Route, query, session, and user facts come from `RequestContext`.
-13. Server handlers may use `ServerContext` for app resources and I/O.
-14. `ToClient` values are applied to page, layout, or shared-state models by constructor-named client handlers.
-15. Local page messages are for browser-originated events and do not cross the wire.
-16. `ClientSharedState` is per Mount by default.
-17. Live connection state belongs to the app runtime.
-18. Rich app-wide payloads use `ToClient` values.
-19. User-owned app code is Mount-first under root `src/{mount_namespace}`. The exception is `src/api`, which is one global wire graph and has no public/admin subdivision.
-20. Generated support modules live under `src/generated`.
-21. Shared page views are pure enough for SSR, client rendering, and direct tests. They must not import transport, generated client effects, modem, browser setup, or route modules.
+1. User-authored wire-visible app and domain types live under `src/api/**`.
+2. Generated protocol helper types live under `src/generated/api/**`.
+3. Other user-authored types outside `src/api/**` do not cross the wire.
+4. Public custom types named `ToServer` under `api` define command constructors.
+5. Public custom types named `ToClient` under `api` define app-data constructors.
+6. Other public custom types under `api` are domain types.
+7. Load and save results use generated Libero result error types and Gleam `Result`.
+8. Live updates use `ToClient`.
+9. Codec generation validates the selected `api` graph.
+10. Module paths and directories under `api` are code organization only.
+11. Duplicate plain ETF constructor names inside the shared API graph are generation errors.
+12. Every `ToServer` constructor has exactly one server handler in the app.
+13. `ToServer` constructors carry app message data only.
+14. Route, query, session, and user facts come from `RequestContext`.
+15. Server handlers may use `ServerContext` for app resources and I/O.
+16. `ToClient` values are applied to page, layout, or shared-state models by constructor-named client handlers.
+17. Local page messages are for browser-originated events and do not cross the wire.
+18. `ClientSharedState` is per Mount by default.
+19. Live connection state belongs to the app runtime.
+20. Rich app-wide payloads use `ToClient` values.
+21. User-owned app code is Mount-first under root `src/{mount_namespace}`. The exception is `src/api`, which is one global wire graph and has no public/admin subdivision.
+22. Generated support modules live under `src/generated`.
+23. Shared page views are pure enough for SSR, client rendering, and direct tests. They must not import transport, generated client effects, modem, browser setup, or route modules.

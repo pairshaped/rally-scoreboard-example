@@ -3,7 +3,7 @@ import api/to_client.{type ToClient}
 @target(erlang)
 import api/to_server.{type ToServer}
 @target(erlang)
-import generated/api/ack.{type ApiLoadError, type ApiSaveError}
+import generated/api/result.{type ApiLoadError, type ApiSaveError}
 @target(erlang)
 import generated/api/to_client_codec
 @target(erlang)
@@ -45,18 +45,22 @@ pub fn encode_response(message message: ToClient) -> BitArray {
 }
 
 @target(erlang)
-pub fn encode_load_ack(ack ack: Result(Nil, List(ApiLoadError))) -> BitArray {
-  encode_ack(ack)
+pub fn encode_load_result(
+  result result: Result(Nil, List(ApiLoadError)),
+) -> BitArray {
+  encode_result_frame(result)
 }
 
 @target(erlang)
-pub fn encode_save_ack(ack ack: Result(Nil, List(ApiSaveError))) -> BitArray {
-  encode_ack(ack)
+pub fn encode_save_result(
+  result result: Result(Nil, List(ApiSaveError)),
+) -> BitArray {
+  encode_result_frame(result)
 }
 
 @target(erlang)
-fn encode_ack(ack: a) -> BitArray {
-  let payload = encode_any(ack)
+fn encode_result_frame(result: a) -> BitArray {
+  let payload = encode_any(result)
   <<0, payload:bits>>
 }
 

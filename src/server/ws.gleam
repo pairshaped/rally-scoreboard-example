@@ -92,7 +92,7 @@ fn handle_client_frame(
           message: request_message,
           admin_authorized: state.admin_authorized,
         )
-      let _sent = mist.send_binary_frame(conn, api.reply_ack(reply))
+      let _sent = mist.send_binary_frame(conn, api.reply_result(reply))
       case reply {
         api.LoadReply(messages: messages, ..) ->
           list.each(messages, fn(message) {

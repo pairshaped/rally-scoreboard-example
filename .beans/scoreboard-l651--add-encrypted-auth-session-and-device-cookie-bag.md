@@ -61,7 +61,7 @@ Implemented the unified app auth tracer bullet against the `../scoreboard-sc` re
 - Sign-in uses a normal HTTP POST to `/sign_in`, validates the seeded demo admin code, sets the session cookie, and redirects to the safe admin return path.
 - Sign-out expires the session cookie and redirects to a safe local path.
 - `/admin` and `/admin/games` redirect anonymous or invalid sessions to `/sign_in?return_to=...`.
-- WebSocket admin commands require an admin session from the connection request; unauthenticated admin commands receive a request acknowledgement error.
+- WebSocket admin commands require an admin session from the connection request; unauthenticated admin commands receive a request confirmation error.
 - The public/admin shell boot state receives non-sensitive authentication facts from server-rendered `#app` data attributes. JavaScript does not read or write `_scoreboard_session`.
 - `_scoreboard_device` remains browser-owned and continues to drive dark-mode preference.
 

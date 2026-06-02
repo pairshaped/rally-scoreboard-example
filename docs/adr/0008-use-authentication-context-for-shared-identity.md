@@ -34,7 +34,7 @@ Use these terms consistently:
 - `ClientSharedState`: Mount-specific browser state derived from route,
   authentication context, authorization facts, and app data
 - `ToServer`: browser-to-server command vocabulary
-- `ToClient`: server-to-browser result, boot data, and event vocabulary
+- `ToClient`: server-to-browser app data vocabulary
 - `access guard`: route or Mount check that decides whether a request may load
 
 Avoid `auth` in generated names because it can mean authentication or

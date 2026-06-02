@@ -23,7 +23,7 @@ Create src/generated_soon/ as a quarantine for code that is generic enough to be
 Candidate areas:
 
 - Browser boot attrs, navigation event plumbing, and history helpers.
-- Websocket transport and request-id frame plumbing.
+- Websocket transport and generated frame plumbing.
 - ETF hydration reader/writer shape.
 - Generic mount startup helpers if they can be moved without obscuring public/admin concrete types.
 

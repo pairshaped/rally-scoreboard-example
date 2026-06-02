@@ -13,7 +13,7 @@ import api/to_client.{type ToClient}
 @target(erlang)
 import api/to_server.{type ToServer}
 @target(erlang)
-import generated/api/ack.{
+import generated/api/result.{
   type ApiLoadError, type ApiSaveError, ApiLoadError, ApiSaveError,
 }
 @target(erlang)
@@ -35,8 +35,8 @@ import sqlight
 
 @target(erlang)
 pub type DispatchReply {
-  LoadReply(ack: Result(Nil, List(ApiLoadError)), messages: List(ToClient))
-  SaveReply(ack: Result(Nil, List(ApiSaveError)), messages: List(ToClient))
+  LoadReply(result: Result(Nil, List(ApiLoadError)), messages: List(ToClient))
+  SaveReply(result: Result(Nil, List(ApiSaveError)), messages: List(ToClient))
 }
 
 @target(erlang)
@@ -113,10 +113,10 @@ pub fn reply_messages(reply: DispatchReply) -> List(ToClient) {
 }
 
 @target(erlang)
-pub fn reply_ack(reply: DispatchReply) -> BitArray {
+pub fn reply_result(reply: DispatchReply) -> BitArray {
   case reply {
-    LoadReply(ack, ..) -> generated_server.encode_load_ack(ack)
-    SaveReply(ack, ..) -> generated_server.encode_save_ack(ack)
+    LoadReply(result, ..) -> generated_server.encode_load_result(result)
+    SaveReply(result, ..) -> generated_server.encode_save_result(result)
   }
 }
 
@@ -257,22 +257,22 @@ fn saved_game_reply(db: sqlight.Connection, game_id: Int) -> DispatchReply {
 
 @target(erlang)
 fn load_succeeded(messages: List(ToClient)) -> DispatchReply {
-  LoadReply(ack: Ok(Nil), messages:)
+  LoadReply(result: Ok(Nil), messages:)
 }
 
 @target(erlang)
 fn load_failed(message: String) -> DispatchReply {
-  LoadReply(ack: Error([ApiLoadError(message:)]), messages: [])
+  LoadReply(result: Error([ApiLoadError(message:)]), messages: [])
 }
 
 @target(erlang)
 fn save_succeeded(messages: List(ToClient)) -> DispatchReply {
-  SaveReply(ack: Ok(Nil), messages:)
+  SaveReply(result: Ok(Nil), messages:)
 }
 
 @target(erlang)
 fn save_failed(message: String) -> DispatchReply {
-  SaveReply(ack: Error([ApiSaveError(field: None, message:)]), messages: [])
+  SaveReply(result: Error([ApiSaveError(field: None, message:)]), messages: [])
 }
 
 @target(erlang)
