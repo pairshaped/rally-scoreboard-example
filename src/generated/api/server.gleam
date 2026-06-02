@@ -1,7 +1,7 @@
 @target(erlang)
-import api/to_server.{type ToServer}
-@target(erlang)
 import api/to_client.{type ToClient}
+@target(erlang)
+import api/to_server.{type ToServer}
 @target(erlang)
 import generated/api/to_client_codec
 @target(erlang)
@@ -26,8 +26,9 @@ pub fn decode(bytes: BitArray) -> Result(ToServer, Nil) {
 @target(erlang)
 pub fn decode_request(bytes: BitArray) -> Result(ClientRequest, Nil) {
   case decode_any(bytes) {
-    Ok(#(module, request_id, message)) if request_id >= 0 && request_id <= 4_294_967_295 ->
-      Ok(ClientRequest(module:, request_id:, message:))
+    Ok(#(module, request_id, message))
+      if request_id >= 0 && request_id <= 4_294_967_295
+    -> Ok(ClientRequest(module:, request_id:, message:))
     _ -> Error(Nil)
   }
 }
@@ -38,14 +39,20 @@ pub fn encode(message: ToClient) -> BitArray {
 }
 
 @target(erlang)
-pub fn encode_response(request_id request_id: Int, message message: ToClient) -> BitArray {
+pub fn encode_response(
+  request_id request_id: Int,
+  message message: ToClient,
+) -> BitArray {
   let assert True = request_id >= 0 && request_id <= 4_294_967_295
   let payload = to_client_codec.encode(message)
   <<0, request_id:32, payload:bits>>
 }
 
 @target(erlang)
-pub fn encode_push(module module: String, message message: ToClient) -> BitArray {
+pub fn encode_push(
+  module module: String,
+  message message: ToClient,
+) -> BitArray {
   let payload = encode_any(#(module, message))
   <<1, payload:bits>>
 }

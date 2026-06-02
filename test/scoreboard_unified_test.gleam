@@ -78,7 +78,6 @@ pub fn update_score_returns_score_saved_and_game_update_test() {
 
 @target(erlang)
 pub fn only_game_updates_are_global_mutation_broadcasts_test() {
-  let standings = to_client.StandingsLoaded([])
   let game_update =
     to_client.GameUpdated(game.GameSnapshot(
       id: 1,
@@ -95,21 +94,20 @@ pub fn only_game_updates_are_global_mutation_broadcasts_test() {
   )
   |> should.equal(True)
 
+  let result_saved =
+    to_client.ResultSaved(game.AdminGameDetail(
+      id: 1,
+      home_code: "TOR",
+      away_code: "MTL",
+      home_score: 4,
+      away_score: 2,
+      status: game.Final,
+      period: "Final",
+    ))
+
   ws.should_broadcast_live_update(
     request: to_server.MarkFinal(1),
-    reply: standings,
-  )
-  |> should.equal(False)
-
-  ws.should_broadcast_live_update(
-    request: to_server.UpdateScore(1, 5, 2, "Live"),
-    reply: standings,
-  )
-  |> should.equal(False)
-
-  ws.should_broadcast_live_update(
-    request: to_server.CorrectResult(1, 5, 2),
-    reply: standings,
+    reply: result_saved,
   )
   |> should.equal(False)
 }

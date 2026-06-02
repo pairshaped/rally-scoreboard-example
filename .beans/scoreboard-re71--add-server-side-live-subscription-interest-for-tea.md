@@ -3,14 +3,17 @@
 title: Add server-side live subscription interest for team pages
 status: todo
 type: task
-priority: normal
+priority: high
 tags:
     - live-updates
     - websockets
     - routing
+    - prerequisite
 created_at: 2026-06-02T11:54:09Z
-updated_at: 2026-06-02T11:54:09Z
+updated_at: 2026-06-02T11:57:20Z
 parent: scoreboard-d0g1
+blocking:
+    - scoreboard-d0g1
 ---
 
 ## Problem
@@ -51,3 +54,7 @@ Likely shape:
 - `src/api/to_server.gleam`
 - `src/api/to_client.gleam`
 
+
+## Priority Note
+
+Resolve this before the refactoring/unwind work. Subscription interest is part of the runtime contract: if the refactor lands first, it may cement a global-push shape that team/game/page-specific live updates then have to fight.
