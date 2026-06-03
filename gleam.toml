@@ -12,11 +12,11 @@ gleam_crypto = ">= 1.6.0 and < 2.0.0"
 
 [dev-dependencies]
 gleeunit = ">= 1.0.0 and < 2.0.0"
-glinter = ">= 2.19.0 and < 3.0.0"
-libero = { path = "../libero" }
-marmot = "1.7.1"
-proute = { path = "../proute" }
 birdie = ">= 2.0.0 and < 3.0.0"
+glinter = ">= 2.19.0 and < 3.0.0"
+marmot = ">= 1.7.1 and < 2.0.0"
+libero = { path = "../libero" }
+proute = { path = "../proute" }
 
 [tools.glinter]
 stats = true
