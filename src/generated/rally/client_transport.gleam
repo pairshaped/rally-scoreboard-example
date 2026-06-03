@@ -1,7 +1,7 @@
 @target(javascript)
 import api/to_server.{type ToServer}
 @target(javascript)
-import generated/api/client as generated_client
+import generated/libero/client as generated_client
 @target(javascript)
 import lustre/effect.{type Effect}
 

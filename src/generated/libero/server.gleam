@@ -3,11 +3,11 @@ import api/to_client.{type ToClient}
 @target(erlang)
 import api/to_server.{type ToServer}
 @target(erlang)
-import generated/api/result.{type ApiLoadError, type ApiSaveError}
+import generated/libero/result.{type ApiLoadError, type ApiSaveError}
 @target(erlang)
-import generated/api/to_client_codec
+import generated/libero/to_client_codec
 @target(erlang)
-import generated/api/to_server_codec
+import generated/libero/to_server_codec
 
 @target(erlang)
 pub type ClientRequest {
@@ -76,11 +76,11 @@ pub fn encode_push(
 @target(erlang)
 @external(erlang, "to_server_codec_ffi", "decode")
 fn decode_any(_bytes: BitArray) -> Result(a, Nil) {
-  panic as "generated/api/server.decode_any external missing"
+  panic as "generated/libero/server.decode_any external missing"
 }
 
 @target(erlang)
 @external(erlang, "to_client_codec_ffi", "encode")
 fn encode_any(_value: a) -> BitArray {
-  panic as "generated/api/server.encode_any external missing"
+  panic as "generated/libero/server.encode_any external missing"
 }

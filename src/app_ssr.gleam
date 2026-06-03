@@ -15,7 +15,7 @@ import app_shell
 @target(erlang)
 import authentication_context.{type AuthenticationContext}
 @target(erlang)
-import generated/api/to_client_codec
+import generated/libero/to_client_codec
 @target(erlang)
 import generated/proute/admin/page_input as admin_page_input
 @target(erlang)
@@ -29,9 +29,9 @@ import generated/proute/public/pages as public_pages
 @target(erlang)
 import generated/proute/public/routes as public_routes
 @target(erlang)
-import generated_soon/admin_boot
+import generated/rally/admin_boot
 @target(erlang)
-import generated_soon/public_boot
+import generated/rally/public_boot
 @target(erlang)
 import gleam/bit_array
 @target(erlang)

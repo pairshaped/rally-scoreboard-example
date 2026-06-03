@@ -1,9 +1,9 @@
 @target(javascript)
 import api/to_client.{type ToClient}
 @target(javascript)
-import generated/api/to_client_codec
+import generated/libero/to_client_codec
 @target(javascript)
-import generated_soon/browser
+import generated/rally/browser
 @target(javascript)
 import gleam/bit_array
 @target(javascript)

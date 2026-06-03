@@ -20,7 +20,7 @@ proute = { path = "../proute" }
 
 [tools.glinter]
 stats = true
-warnings_as_errors = false
+warnings_as_errors = true
 exclude = ["src/generated/**/*.gleam"]
 scan_paths = ["src"]
 
@@ -30,6 +30,5 @@ sql_dir = "src/sql"
 output = "src/generated/sql"
 
 [tools.libero]
-api_dir = "src/api"
-js_output_dir = "src/generated/api"
-erlang_output_dir = "src/generated/api"
+js_output_dir = "src/generated/libero"
+erlang_output_dir = "src/generated/libero"

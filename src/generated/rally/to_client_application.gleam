@@ -1,15 +1,15 @@
 @target(javascript)
 import api/to_client.{type ToClient}
 @target(javascript)
-import generated/api/client as generated_client
+import generated/libero/client as generated_client
 @target(javascript)
 import generated/proute/admin/pages as admin_pages
 @target(javascript)
 import generated/proute/public/pages as public_pages
 @target(javascript)
-import generated_soon/admin_boot
+import generated/rally/admin_boot
 @target(javascript)
-import generated_soon/public_boot
+import generated/rally/public_boot
 @target(javascript)
 import lustre/effect
 

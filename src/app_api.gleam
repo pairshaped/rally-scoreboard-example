@@ -13,11 +13,11 @@ import api/to_client.{type ToClient}
 @target(erlang)
 import api/to_server.{type ToServer}
 @target(erlang)
-import generated/api/result.{
+import generated/libero/result.{
   type ApiLoadError, type ApiSaveError, ApiLoadError, ApiSaveError,
 }
 @target(erlang)
-import generated/api/server as generated_server
+import generated/libero/server as generated_server
 @target(erlang)
 import generated/sql/games_sql
 @target(erlang)

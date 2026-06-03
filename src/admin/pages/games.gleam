@@ -1,12 +1,10 @@
-import api/domain/game.{
-  type AdminGameSummary, type GameSnapshot, AdminGameSummary, Final,
-}
 @target(javascript)
 import api/to_server
-import components/ui
 import generated/proute/admin/page_input
 @target(javascript)
-import generated_soon/client_transport as api_client
+import generated/rally/client_transport as api_client
+@target(erlang)
+import generated/sql/games_sql
 import gleam/int
 import gleam/list
 import lustre/attribute
@@ -15,6 +13,55 @@ import lustre/element.{type Element}
 import lustre/element/html
 import lustre/event
 import page_context.{type PageContext}
+@target(erlang)
+import sqlight
+
+pub type GameStatus {
+  Scheduled
+  Live(period: String)
+  Final
+}
+
+pub type AdminGameSummary {
+  AdminGameSummary(
+    id: Int,
+    home_code: String,
+    away_code: String,
+    home_score: Int,
+    away_score: Int,
+    status: GameStatus,
+    needs_attention: Bool,
+  )
+}
+
+pub type GameUpdate {
+  GameUpdate(
+    id: Int,
+    home_code: String,
+    away_code: String,
+    home_score: Int,
+    away_score: Int,
+    status: GameStatus,
+  )
+}
+
+pub type LoadError {
+  LoadError(message: String)
+}
+
+pub type SaveError {
+  SaveError(message: String)
+}
+
+pub type ServerCommand {
+  ServerUpdateScore(
+    game_id: Int,
+    home_score: Int,
+    away_score: Int,
+    period: String,
+  )
+  ServerMarkFinal(game_id: Int)
+}
 
 pub type Model {
   Model(games: List(AdminGameSummary))
@@ -23,7 +70,9 @@ pub type Model {
 pub type Message {
   AdjustAway(id: Int, home_score: Int, away_score: Int, delta: Int)
   AdjustHome(id: Int, home_score: Int, away_score: Int, delta: Int)
+  Loaded(Result(List(AdminGameSummary), LoadError))
   MarkFinal(id: Int)
+  Saved(Result(GameUpdate, SaveError))
 }
 
 pub fn init(
@@ -45,7 +94,19 @@ pub fn update(
   model model: Model,
   msg msg: Message,
 ) -> #(Model, Effect(Message)) {
-  #(model, message_effect(msg))
+  case msg {
+    Loaded(Ok(games)) -> #(Model(games: games), effect.none())
+    Loaded(Error(_)) -> #(model, effect.none())
+    Saved(Ok(game)) -> #(
+      upsert_game(model, game_update_summary(game)),
+      effect.none(),
+    )
+    Saved(Error(_)) -> #(model, effect.none())
+    AdjustAway(..) | AdjustHome(..) | MarkFinal(..) -> #(
+      model,
+      message_effect(msg),
+    )
+  }
 }
 
 pub fn admin_games_loaded(
@@ -57,9 +118,9 @@ pub fn admin_games_loaded(
 
 pub fn game_updated(
   model model: Model,
-  game game: GameSnapshot,
+  game game: GameUpdate,
 ) -> #(Model, Effect(Message)) {
-  #(upsert_game(model, snapshot_summary(game)), effect.none())
+  #(upsert_game(model, game_update_summary(game)), effect.none())
 }
 
 pub fn view(model model: Model) -> Element(Message) {
@@ -129,7 +190,7 @@ fn view_game_card(
       ]),
     ]),
     html.div([attribute.class("score-line admin-status-row")], [
-      ui.status_badge(game.status),
+      status_badge(game.status),
       final_action(game, on_mark_final),
     ]),
   ])
@@ -170,17 +231,28 @@ fn upsert_game(model: Model, game: AdminGameSummary) -> Model {
   Model(games: games)
 }
 
-fn snapshot_summary(game: GameSnapshot) -> AdminGameSummary {
+fn game_update_summary(game: GameUpdate) -> AdminGameSummary {
   AdminGameSummary(
     id: game.id,
-    home_code: game.home.code,
-    away_code: game.away.code,
+    home_code: game.home_code,
+    away_code: game.away_code,
     home_score: game.home_score,
     away_score: game.away_score,
     status: game.status,
     needs_attention: False,
   )
 }
+
+fn status_badge(status: GameStatus) -> Element(msg) {
+  case status {
+    Scheduled -> html.span([attribute.class("badge")], [html.text("Scheduled")])
+    Live(period) ->
+      html.span([attribute.class("badge live")], [html.text(period)])
+    Final -> html.span([attribute.class("badge final")], [html.text("Final")])
+  }
+}
+
+// CLIENT
 
 @target(javascript)
 fn init_effect() -> Effect(Message) {
@@ -217,6 +289,7 @@ fn message_effect(msg: Message) -> Effect(Message) {
       )
     MarkFinal(id) ->
       api_client.send(module: "admin/games", message: to_server.MarkFinal(id))
+    Loaded(_) | Saved(_) -> effect.none()
   }
 }
 
@@ -231,5 +304,98 @@ fn clamp_score(score: Int) -> Int {
   case score < 0 {
     True -> 0
     False -> score
+  }
+}
+
+// SERVER
+
+@target(erlang)
+pub fn load(
+  db: sqlight.Connection,
+) -> Result(List(AdminGameSummary), LoadError) {
+  case games_sql.list_admin_games(db: db) {
+    Ok(rows) -> Ok(list.map(rows, admin_game_summary_from_row))
+    Error(sqlight.SqlightError(..)) ->
+      Error(LoadError(message: "Could not load games."))
+  }
+}
+
+@target(erlang)
+pub fn handle(
+  db: sqlight.Connection,
+  command: ServerCommand,
+) -> Result(GameUpdate, SaveError) {
+  case command {
+    ServerUpdateScore(game_id, home_score, away_score, period) ->
+      case
+        games_sql.update_game_score(
+          db: db,
+          home_score: home_score,
+          away_score: away_score,
+          period: period,
+          game_id: game_id,
+        )
+      {
+        Ok([row, ..]) -> Ok(game_update_from_score_row(row))
+        Ok([]) -> Error(SaveError(message: "Game not found."))
+        Error(sqlight.SqlightError(..)) ->
+          Error(SaveError(message: "Could not save game."))
+      }
+
+    ServerMarkFinal(game_id) ->
+      case games_sql.update_game_final(db: db, game_id: game_id) {
+        Ok([row, ..]) -> Ok(game_update_from_final_row(row))
+        Ok([]) -> Error(SaveError(message: "Game not found."))
+        Error(sqlight.SqlightError(..)) ->
+          Error(SaveError(message: "Could not save game."))
+      }
+  }
+}
+
+@target(erlang)
+fn admin_game_summary_from_row(
+  row: games_sql.ListAdminGamesRow,
+) -> AdminGameSummary {
+  AdminGameSummary(
+    id: row.id,
+    home_code: row.home_code,
+    away_code: row.away_code,
+    home_score: row.home_score,
+    away_score: row.away_score,
+    status: game_status(row.period, row.final),
+    needs_attention: False,
+  )
+}
+
+@target(erlang)
+fn game_update_from_score_row(row: games_sql.UpdateGameScoreRow) -> GameUpdate {
+  GameUpdate(
+    id: row.id,
+    home_code: row.home_code,
+    away_code: row.away_code,
+    home_score: row.home_score,
+    away_score: row.away_score,
+    status: game_status(row.period, row.final),
+  )
+}
+
+@target(erlang)
+fn game_update_from_final_row(row: games_sql.UpdateGameFinalRow) -> GameUpdate {
+  GameUpdate(
+    id: row.id,
+    home_code: row.home_code,
+    away_code: row.away_code,
+    home_score: row.home_score,
+    away_score: row.away_score,
+    status: game_status(row.period, row.final),
+  )
+}
+
+@target(erlang)
+fn game_status(period: String, final: Int) -> GameStatus {
+  case final == 1, period {
+    True, _ -> Final
+    False, "Scheduled" -> Scheduled
+    False, _ -> Live(period)
   }
 }

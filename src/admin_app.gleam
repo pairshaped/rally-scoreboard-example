@@ -11,15 +11,15 @@ import generated/proute/admin/pages
 @target(javascript)
 import generated/proute/admin/routes
 @target(javascript)
-import generated_soon/admin_boot
+import generated/rally/admin_boot
 @target(javascript)
-import generated_soon/browser
+import generated/rally/browser
 @target(javascript)
-import generated_soon/browser_mount
+import generated/rally/browser_mount
 @target(javascript)
-import generated_soon/hydration
+import generated/rally/hydration
 @target(javascript)
-import generated_soon/to_client_application
+import generated/rally/to_client_application
 @target(javascript)
 import gleam/list
 @target(javascript)

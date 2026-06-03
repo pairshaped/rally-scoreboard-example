@@ -1,9 +1,9 @@
 @target(javascript)
 import authentication_context.{type AuthenticationContext, AuthenticationContext}
 @target(javascript)
-import generated_soon/browser
+import generated/rally/browser
 @target(javascript)
-import generated_soon/client_transport
+import generated/rally/client_transport
 @target(javascript)
 import gleam/list
 @target(javascript)

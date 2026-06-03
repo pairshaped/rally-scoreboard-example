@@ -7,15 +7,15 @@ import generated/proute/public/pages
 @target(javascript)
 import generated/proute/public/routes
 @target(javascript)
-import generated_soon/browser
+import generated/rally/browser
 @target(javascript)
-import generated_soon/browser_mount
+import generated/rally/browser_mount
 @target(javascript)
-import generated_soon/hydration
+import generated/rally/hydration
 @target(javascript)
-import generated_soon/public_boot
+import generated/rally/public_boot
 @target(javascript)
-import generated_soon/to_client_application
+import generated/rally/to_client_application
 @target(javascript)
 import gleam/int
 @target(javascript)

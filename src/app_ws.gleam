@@ -7,7 +7,7 @@ import app_api
 @target(erlang)
 import app_topics
 @target(erlang)
-import generated/api/server as generated_server
+import generated/libero/server as generated_server
 @target(erlang)
 import gleam/dynamic/decode
 @target(erlang)

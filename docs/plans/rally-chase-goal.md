@@ -120,7 +120,7 @@ Move generated-shaped framework code to `src/generated/rally`.
 
 Expected changes:
 
-- Replace `src/generated_soon` with `src/generated/rally`.
+- Put generated Rally framework code under `src/generated/rally`.
 - Put browser boot, hydration, client transport, page client helpers, SSR glue, and server dispatch glue there.
 - Keep user-authored app modules thin.
 - Avoid user-authored modules where every import and declaration is target annotated.
@@ -130,10 +130,10 @@ Acceptance:
 ```sh
 gleam build --target javascript
 gleam build --target erlang
-rg "generated_soon" src docs README.md
+find src/generated/rally -maxdepth 1 -type f
 ```
 
-The `rg` command should find no references.
+Generated Rally glue should live in `src/generated/rally`.
 
 ## Slice 6: Proute Boundary
 
@@ -169,7 +169,7 @@ Expected changes:
 Acceptance:
 
 ```sh
-rg "api/to_server|api/to_client|ToServer|ToClient|generated_soon|superseded|legacy" README.md docs
+rg "api/to_server|api/to_client|ToServer|ToClient|superseded|legacy" README.md docs
 ```
 
 The command should find no matches.
@@ -187,4 +187,3 @@ gleam test
 ```
 
 The app should compile for both targets, tests should pass, and the source should make the Rally chase target obvious without reading generated code first.
-

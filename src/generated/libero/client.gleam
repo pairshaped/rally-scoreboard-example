@@ -3,11 +3,11 @@ import api/to_client.{type ToClient}
 @target(javascript)
 import api/to_server.{type ToServer}
 @target(javascript)
-import generated/api/result.{type ApiLoadError, type ApiSaveError}
+import generated/libero/result.{type ApiLoadError, type ApiSaveError}
 @target(javascript)
-import generated/api/to_client_codec
+import generated/libero/to_client_codec
 @target(javascript)
-import generated/api/to_server_codec
+import generated/libero/to_server_codec
 
 @target(javascript)
 pub type ServerFrame {
@@ -83,11 +83,11 @@ fn decode_result_frame(bytes: BitArray) -> Result(a, Nil) {
 @target(javascript)
 @external(javascript, "./codec_ffi.mjs", "encode_value")
 fn encode_any(_value: a) -> BitArray {
-  panic as "generated/api/client.encode_any external missing"
+  panic as "generated/libero/client.encode_any external missing"
 }
 
 @target(javascript)
 @external(javascript, "./codec_ffi.mjs", "decode_result")
 fn decode_any(_bytes: BitArray) -> Result(a, Nil) {
-  panic as "generated/api/client.decode_any external missing"
+  panic as "generated/libero/client.decode_any external missing"
 }
