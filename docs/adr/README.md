@@ -2,8 +2,7 @@
 
 These ADRs describe the generated-source contract that Scoreboard validates.
 
-Scoreboard exercises the generated root API, app-owned runtime, Mount layout,
-wire protocol, authentication, live updates, logging, and database boundaries.
+Scoreboard exercises page-local Rally contracts, target-scoped source, Proute routing, generated framework glue, and page-owned domain data.
 
 This repo checks in generated source under `src/generated` while the unified source shape is being proven. Marmot and Proute already write generated modules there.
 
@@ -11,12 +10,7 @@ The ADRs describe the intended design.
 
 ## Records
 
-- [0002: Keep Dispatch Effect Agnostic](0002-keep-dispatch-effect-agnostic.md)
-- [0003: Use ToClient For Server App Data](0003-use-to-client-for-server-operation-outcomes.md)
-- [0004: Use ToClient For Live Updates](0004-use-to-client-for-live-updates.md)
-- [0005: Use Server Runtime State For Live Connections](0005-use-server-runtime-state-for-live-connections.md)
-- [0006: Default To Root API Contracts](0006-default-to-root-api-contracts.md)
-- [0007: Use File Routes, Route Kinds, And Mount Contexts](0007-use-file-routes-route-kinds-and-mount-contexts.md)
-- [0008: Use Authentication Context For Shared Identity](0008-use-authentication-context-for-shared-identity.md)
-- [0009: Use Target Annotations For Unified Source](0009-use-target-annotations-for-unified-source.md)
-- [0010: Use Server Update And Client Taxonomy](0010-use-server-update-and-client-taxonomy.md)
+- [0001: Use Page Local Rally Contracts](0001-use-page-local-rally-contracts.md)
+- [0002: Keep Page Domain Models Local](0002-keep-page-domain-models-local.md)
+- [0003: Use Proute For Routing And Page Glue](0003-use-proute-for-routing-and-page-glue.md)
+- [0004: Generate Target Specific Framework Glue](0004-generate-target-specific-framework-glue.md)

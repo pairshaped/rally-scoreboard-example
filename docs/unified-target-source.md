@@ -4,11 +4,9 @@ Scoreboard Unified uses one authored Gleam source tree. The source tree compiles
 
 ```text
 src/
-  api/
   public/
   admin/
   components/
-  app_*.gleam
   generated/
 ```
 
@@ -19,225 +17,97 @@ gleam build --target javascript
 gleam build --target erlang
 ```
 
-## Working Thesis
+## Page Shape
 
-The root app compiles directly for both targets. Browser-only code uses JavaScript target annotations. Server-only code uses Erlang target annotations. Shared code stays unannotated and must compile on both targets.
-
-Current Gleam uses:
+A page module should read like a basic TEA SPA page with server handlers at the bottom.
 
 ```gleam
-@target(javascript)
-pub fn browser_update(...) {
-  Nil
-}
-
-@target(erlang)
-pub fn server_handler(...) {
-  Nil
-}
-```
-
-The architecture depends on target-scoped declarations and imports. The exact syntax can follow Gleam as it evolves.
-
-## Source Layout
-
-The unified source tree is the user-owned package:
-
-```text
-src/api/to_server.gleam
-src/api/to_client.gleam
-src/api/domain/**/*.gleam
-
-src/public/pages/**/*.gleam
-src/public/client_shared_state.gleam
-
-src/admin/pages/**/*.gleam
-src/admin/client_shared_state.gleam
-
-src/app_assets.gleam
-src/app_api.gleam
-src/app_auth.gleam
-src/app_auth_http.gleam
-src/app_config.gleam
-src/app_document.gleam
-src/app_session.gleam
-src/app_ssr.gleam
-src/app_topics.gleam
-src/app_ws.gleam
-src/scoreboard_unified.gleam
-
-src/components/**/*.gleam
-src/generated_soon/**/*.gleam
-src/sql/**/*.sql
-
-src/generated/sql/**/*.gleam
-src/generated/proute/**/*.gleam
-src/generated/api/**/*.gleam
-```
-
-Generated source is checked in while this project proves the shape. Tracer generated modules are acceptable when they prove the target boundary before full generator coverage exists.
-
-Each generator owns a namespace under `src/generated`:
-
-- `generated/sql`: typed SQL modules from Marmot, Erlang-only when they touch SQLite
-- `generated/proute`: route and page glue from Proute
-- `generated/api`: ETF codecs, generated result error types, and browser/server transport glue generated around `ToServer`, `ToClient`, and load/save results
-
-`src/generated_soon` holds generated-shaped runtime code that has not moved to a real generator yet. Its current boot modules own route-to-`ToServer` load planning and `ToClient` page application for both SSR hydration and browser startup. `browser_mount.gleam` owns shared browser mount mechanics such as boot auth parsing, dark-mode effects, websocket startup, history push, and navigation listeners. Hydration stays ETF `ToClient` data.
-
-The Erlang entrypoint is intentionally thin:
-
-- `scoreboard_unified.gleam`: process startup, top-level HTTP routing, websocket handoff
-- `app_api.gleam`: app-owned `ToServer` dispatch and load/save results
-- `app_auth.gleam`: authentication lookup and admin policy
-- `app_auth_http.gleam`: sign-in, sign-out, session cookies, authenticated-user lookup, admin access checks
-- `app_config.gleam`: Erlang runtime configuration
-- `app_document.gleam`: HTML document shell, boot attributes, theme resolution, hydration attributes
-- `app_session.gleam`: encrypted session cookie encoding and decoding
-- `app_ssr.gleam`: public/admin SSR rendering and hydration payload generation
-- `app_topics.gleam`: live update process-group boundary
-- `app_ws.gleam`: WebSocket frame handling and live fanout
-- `app_assets.gleam`: build artifact responses and inline CSS text
-
-This differs from the server-component example in `../scoreboard-sc`, where the server owns component mounts and websocket transport for server-rendered component state. Scoreboard Unified keeps a real browser client, so the server entrypoint stays closer to ordinary HTTP routing while SSR and hydration are app boundaries.
-
-## Wire Contract
-
-Only `src/api/**` defines user-authored types that cross the wire. Libero may
-also generate protocol helper types under `src/generated/api/**`.
-
-That rule is intentionally strict. Types from pages, views, SQL modules, generated routes, runtime helpers, and server handlers do not cross the wire. If a user-authored app or domain value crosses the transport boundary, its type belongs under `src/api`.
-
-The root protocol stays app-level and globally unique:
-
-```gleam
-pub type ToServer {
-  LoadGames
-  UpdateScore(game_id: Int, home_score: Int, away_score: Int, period: String)
-}
-
-pub type ToClient {
-  GamesLoaded(games: List(PublicGameSummary))
-  GameUpdated(game: GameSnapshot)
-}
-```
-
-Domain models that cross the wire live under `src/api/domain/**`.
-
-Libero generates the load/save result error types under `src/generated/api/result.gleam`.
-
-The ETF codec graph is:
-
-```text
-src/api/**/*.gleam
-```
-
-Constructor names inside that graph must be unique plain ETF atoms. Module paths, type names, transport direction, and Mount names do not create runtime identity.
-
-## Target Boundary Rule
-
-Annotate the import and declaration where target-specific behavior starts.
-
-Examples:
-
-```gleam
-@target(javascript)
-import generated/api/client as api_client
+import components/ui
+import lustre/effect.{type Effect}
+import lustre/element.{type Element}
 
 @target(javascript)
-pub fn update(model: Model, msg: Message) -> Model {
-  case msg {
-    AdjustHome(game_id, home_score, away_score, period) -> {
-      api_client.send(to_server.UpdateScore(
-        game_id:,
-        home_score:,
-        away_score:,
-        period:,
-      ))
-      model
-    }
-  }
-}
-```
+import generated/rally/page_client
 
-```gleam
 @target(erlang)
 import generated/sql/games_sql
 
+pub type Model {
+  Model(games: List(Game), saving: Bool)
+}
+
+pub type Msg {
+  AdjustHome(id: Int, delta: Int)
+  Loaded(Result(List(Game), LoadError))
+  Saved(Result(Game, SaveError))
+}
+
+pub type ServerCommand {
+  AdjustHome(id: Int, delta: Int)
+}
+
+pub fn view(model: Model) -> Element(Msg) {
+  todo
+}
+
+// CLIENT
+
+@target(javascript)
+pub fn init(games: List(Game)) -> #(Model, Effect(Msg)) {
+  #(Model(games: games, saving: False), effect.none())
+}
+
+@target(javascript)
+pub fn update(msg: Msg, model: Model) -> #(Model, Effect(Msg)) {
+  todo
+}
+
+// SERVER
+
 @target(erlang)
-pub fn update_score(...) -> DispatchReply {
-  panic as "implemented by the app"
+pub fn load(ctx, params) -> Result(List(Game), LoadError) {
+  todo
+}
+
+@target(erlang)
+pub fn handle(ctx, command: ServerCommand) -> Result(Game, SaveError) {
+  todo
 }
 ```
 
-The compiler should catch wrong-target leaks:
+Shared imports come first, followed by JavaScript-targeted imports, then Erlang-targeted imports. The module body follows the same order: shared types and view first, then `// CLIENT`, then `// SERVER`.
 
-- JavaScript-kept code cannot call Erlang-only declarations.
-- Erlang-kept code cannot call JavaScript-only declarations.
-- Target-specific imports should be annotated so inactive-target builds do not retain useless or invalid imports.
+The section comments are for humans. Rally validates the page contract by function names, signatures, target availability, and wire-visible types.
 
-The practical authoring rule:
+## Page Data
 
-> Put the target annotation at the first declaration or import that depends on a target-specific capability.
+Page data shapes belong to the page that renders and updates them. A list page, detail page, and form page should duplicate similar fields instead of sharing one model just because their current shapes overlap.
 
-## Page Shape
+Shared types are reserved for stable app concepts independent of a page, such as identifiers, enums, or value objects. Page payloads, form models, table rows, detail data, and save responses stay page local.
 
-A page module may own:
+## Generated Source
 
-- page `Model`
-- browser-originated page `Message`
-- target-neutral `view`
-- shared boot request declarations
-- JavaScript-only update paths
-- Erlang-only server handlers
-- constructor-named `ToClient` handlers where the client applies app data
-
-Local page messages do not cross the wire. They represent browser-originated events such as clicks, input changes, timers, subscriptions, and JavaScript callbacks.
-
-Server app data crosses the wire as `ToClient`. No-data load and save results cross
-the wire as `Result(Nil, List(ApiLoadError))` or
-`Result(Nil, List(ApiSaveError))`.
-
-Browser commands cross the wire as `ToServer`.
-
-## Generated API Shape
-
-The first tracer should use checked-in generated modules:
+Generated source lives under `src/generated`:
 
 ```text
-src/generated/api/to_server_codec.gleam
-src/generated/api/to_client_codec.gleam
-src/generated/api/result.gleam
-src/generated/api/client.gleam
-src/generated/api/server.gleam
+src/generated/proute/**/*.gleam
+src/generated/rally/**/*.gleam
+src/generated/sql/**/*.gleam
 ```
 
-The codec modules exercise the real `api` types before ETF is fully implemented.
+Proute owns file routes, page enums, route params, query params, and page dispatch shape. Rally consumes Proute output and generates page protocol code, browser boot, hydration, SSR, client transport, and server dispatch. Marmot writes typed SQL modules for Erlang-only server paths.
 
-The API transport modules are target annotated:
+Generated modules use the same target annotation rules as user-authored modules.
 
-- browser transport accepts `ToServer`, encodes it, and sends it
-- server transport decodes `ToServer`, dispatches to server handlers, and emits a result plus any `ToClient` app data
-- transport details stay inside generated modules
+## Target Boundaries
 
-The tracer should demonstrate the whole intended flow:
+Target annotations belong where target-specific behavior begins:
 
-```text
-browser page Message
-  -> ToServer
-  -> generated/api/client
-  -> generated/api/to_server_codec
-  -> generated/api/server
-  -> server handler
-  -> load/save result
-  -> optional ToClient app data
-  -> generated/api/to_client_codec
-  -> generated/api/client receive path
-  -> page ToClient handler
-  -> updated page Model
-```
+- JavaScript-only imports and declarations for browser APIs, DOM effects, browser storage, and browser transport setup
+- Erlang-only imports and declarations for SQL, secrets, filesystem access, server runtime APIs, and server handlers
+- unannotated declarations only when they compile and make sense on both targets
 
-The tracer implementation can be inert, but the types and target boundaries should be real.
+Target-specific imports should be annotated too. Inactive-target builds should not retain useless or invalid imports.
 
 ## SQL And Marmot
 
@@ -249,64 +119,4 @@ The authored root contains SQL files:
 src/sql/**/*.sql
 ```
 
-Marmot writes:
-
-```text
-src/generated/sql/games_sql.gleam
-src/generated/sql/standings_sql.gleam
-src/generated/sql/teams_sql.gleam
-```
-
 Server code imports these modules from Erlang-only declarations. JavaScript builds must not keep code paths that import SQL modules.
-
-Raw `.sql` files are generator inputs. They are not runtime source.
-
-## Proute
-
-Proute generation stays separate from transport and codec generation.
-
-Proute writes route and page glue under:
-
-```text
-src/generated/proute
-```
-
-Each Mount gets a small generated group:
-
-```text
-src/generated/proute/public/routes.gleam
-src/generated/proute/public/page_input.gleam
-src/generated/proute/public/pages.gleam
-
-src/generated/proute/admin/routes.gleam
-src/generated/proute/admin/page_input.gleam
-src/generated/proute/admin/pages.gleam
-```
-
-Root source imports Proute through stable generated modules:
-
-```gleam
-import generated/proute/public/routes as public_routes
-import generated/proute/admin/routes as admin_routes
-```
-
-## Validation
-
-The architecture is only convincing if the same package passes both target builds:
-
-```sh
-gleam run -m proute
-gleam check
-gleam build --target javascript
-gleam build --target erlang
-```
-
-For the tracer, both target builds must pass with generated API codec and transport modules checked in.
-
-## Summary
-
-The useful design is:
-
-> Write one Gleam app. Keep user-authored wire types under `api`. Put generated protocol helpers under `src/generated/api`. Put target facts on target-specific declarations and imports. Let Gleam target builds catch cross-target mistakes.
-
-That keeps the hard boundary where the compiler can help, and it leaves generation focused on API codecs, route glue, transport glue, and clear diagnostics around the `api` wire graph.
