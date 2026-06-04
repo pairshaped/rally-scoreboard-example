@@ -18,7 +18,12 @@ fn apply_public_frame(
   page page: public_pages.Page,
   frame frame: client_protocol.ServerFrame,
 ) -> #(public_pages.Page, effect.Effect(public_pages.Message)) {
-  apply_public(page: page, message: server_frame_message(frame))
+  case frame {
+    client_protocol.Response(message: message) ->
+      apply_public(page: page, message:)
+    client_protocol.Push(message: message, ..) ->
+      public_boot.apply_broadcast(page: page, message:)
+  }
 }
 
 @target(javascript)
@@ -26,7 +31,12 @@ fn apply_admin_frame(
   page page: admin_pages.Page,
   frame frame: client_protocol.ServerFrame,
 ) -> #(admin_pages.Page, effect.Effect(admin_pages.Message)) {
-  apply_admin(page: page, message: server_frame_message(frame))
+  case frame {
+    client_protocol.Response(message: message) ->
+      apply_admin(page: page, message:)
+    client_protocol.Push(message: message, ..) ->
+      admin_boot.apply_broadcast(page: page, message:)
+  }
 }
 
 @target(javascript)
@@ -65,12 +75,4 @@ pub fn apply_admin(
   message message: ToClient,
 ) -> #(admin_pages.Page, effect.Effect(admin_pages.Message)) {
   admin_boot.apply_message(page: page, message: message)
-}
-
-@target(javascript)
-fn server_frame_message(frame: client_protocol.ServerFrame) -> ToClient {
-  case frame {
-    client_protocol.Response(message: message) -> message
-    client_protocol.Push(message: message, ..) -> message
-  }
 }

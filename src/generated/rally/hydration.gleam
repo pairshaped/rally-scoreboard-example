@@ -1,4 +1,3 @@
-@target(javascript)
 import api/to_client.{type ToClient}
 @target(javascript)
 import generated/libero/result.{type ApiLoadError}
@@ -28,6 +27,21 @@ pub fn messages() -> Result(List(ToClient), Nil) {
   case browser.take_boot_string("hydration") {
     "" -> Error(Nil)
     raw -> decode_all(string.split(raw, ","), [])
+  }
+}
+
+@target(javascript)
+pub fn admin_games_load_result() -> Result(
+  Result(load_result, List(ApiLoadError)),
+  Nil,
+) {
+  case browser.take_boot_string("hydration") {
+    "" -> Error(Nil)
+    raw ->
+      case string.split(raw, ",") {
+        [encoded, ..] -> decode_admin_games_load_result(encoded)
+        [] -> Error(Nil)
+      }
   }
 }
 
@@ -110,6 +124,20 @@ fn decode_all(
 fn decode_message(encoded: String) -> Result(ToClient, Nil) {
   case bit_array.base64_url_decode(encoded) {
     Ok(bytes) -> to_client_codec.decode(bytes)
+    Error(_) -> Error(Nil)
+  }
+}
+
+@target(javascript)
+fn decode_admin_games_load_result(
+  encoded: String,
+) -> Result(Result(load_result, List(ApiLoadError)), Nil) {
+  case bit_array.base64_url_decode(encoded) {
+    Ok(bytes) ->
+      case client_protocol.decode_admin_games_load_result(bytes) {
+        Ok(#(_, result)) -> Ok(result)
+        Error(Nil) -> Error(Nil)
+      }
     Error(_) -> Error(Nil)
   }
 }

@@ -28,8 +28,8 @@ import sqlight
 @target(erlang)
 import api/domain/game.{
   type AdminGameSummary, type GameDetail, type GameSnapshot, type GameStatus,
-  type PublicGameSummary, AdminGameSummary, Final, GameDetail, GameSnapshot,
-  Live, PublicGameSummary, Scheduled, Team,
+  type PublicGameSummary, type Team, AdminGameSummary, Final, GameDetail,
+  GameSnapshot, Live, PublicGameSummary, Scheduled, Team,
 }
 @target(erlang)
 import api/domain/standing.{type StandingRow, StandingRow}
@@ -39,6 +39,8 @@ import api/domain/team.{TeamDetail}
 import api/to_client.{type ToClient}
 @target(erlang)
 import api/to_server.{type ToServer}
+@target(erlang)
+import broadcasts
 
 // TYPES
 
@@ -47,7 +49,7 @@ pub type DispatchReply {
   LoadReply(result: Result(ToClient, List(ApiLoadError)))
   SaveReply(
     result: Result(ToClient, List(ApiSaveError)),
-    messages: List(ToClient),
+    messages: List(broadcasts.Event),
   )
 }
 
@@ -125,7 +127,7 @@ pub fn reply_messages(reply: DispatchReply) -> List(ToClient) {
   case reply {
     LoadReply(result: Ok(message)) -> [message]
     LoadReply(result: Error(_)) -> []
-    SaveReply(messages: messages, ..) -> messages
+    SaveReply(..) -> []
   }
 }
 
@@ -143,8 +145,22 @@ pub fn reply_result(
 }
 
 @target(erlang)
-pub fn push(module module: String, message message: ToClient) -> BitArray {
+pub fn push(
+  module module: String,
+  message message: broadcasts.Event,
+) -> BitArray {
   server_protocol.encode_push(module, message)
+}
+
+@target(erlang)
+pub fn game_updated_broadcast(
+  db: sqlight.Connection,
+  game_id: Int,
+) -> Result(broadcasts.Event, Nil) {
+  case game_snapshot(db, game_id) {
+    Ok(snapshot) -> Ok(game_updated_event(snapshot))
+    Error(Nil) -> Error(Nil)
+  }
 }
 
 // LOADERS
@@ -292,7 +308,7 @@ fn saved_game_reply(db: sqlight.Connection, game_id: Int) -> DispatchReply {
   case game_snapshot(db, game_id) {
     Ok(snapshot) -> {
       let message = to_client.GameUpdated(snapshot)
-      save_succeeded(result: message, messages: [message])
+      save_succeeded(result: message, messages: [game_updated_event(snapshot)])
     }
     Error(Nil) -> save_failed("Could not load saved game.")
   }
@@ -311,7 +327,7 @@ fn load_failed(message: String) -> DispatchReply {
 @target(erlang)
 fn save_succeeded(
   result result: ToClient,
-  messages messages: List(ToClient),
+  messages messages: List(broadcasts.Event),
 ) -> DispatchReply {
   SaveReply(result: Ok(result), messages:)
 }
@@ -369,6 +385,32 @@ fn game_snapshot_from_row(row: game_detail_sql.GetGameRow) -> GameSnapshot {
     away_score: row.away_score,
     status: game_status(row.period, row.final),
   )
+}
+
+@target(erlang)
+fn game_updated_event(snapshot: GameSnapshot) -> broadcasts.Event {
+  broadcasts.BroadcastGameUpdated(broadcasts.BroadcastGameSnapshot(
+    id: snapshot.id,
+    home: broadcast_team(snapshot.home),
+    away: broadcast_team(snapshot.away),
+    home_score: snapshot.home_score,
+    away_score: snapshot.away_score,
+    status: broadcast_status(snapshot.status),
+  ))
+}
+
+@target(erlang)
+fn broadcast_team(team: Team) -> broadcasts.Team {
+  broadcasts.BroadcastTeam(code: team.code, name: team.name, slug: team.slug)
+}
+
+@target(erlang)
+fn broadcast_status(status: GameStatus) -> broadcasts.GameStatus {
+  case status {
+    Scheduled -> broadcasts.BroadcastScheduled
+    Live(period) -> broadcasts.BroadcastLive(period)
+    Final -> broadcasts.BroadcastFinal
+  }
 }
 
 @target(erlang)

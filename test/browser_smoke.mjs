@@ -4,7 +4,7 @@ import { createRequire } from "node:module";
 import { execFileSync, spawn } from "node:child_process";
 import path from "node:path";
 
-import { GameUpdated } from "../build/dev/javascript/scoreboard_unified/api/to_client.mjs";
+import { AdminGamesUpdate } from "../build/dev/javascript/scoreboard_unified/admin/pages/games.mjs";
 import { decode_result_envelope } from "../build/dev/javascript/scoreboard_unified/generated/rally/client_protocol.mjs";
 import { BitArray, Ok } from "../build/dev/javascript/scoreboard_unified/gleam.mjs";
 
@@ -429,8 +429,8 @@ function assertSaveResultCarriesGameUpdated(payload) {
   const [, result] = decoded[0];
   assert.ok(result instanceof Ok, "save result should be Ok");
   assert.ok(
-    result[0] instanceof GameUpdated,
-    "save result should carry the saved game update",
+    result[0] instanceof AdminGamesUpdate,
+    "save result should carry the admin page's saved game update",
   );
 }
 

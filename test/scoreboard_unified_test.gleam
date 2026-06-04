@@ -12,6 +12,8 @@ import app_topics
 import app_ws
 import authentication_context
 @target(erlang)
+import broadcasts
+@target(erlang)
 import gleam/dynamic/decode
 @target(erlang)
 import gleam/erlang/atom
@@ -58,8 +60,9 @@ pub fn mark_final_returns_save_ack_payload_and_game_update_test() {
   case reply {
     app_api.SaveReply(
       result: Ok(to_client.GameUpdated(result)),
-      messages: [to_client.GameUpdated(updated)],
-    ) -> result.status == game.Final && updated.status == game.Final
+      messages: [broadcasts.BroadcastGameUpdated(updated)],
+    ) ->
+      result.status == game.Final && updated.status == broadcasts.BroadcastFinal
     _ -> False
   }
   |> should.equal(True)
@@ -81,9 +84,10 @@ pub fn update_score_returns_save_ack_payload_and_game_update_test() {
   case reply {
     app_api.SaveReply(
       result: Ok(to_client.GameUpdated(result)),
-      messages: [to_client.GameUpdated(updated)],
+      messages: [broadcasts.BroadcastGameUpdated(updated)],
     ) ->
-      result.status == game.Live("Live") && updated.status == game.Live("Live")
+      result.status == game.Live("Live")
+      && updated.status == broadcasts.BroadcastLive("Live")
     _ -> False
   }
   |> should.equal(True)
@@ -92,15 +96,19 @@ pub fn update_score_returns_save_ack_payload_and_game_update_test() {
 }
 
 @target(erlang)
-pub fn only_game_updates_are_global_mutation_broadcasts_test() {
+pub fn game_updates_are_global_mutation_broadcasts_test() {
   let game_update =
-    to_client.GameUpdated(game.GameSnapshot(
+    broadcasts.BroadcastGameUpdated(broadcasts.BroadcastGameSnapshot(
       id: 1,
-      home: game.Team("TOR", "Toronto Towers", "toronto-towers"),
-      away: game.Team("MTL", "Montreal Meteors", "montréal-meteors"),
+      home: broadcasts.BroadcastTeam("TOR", "Toronto Towers", "toronto-towers"),
+      away: broadcasts.BroadcastTeam(
+        "MTL",
+        "Montreal Meteors",
+        "montréal-meteors",
+      ),
       home_score: 4,
       away_score: 2,
-      status: game.Final,
+      status: broadcasts.BroadcastFinal,
     ))
 
   app_ws.should_broadcast_live_update(
@@ -108,24 +116,6 @@ pub fn only_game_updates_are_global_mutation_broadcasts_test() {
     reply: game_update,
   )
   |> should.equal(True)
-
-  let games_loaded =
-    to_client.GamesLoaded([
-      game.PublicGameSummary(
-        id: 1,
-        home: game.Team("TOR", "Toronto Towers", "toronto-towers"),
-        away: game.Team("MTL", "Montreal Meteors", "montréal-meteors"),
-        home_score: 4,
-        away_score: 2,
-        status: game.Final,
-      ),
-    ])
-
-  app_ws.should_broadcast_live_update(
-    request: to_server.MarkFinal(1),
-    reply: games_loaded,
-  )
-  |> should.equal(False)
 }
 
 @target(erlang)

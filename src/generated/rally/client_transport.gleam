@@ -1,4 +1,3 @@
-@target(javascript)
 import api/to_client.{type ToClient}
 @target(javascript)
 import api/to_server.{type ToServer}
@@ -46,6 +45,18 @@ pub fn send_load(
     let request_id = next_request_id()
     let frame = client_protocol.encode_request(request_id, module, message)
     send_load_frame(request_id, frame, on_result, dispatch)
+  })
+}
+
+@target(javascript)
+pub fn send_admin_games_load(
+  message message: a,
+  on_result on_result: fn(Result(load_result, List(ApiLoadError))) -> msg,
+) -> Effect(msg) {
+  effect.from(fn(dispatch) {
+    let request_id = next_request_id()
+    let frame = client_protocol.encode_admin_games_request(request_id, message)
+    send_admin_games_load_frame(request_id, frame, on_result, dispatch)
   })
 }
 
@@ -119,6 +130,18 @@ pub fn send_save(
 }
 
 @target(javascript)
+pub fn send_admin_games_save(
+  message message: a,
+  on_result on_result: fn(Result(save_result, List(ApiSaveError))) -> msg,
+) -> Effect(msg) {
+  effect.from(fn(dispatch) {
+    let request_id = next_request_id()
+    let frame = client_protocol.encode_admin_games_request(request_id, message)
+    send_admin_games_save_frame(request_id, frame, on_result, dispatch)
+  })
+}
+
+@target(javascript)
 @external(javascript, "./client_transport_ffi.mjs", "connect")
 fn connect_socket(_url: String, _on_frame: fn(BitArray) -> Nil) -> Nil {
   Nil
@@ -136,6 +159,17 @@ fn send_load_frame(
   _request_id: Int,
   _frame: BitArray,
   _on_result: fn(Result(ToClient, List(ApiLoadError))) -> msg,
+  _dispatch: fn(msg) -> Nil,
+) -> Nil {
+  Nil
+}
+
+@target(javascript)
+@external(javascript, "./client_transport_ffi.mjs", "send_load_frame")
+fn send_admin_games_load_frame(
+  _request_id: Int,
+  _frame: BitArray,
+  _on_result: fn(Result(load_result, List(ApiLoadError))) -> msg,
   _dispatch: fn(msg) -> Nil,
 ) -> Nil {
   Nil
@@ -195,6 +229,17 @@ fn send_save_frame(
   _request_id: Int,
   _frame: BitArray,
   _on_result: fn(Result(ToClient, List(ApiSaveError))) -> msg,
+  _dispatch: fn(msg) -> Nil,
+) -> Nil {
+  Nil
+}
+
+@target(javascript)
+@external(javascript, "./client_transport_ffi.mjs", "send_save_frame")
+fn send_admin_games_save_frame(
+  _request_id: Int,
+  _frame: BitArray,
+  _on_result: fn(Result(save_result, List(ApiSaveError))) -> msg,
   _dispatch: fn(msg) -> Nil,
 ) -> Nil {
   Nil

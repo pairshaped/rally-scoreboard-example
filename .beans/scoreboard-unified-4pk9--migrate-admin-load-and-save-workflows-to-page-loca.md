@@ -31,14 +31,28 @@ Save behavior should follow ADR 0010: a correlated result with the initiating pa
 
 ## Acceptance criteria
 
-- [ ] Admin games load uses a page-local contract.
-- [ ] Score adjustment uses a page-local save contract with correlated result handling.
-- [ ] Finalization uses a page-local save contract with correlated result handling.
-- [ ] The initiating admin connection updates from the save result payload, while other subscribed admin connections receive the live broadcast.
-- [ ] Root admin API/domain types are no longer needed for this workflow.
+- [x] Admin games load uses a page-local contract.
+- [x] Score adjustment uses a page-local save contract with correlated result handling.
+- [x] Finalization uses a page-local save contract with correlated result handling.
+- [x] The initiating admin connection updates from the save result payload, while other subscribed admin connections receive the live broadcast.
+- [x] Root admin API/domain types are no longer needed for this workflow.
 
 ## Blocked by
 
 - Rally load RPC generation for page-local contracts.
 
 - Decision note: admin save ack payloads belong in the admin page contract, not a new shared module. Cross-page live broadcast events live in `src/broadcasts.gleam`, because public and admin pages all consume game update events.
+
+## Progress
+
+Implemented the admin workflow migration in the chase app. Admin load and save requests now use `admin/pages/games.ServerMsg`, admin load hydration uses the page-local `LoadResult`, and score/finalization save acks return the page-local `GameUpdate` payload. Live score fanout now uses root `src/broadcasts.gleam` events and excludes the initiating websocket connection.
+
+The generated Rally and Libero files are still hand-prototyped for this slice. The app behavior is proven, but `rally load-rpc` still needs follow-up generator support before this shape is regeneration-safe.
+
+Validated with:
+
+- `gleam build --target erlang`
+- `gleam build --target javascript`
+- `gleam test --target erlang`
+- `SCOREBOARD_BASE_URL=http://localhost:8097 node test/ws_result_smoke.mjs`
+- `SCOREBOARD_BASE_URL=http://localhost:8098 node test/browser_smoke.mjs`

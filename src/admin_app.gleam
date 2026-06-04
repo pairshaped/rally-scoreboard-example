@@ -96,21 +96,33 @@ fn initial_page(
 ) -> #(pages.Page, Effect(pages.Message)) {
   let query_params = page_input.empty_query_params()
 
-  case hydration.messages() {
-    Ok(messages) -> {
-      let page =
-        list.fold(
-          messages,
-          pages.load_sync(PageContext, query_params, route),
-          fn(page, message) {
-            let #(page, _) =
-              to_client_application.apply_admin(page: page, message: message)
-            page
-          },
-        )
+  case route, hydration.admin_games_load_result() {
+    routes.AdminHome, Ok(result) | routes.AdminGames, Ok(result) -> {
+      let page = pages.load_sync(PageContext, query_params, route)
+      let message = admin_boot.load_result_message(route, result)
+      let #(page, _) = pages.update(PageContext, page, message)
       #(page, effect.none())
     }
-    Error(Nil) -> admin_boot.load_client(PageContext, query_params, route)
+    _, _ ->
+      case hydration.messages() {
+        Ok(messages) -> {
+          let page =
+            list.fold(
+              messages,
+              pages.load_sync(PageContext, query_params, route),
+              fn(page, message) {
+                let #(page, _) =
+                  to_client_application.apply_admin(
+                    page: page,
+                    message: message,
+                  )
+                page
+              },
+            )
+          #(page, effect.none())
+        }
+        Error(Nil) -> admin_boot.load_client(PageContext, query_params, route)
+      }
   }
 }
 

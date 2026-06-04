@@ -1,8 +1,6 @@
 @target(erlang)
 import generated/libero/result.{type ApiLoadError, ApiLoadError}
 @target(erlang)
-import generated/libero/to_client_codec
-@target(erlang)
 import generated/proute/admin/page_input as admin_page_input
 @target(erlang)
 import generated/proute/admin/pages as admin_pages
@@ -14,8 +12,6 @@ import generated/proute/public/page_input as public_page_input
 import generated/proute/public/pages as public_pages
 @target(erlang)
 import generated/proute/public/routes as public_routes
-@target(erlang)
-import generated/rally/admin_boot
 @target(erlang)
 import generated/rally/server_protocol
 
@@ -38,11 +34,7 @@ import mist.{type Connection}
 import sqlight
 
 @target(erlang)
-import api/to_client
-@target(erlang)
-import api/to_server.{type ToServer}
-@target(erlang)
-import app_api
+import admin/pages/games as admin_games_page
 @target(erlang)
 import app_auth
 @target(erlang)
@@ -155,10 +147,7 @@ pub fn admin_render(
   authentication_context authentication_context: Option(AuthenticationContext),
 ) -> SsrApp {
   let route = admin_routes.parse_path(path)
-  let messages = admin_boot_messages(db, route)
-  let page =
-    admin_pages.load_sync(PageContext, query_params, route)
-    |> admin_boot.apply_messages(messages)
+  let #(page, hydration) = admin_boot_page(db, query_params, route)
 
   SsrApp(
     html: app_shell.admin(
@@ -169,7 +158,7 @@ pub fn admin_render(
       content: admin_pages.view(page) |> element.map(fn(_) { Nil }),
     )
       |> element.to_string,
-    hydration: hydration_payloads(messages),
+    hydration: hydration,
   )
 }
 
@@ -212,6 +201,51 @@ fn public_boot_page(
       #(page, [])
     }
   }
+}
+
+@target(erlang)
+fn admin_boot_page(
+  db db: sqlight.Connection,
+  query_params query_params: admin_page_input.QueryParams,
+  route route: admin_routes.Route,
+) -> #(admin_pages.Page, List(String)) {
+  let page = admin_pages.load_sync(PageContext, query_params, route)
+
+  case route {
+    admin_routes.AdminHome | admin_routes.AdminGames -> {
+      let result = admin_games_page.load(db)
+      #(apply_admin_games_load_result(page, route, result), [
+        admin_games_hydration_payload(result),
+      ])
+    }
+    admin_routes.NotFound -> #(page, [])
+  }
+}
+
+@target(erlang)
+fn apply_admin_games_load_result(
+  page page: admin_pages.Page,
+  route route: admin_routes.Route,
+  result result: Result(
+    List(admin_games_page.AdminGameSummary),
+    admin_games_page.LoadError,
+  ),
+) -> admin_pages.Page {
+  let message = case route {
+    admin_routes.AdminHome ->
+      admin_pages.AdminHomeMsg(admin_games_page.Loaded(result))
+    admin_routes.AdminGames ->
+      admin_pages.AdminGamesMsg(admin_games_page.Loaded(result))
+    admin_routes.NotFound ->
+      admin_pages.AdminGamesMsg(
+        admin_games_page.Loaded(
+          Error(admin_games_page.LoadError(message: "Unexpected admin route.")),
+        ),
+      )
+  }
+
+  let #(page, _) = admin_pages.update(PageContext, page, message)
+  page
 }
 
 @target(erlang)
@@ -358,6 +392,20 @@ fn public_games_hydration_payload(
 }
 
 @target(erlang)
+fn admin_games_hydration_payload(
+  result result: Result(
+    List(admin_games_page.AdminGameSummary),
+    admin_games_page.LoadError,
+  ),
+) -> String {
+  server_protocol.ensure()
+  result
+  |> admin_games_wire_result
+  |> server_protocol.encode_admin_games_load_result(request_id: 0)
+  |> bit_array.base64_url_encode(False)
+}
+
+@target(erlang)
 fn public_team_detail_wire_result(
   result result: Result(
     public_team_detail_page.TeamDetail,
@@ -436,6 +484,20 @@ fn public_games_wire_result(
 }
 
 @target(erlang)
+fn admin_games_wire_result(
+  result result: Result(
+    List(admin_games_page.AdminGameSummary),
+    admin_games_page.LoadError,
+  ),
+) -> Result(admin_games_page.LoadResult, List(ApiLoadError)) {
+  case result {
+    Ok(games) -> Ok(admin_games_page.AdminGamesLoadResult(games: games))
+    Error(admin_games_page.LoadError(message: message)) ->
+      Error([ApiLoadError(message:)])
+  }
+}
+
+@target(erlang)
 fn boot_identity(
   req req: Request(Connection),
   db db: sqlight.Connection,
@@ -445,44 +507,4 @@ fn boot_identity(
     Ok(user) -> #(Some(user.context), app_auth.can_access_admin(user))
     Error(Nil) -> #(None, False)
   }
-}
-
-@target(erlang)
-fn admin_boot_messages(
-  db: sqlight.Connection,
-  route: admin_routes.Route,
-) -> List(to_client.ToClient) {
-  dispatch_requests(
-    db: db,
-    requests: admin_boot.requests(route),
-    admin_authorized: True,
-  )
-}
-
-@target(erlang)
-fn dispatch_requests(
-  db db: sqlight.Connection,
-  requests requests: List(ToServer),
-  admin_authorized admin_authorized: Bool,
-) -> List(to_client.ToClient) {
-  list.fold(requests, [], fn(messages, request) {
-    list.append(
-      messages,
-      app_api.dispatch(
-        db: db,
-        message: request,
-        admin_authorized: admin_authorized,
-      ),
-    )
-  })
-}
-
-@target(erlang)
-fn hydration_payloads(messages: List(to_client.ToClient)) -> List(String) {
-  to_client_codec.ensure()
-  list.map(messages, fn(message) {
-    message
-    |> to_client_codec.encode
-    |> bit_array.base64_url_encode(False)
-  })
 }

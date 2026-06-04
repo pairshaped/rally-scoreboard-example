@@ -12,7 +12,7 @@ import gleam/erlang/process.{type Selector}
 @target(erlang)
 import gleam/list
 @target(erlang)
-import gleam/option.{type Option, Some}
+import gleam/option.{type Option, None, Some}
 @target(erlang)
 import gleam/result
 
@@ -22,13 +22,15 @@ import mist.{type Next, type WebsocketConnection, type WebsocketMessage}
 import sqlight
 
 @target(erlang)
-import api/to_client.{type ToClient}
+import admin/pages/games as admin_games_page
 @target(erlang)
 import api/to_server.{type ToServer}
 @target(erlang)
 import app_api
 @target(erlang)
 import app_topics
+@target(erlang)
+import broadcasts
 @target(erlang)
 import public/pages/games as public_games_page
 @target(erlang)
@@ -113,59 +115,183 @@ fn handle_client_frame(
   conn conn: WebsocketConnection,
   data data: BitArray,
 ) -> Nil {
-  case server_protocol.decode_public_games_request(data) {
-    Ok(server_protocol.PublicGamesClientRequest(
+  case server_protocol.decode_admin_games_request(data) {
+    Ok(server_protocol.AdminGamesClientRequest(
       request_id: request_id,
-      module: "public/pages/games",
-      message: public_games_wire.PublicGamesLoad,
-    )) -> handle_public_games_load(state: state, conn: conn, request_id:)
+      module: "admin/games",
+      message: message,
+    )) ->
+      handle_admin_games_request(
+        state: state,
+        conn: conn,
+        request_id:,
+        message:,
+      )
     _ ->
-      case server_protocol.decode_public_game_detail_request(data) {
-        Ok(server_protocol.PublicGameDetailClientRequest(
+      case server_protocol.decode_public_games_request(data) {
+        Ok(server_protocol.PublicGamesClientRequest(
           request_id: request_id,
-          module: "public/pages/games/id_",
-          message: public_game_detail_wire.PublicGameDetailLoad(
-            game_id: game_id,
-          ),
-        )) ->
-          handle_public_game_detail_load(
-            state: state,
-            conn: conn,
-            request_id:,
-            game_id:,
-          )
+          module: "public/pages/games",
+          message: public_games_wire.PublicGamesLoad,
+        )) -> handle_public_games_load(state: state, conn: conn, request_id:)
         _ ->
-          case server_protocol.decode_public_standings_request(data) {
-            Ok(server_protocol.PublicStandingsClientRequest(
+          case server_protocol.decode_public_game_detail_request(data) {
+            Ok(server_protocol.PublicGameDetailClientRequest(
               request_id: request_id,
-              module: "public/pages/standings",
-              message: public_standings_wire.PublicStandingsLoad,
+              module: "public/pages/games/id_",
+              message: public_game_detail_wire.PublicGameDetailLoad(
+                game_id: game_id,
+              ),
             )) ->
-              handle_public_standings_load(
+              handle_public_game_detail_load(
                 state: state,
                 conn: conn,
                 request_id:,
+                game_id:,
               )
             _ ->
-              case server_protocol.decode_public_team_detail_request(data) {
-                Ok(server_protocol.PublicTeamDetailClientRequest(
+              case server_protocol.decode_public_standings_request(data) {
+                Ok(server_protocol.PublicStandingsClientRequest(
                   request_id: request_id,
-                  module: "public/pages/teams/slug_",
-                  message: public_team_detail_wire.PublicTeamDetailLoad(
-                    slug: slug,
-                  ),
+                  module: "public/pages/standings",
+                  message: public_standings_wire.PublicStandingsLoad,
                 )) ->
-                  handle_public_team_detail_load(
+                  handle_public_standings_load(
                     state: state,
                     conn: conn,
                     request_id:,
-                    slug:,
                   )
                 _ ->
-                  handle_root_client_frame(state: state, conn: conn, data: data)
+                  case server_protocol.decode_public_team_detail_request(data) {
+                    Ok(server_protocol.PublicTeamDetailClientRequest(
+                      request_id: request_id,
+                      module: "public/pages/teams/slug_",
+                      message: public_team_detail_wire.PublicTeamDetailLoad(
+                        slug: slug,
+                      ),
+                    )) ->
+                      handle_public_team_detail_load(
+                        state: state,
+                        conn: conn,
+                        request_id:,
+                        slug:,
+                      )
+                    _ ->
+                      handle_root_client_frame(
+                        state: state,
+                        conn: conn,
+                        data: data,
+                      )
+                  }
               }
           }
       }
+  }
+}
+
+@target(erlang)
+fn handle_admin_games_request(
+  state state: State,
+  conn conn: WebsocketConnection,
+  request_id request_id: Int,
+  message message: admin_games_page.ServerMsg,
+) -> Nil {
+  case message {
+    admin_games_page.AdminGamesLoad ->
+      handle_admin_games_load(state: state, conn: conn, request_id:)
+    admin_games_page.AdminGamesUpdateScore(..)
+    | admin_games_page.AdminGamesMarkFinal(_) ->
+      handle_admin_games_save(state: state, conn: conn, request_id:, message:)
+  }
+}
+
+@target(erlang)
+fn handle_admin_games_load(
+  state state: State,
+  conn conn: WebsocketConnection,
+  request_id request_id: Int,
+) -> Nil {
+  let result = case state.admin_authorized {
+    False -> Error([wire_result.ApiLoadError(message: "Unauthorized.")])
+    True ->
+      case admin_games_page.load(state.db) {
+        Ok(games) -> Ok(admin_games_page.AdminGamesLoadResult(games: games))
+        Error(admin_games_page.LoadError(message: message)) ->
+          Error([wire_result.ApiLoadError(message:)])
+      }
+  }
+
+  let _sent =
+    mist.send_binary_frame(
+      conn,
+      server_protocol.encode_admin_games_load_result(
+        request_id: request_id,
+        result: result,
+      ),
+    )
+  Nil
+}
+
+@target(erlang)
+fn handle_admin_games_save(
+  state state: State,
+  conn conn: WebsocketConnection,
+  request_id request_id: Int,
+  message message: admin_games_page.ServerMsg,
+) -> Nil {
+  let result = case state.admin_authorized {
+    False ->
+      Error([wire_result.ApiSaveError(field: None, message: "Unauthorized.")])
+    True ->
+      case admin_games_page.handle(state.db, message) {
+        Ok(game) -> Ok(game)
+        Error(admin_games_page.SaveError(message: message)) ->
+          Error([wire_result.ApiSaveError(field: None, message:)])
+      }
+  }
+
+  let _sent =
+    mist.send_binary_frame(
+      conn,
+      server_protocol.encode_admin_games_save_result(
+        request_id: request_id,
+        result: result,
+      ),
+    )
+
+  case result {
+    Ok(_) -> broadcast_admin_game_update(state: state, message: message)
+    Error(_) -> Nil
+  }
+}
+
+@target(erlang)
+fn broadcast_admin_game_update(
+  state state: State,
+  message message: admin_games_page.ServerMsg,
+) -> Nil {
+  case admin_games_request_game_id(message) {
+    Ok(game_id) ->
+      case app_api.game_updated_broadcast(state.db, game_id) {
+        Ok(event) ->
+          app_topics.broadcast_except_self(
+            "app",
+            app_api.push(module: "app", message: event),
+          )
+        Error(Nil) -> Nil
+      }
+    Error(Nil) -> Nil
+  }
+}
+
+@target(erlang)
+fn admin_games_request_game_id(
+  message: admin_games_page.ServerMsg,
+) -> Result(Int, Nil) {
+  case message {
+    admin_games_page.AdminGamesUpdateScore(game_id, ..) -> Ok(game_id)
+    admin_games_page.AdminGamesMarkFinal(game_id) -> Ok(game_id)
+    admin_games_page.AdminGamesLoad -> Error(Nil)
   }
 }
 
@@ -305,13 +431,7 @@ fn handle_root_client_frame(
         )
       let _sent =
         mist.send_binary_frame(conn, app_api.reply_result(reply, request_id:))
-      case reply {
-        app_api.LoadReply(..) -> Nil
-        app_api.SaveReply(messages: messages, ..) ->
-          list.each(messages, fn(message) {
-            broadcast_if_live_update(request: request_message, reply: message)
-          })
-      }
+      broadcast_if_live_update(request: request_message, reply: reply)
     }
     Error(Nil) -> Nil
   }
@@ -320,15 +440,21 @@ fn handle_root_client_frame(
 @target(erlang)
 fn broadcast_if_live_update(
   request request: ToServer,
-  reply reply: ToClient,
+  reply reply: app_api.DispatchReply,
 ) -> Nil {
-  case should_broadcast_live_update(request: request, reply: reply) {
-    True ->
-      app_topics.broadcast_except_self(
-        "app",
-        app_api.push(module: "app", message: reply),
-      )
-    False -> Nil
+  case reply {
+    app_api.SaveReply(messages: messages, ..) ->
+      list.each(messages, fn(message) {
+        case should_broadcast_live_update(request: request, reply: message) {
+          True ->
+            app_topics.broadcast_except_self(
+              "app",
+              app_api.push(module: "app", message: message),
+            )
+          False -> Nil
+        }
+      })
+    app_api.LoadReply(..) -> Nil
   }
 }
 
@@ -336,10 +462,9 @@ fn broadcast_if_live_update(
 @target(erlang)
 pub fn should_broadcast_live_update(
   request request: ToServer,
-  reply reply: ToClient,
+  reply reply: broadcasts.Event,
 ) -> Bool {
   case request, reply {
-    _, to_client.GameUpdated(_) -> True
-    _, _ -> False
+    _, broadcasts.BroadcastGameUpdated(_) -> True
   }
 }

@@ -65,6 +65,25 @@ import {
   PublicTeamDetailGameSummary,
   PublicTeamDetailTeamDetail,
 } from "../../public/pages/teams/slug_/wire.mjs";
+import {
+  AdminGamesLoad,
+  AdminGamesUpdateScore,
+  AdminGamesMarkFinal,
+  AdminGamesLoadResult,
+  AdminGamesSummary,
+  AdminGamesUpdate,
+  AdminGamesScheduled,
+  AdminGamesLive,
+  AdminGamesFinal,
+} from "../../admin/pages/games.mjs";
+import {
+  BroadcastGameUpdated,
+  BroadcastGameSnapshot,
+  BroadcastTeam,
+  BroadcastScheduled,
+  BroadcastLive,
+  BroadcastFinal,
+} from "../../broadcasts.mjs";
 
 const constructorRegistry = new Map();
 
@@ -569,6 +588,36 @@ export function ensure() {
   registerConstructor("public_team_detail_game_summary", PublicTeamDetailGameSummary, 6, ["int", undefined, undefined, "int", "int", undefined]);
   PublicTeamDetailTeamDetail.__wireAtom = "public_team_detail_team_detail";
   registerConstructor("public_team_detail_team_detail", PublicTeamDetailTeamDetail, 8, ["string", "string", "string", "int", "int", "int", "int", { kind: "list", element: undefined }]);
+  AdminGamesScheduled.__wireAtom = "admin_games_scheduled";
+  registerConstructor("admin_games_scheduled", AdminGamesScheduled, 0, []);
+  AdminGamesLive.__wireAtom = "admin_games_live";
+  registerConstructor("admin_games_live", AdminGamesLive, 1, ["string"]);
+  AdminGamesFinal.__wireAtom = "admin_games_final";
+  registerConstructor("admin_games_final", AdminGamesFinal, 0, []);
+  AdminGamesSummary.__wireAtom = "admin_games_summary";
+  registerConstructor("admin_games_summary", AdminGamesSummary, 7, ["int", "string", "string", "int", "int", undefined, "bool"]);
+  AdminGamesUpdate.__wireAtom = "admin_games_update";
+  registerConstructor("admin_games_update", AdminGamesUpdate, 6, ["int", "string", "string", "int", "int", undefined]);
+  AdminGamesLoadResult.__wireAtom = "admin_games_load_result";
+  registerConstructor("admin_games_load_result", AdminGamesLoadResult, 1, [{ kind: "list", element: undefined }]);
+  AdminGamesLoad.__wireAtom = "admin_games_load";
+  registerConstructor("admin_games_load", AdminGamesLoad, 0, []);
+  AdminGamesUpdateScore.__wireAtom = "admin_games_update_score";
+  registerConstructor("admin_games_update_score", AdminGamesUpdateScore, 4, ["int", "int", "int", "string"]);
+  AdminGamesMarkFinal.__wireAtom = "admin_games_mark_final";
+  registerConstructor("admin_games_mark_final", AdminGamesMarkFinal, 1, ["int"]);
+  BroadcastScheduled.__wireAtom = "broadcast_scheduled";
+  registerConstructor("broadcast_scheduled", BroadcastScheduled, 0, []);
+  BroadcastLive.__wireAtom = "broadcast_live";
+  registerConstructor("broadcast_live", BroadcastLive, 1, ["string"]);
+  BroadcastFinal.__wireAtom = "broadcast_final";
+  registerConstructor("broadcast_final", BroadcastFinal, 0, []);
+  BroadcastTeam.__wireAtom = "broadcast_team";
+  registerConstructor("broadcast_team", BroadcastTeam, 3, ["string", "string", "string"]);
+  BroadcastGameSnapshot.__wireAtom = "broadcast_game_snapshot";
+  registerConstructor("broadcast_game_snapshot", BroadcastGameSnapshot, 6, ["int", undefined, undefined, "int", "int", undefined]);
+  BroadcastGameUpdated.__wireAtom = "broadcast_game_updated";
+  registerConstructor("broadcast_game_updated", BroadcastGameUpdated, 1, [undefined]);
   Scheduled.__wireAtom = "scheduled";
   registerConstructor("scheduled", Scheduled, 0, []);
   Live.__wireAtom = "live";

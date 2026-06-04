@@ -14,27 +14,20 @@ import lustre/effect.{type Effect}
 import lustre/element.{type Element}
 import lustre/element/html
 import lustre/event
+import page_context.{type PageContext}
 @target(erlang)
 import sqlight
-
-@target(javascript)
-import api/domain/game as api_game
-@target(javascript)
-import api/to_client
-@target(javascript)
-import api/to_server
-import page_context.{type PageContext}
 
 // TYPES
 
 pub type GameStatus {
-  Scheduled
-  Live(period: String)
-  Final
+  AdminGamesScheduled
+  AdminGamesLive(period: String)
+  AdminGamesFinal
 }
 
 pub type AdminGameSummary {
-  AdminGameSummary(
+  AdminGamesSummary(
     id: Int,
     home_code: String,
     away_code: String,
@@ -46,7 +39,7 @@ pub type AdminGameSummary {
 }
 
 pub type GameUpdate {
-  GameUpdate(
+  AdminGamesUpdate(
     id: Int,
     home_code: String,
     away_code: String,
@@ -54,6 +47,10 @@ pub type GameUpdate {
     away_score: Int,
     status: GameStatus,
   )
+}
+
+pub type LoadResult {
+  AdminGamesLoadResult(games: List(AdminGameSummary))
 }
 
 pub type LoadError {
@@ -65,13 +62,14 @@ pub type SaveError {
 }
 
 pub type ServerMsg {
-  ServerUpdateScore(
+  AdminGamesLoad
+  AdminGamesUpdateScore(
     game_id: Int,
     home_score: Int,
     away_score: Int,
     period: String,
   )
-  ServerMarkFinal(game_id: Int)
+  AdminGamesMarkFinal(game_id: Int)
 }
 
 pub type Model {
@@ -226,7 +224,7 @@ fn final_action(
   on_mark_final: fn(Int) -> msg,
 ) -> Element(msg) {
   case game.status {
-    Final -> html.span([], [])
+    AdminGamesFinal -> html.span([], [])
     _ ->
       html.button(
         [
@@ -251,7 +249,7 @@ fn upsert_game(model: Model, game: AdminGameSummary) -> Model {
 }
 
 fn game_update_summary(game: GameUpdate) -> AdminGameSummary {
-  AdminGameSummary(
+  AdminGamesSummary(
     id: game.id,
     home_code: game.home_code,
     away_code: game.away_code,
@@ -264,10 +262,12 @@ fn game_update_summary(game: GameUpdate) -> AdminGameSummary {
 
 fn status_badge(status: GameStatus) -> Element(msg) {
   case status {
-    Scheduled -> html.span([attribute.class("badge")], [html.text("Scheduled")])
-    Live(period) ->
+    AdminGamesScheduled ->
+      html.span([attribute.class("badge")], [html.text("Scheduled")])
+    AdminGamesLive(period) ->
       html.span([attribute.class("badge live")], [html.text(period)])
-    Final -> html.span([attribute.class("badge final")], [html.text("Final")])
+    AdminGamesFinal ->
+      html.span([attribute.class("badge final")], [html.text("Final")])
   }
 }
 
@@ -275,9 +275,8 @@ fn status_badge(status: GameStatus) -> Element(msg) {
 
 @target(javascript)
 fn init_effect() -> Effect(Message) {
-  api_client.send_load(
-    module: "admin/games",
-    message: to_server.LoadAdminGames,
+  api_client.send_admin_games_load(
+    message: AdminGamesLoad,
     on_result: fn(result) { Loaded(map_load_result(result)) },
   )
 }
@@ -289,12 +288,10 @@ fn init_effect() -> Effect(Message) {
 
 @target(javascript)
 fn map_load_result(
-  result: Result(to_client.ToClient, List(wire_result.ApiLoadError)),
+  result: Result(LoadResult, List(wire_result.ApiLoadError)),
 ) -> Result(List(AdminGameSummary), LoadError) {
   case result {
-    Ok(to_client.AdminGamesLoaded(games)) ->
-      Ok(list.map(games, wire_admin_game_summary))
-    Ok(_) -> Error(LoadError(message: "Unexpected admin games response."))
+    Ok(AdminGamesLoadResult(games)) -> Ok(games)
     Error([wire_result.ApiLoadError(message: message), ..]) ->
       Error(LoadError(message: message))
     Error([]) -> Error(LoadError(message: "Could not load admin games."))
@@ -302,48 +299,11 @@ fn map_load_result(
 }
 
 @target(javascript)
-fn wire_admin_game_summary(
-  game: api_game.AdminGameSummary,
-) -> AdminGameSummary {
-  AdminGameSummary(
-    id: game.id,
-    home_code: game.home_code,
-    away_code: game.away_code,
-    home_score: game.home_score,
-    away_score: game.away_score,
-    status: wire_game_status(game.status),
-    needs_attention: game.needs_attention,
-  )
-}
-
-@target(javascript)
-fn wire_game_status(status: api_game.GameStatus) -> GameStatus {
-  case status {
-    api_game.Scheduled -> Scheduled
-    api_game.Live(period) -> Live(period)
-    api_game.Final -> Final
-  }
-}
-
-@target(javascript)
-fn wire_game_update(game: api_game.GameSnapshot) -> GameUpdate {
-  GameUpdate(
-    id: game.id,
-    home_code: game.home.code,
-    away_code: game.away.code,
-    home_score: game.home_score,
-    away_score: game.away_score,
-    status: wire_game_status(game.status),
-  )
-}
-
-@target(javascript)
 fn message_effect(msg: Message) -> Effect(Message) {
   case msg {
     AdjustAway(id, home_score, away_score, delta) ->
-      api_client.send_save(
-        module: "admin/games",
-        message: to_server.UpdateScore(
+      api_client.send_admin_games_save(
+        message: AdminGamesUpdateScore(
           game_id: id,
           home_score: home_score,
           away_score: clamp_score(away_score + delta),
@@ -352,9 +312,8 @@ fn message_effect(msg: Message) -> Effect(Message) {
         on_result: fn(result) { Saved(map_save_result(result)) },
       )
     AdjustHome(id, home_score, away_score, delta) ->
-      api_client.send_save(
-        module: "admin/games",
-        message: to_server.UpdateScore(
+      api_client.send_admin_games_save(
+        message: AdminGamesUpdateScore(
           game_id: id,
           home_score: clamp_score(home_score + delta),
           away_score: away_score,
@@ -363,9 +322,8 @@ fn message_effect(msg: Message) -> Effect(Message) {
         on_result: fn(result) { Saved(map_save_result(result)) },
       )
     MarkFinal(id) ->
-      api_client.send_save(
-        module: "admin/games",
-        message: to_server.MarkFinal(id),
+      api_client.send_admin_games_save(
+        message: AdminGamesMarkFinal(id),
         on_result: fn(result) { Saved(map_save_result(result)) },
       )
     Loaded(_) | Saved(_) -> effect.none()
@@ -388,11 +346,10 @@ fn clamp_score(score: Int) -> Int {
 
 @target(javascript)
 fn map_save_result(
-  result: Result(to_client.ToClient, List(wire_result.ApiSaveError)),
+  result: Result(GameUpdate, List(wire_result.ApiSaveError)),
 ) -> Result(GameUpdate, SaveError) {
   case result {
-    Ok(to_client.GameUpdated(game)) -> Ok(wire_game_update(game))
-    Ok(_) -> Error(SaveError(message: "Unexpected save response."))
+    Ok(game) -> Ok(game)
     Error([wire_result.ApiSaveError(message: message, ..), ..]) ->
       Error(SaveError(message: message))
     Error([]) -> Error(SaveError(message: "Could not save game."))
@@ -418,7 +375,8 @@ pub fn handle(
   msg: ServerMsg,
 ) -> Result(GameUpdate, SaveError) {
   case msg {
-    ServerUpdateScore(game_id, home_score, away_score, period) ->
+    AdminGamesLoad -> Error(SaveError(message: "Load is not a save action."))
+    AdminGamesUpdateScore(game_id, home_score, away_score, period) ->
       case
         games_sql.update_game_score(
           db: db,
@@ -434,7 +392,7 @@ pub fn handle(
           Error(SaveError(message: "Could not save game."))
       }
 
-    ServerMarkFinal(game_id) ->
+    AdminGamesMarkFinal(game_id) ->
       case games_sql.update_game_final(db: db, game_id: game_id) {
         Ok([row, ..]) -> Ok(game_update_from_final_row(row))
         Ok([]) -> Error(SaveError(message: "Game not found."))
@@ -448,7 +406,7 @@ pub fn handle(
 fn admin_game_summary_from_row(
   row: games_sql.ListAdminGamesRow,
 ) -> AdminGameSummary {
-  AdminGameSummary(
+  AdminGamesSummary(
     id: row.id,
     home_code: row.home_code,
     away_code: row.away_code,
@@ -461,7 +419,7 @@ fn admin_game_summary_from_row(
 
 @target(erlang)
 fn game_update_from_score_row(row: games_sql.UpdateGameScoreRow) -> GameUpdate {
-  GameUpdate(
+  AdminGamesUpdate(
     id: row.id,
     home_code: row.home_code,
     away_code: row.away_code,
@@ -473,7 +431,7 @@ fn game_update_from_score_row(row: games_sql.UpdateGameScoreRow) -> GameUpdate {
 
 @target(erlang)
 fn game_update_from_final_row(row: games_sql.UpdateGameFinalRow) -> GameUpdate {
-  GameUpdate(
+  AdminGamesUpdate(
     id: row.id,
     home_code: row.home_code,
     away_code: row.away_code,
@@ -486,8 +444,8 @@ fn game_update_from_final_row(row: games_sql.UpdateGameFinalRow) -> GameUpdate {
 @target(erlang)
 fn game_status(period: String, final: Int) -> GameStatus {
   case final == 1, period {
-    True, _ -> Final
-    False, "Scheduled" -> Scheduled
-    False, _ -> Live(period)
+    True, _ -> AdminGamesFinal
+    False, "Scheduled" -> AdminGamesScheduled
+    False, _ -> AdminGamesLive(period)
   }
 }

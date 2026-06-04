@@ -1,7 +1,8 @@
-@target(javascript)
 import api/to_client.{type ToClient}
 @target(javascript)
 import api/to_server.{type ToServer}
+@target(javascript)
+import broadcasts
 @target(javascript)
 import generated/libero/result.{type ApiLoadError, type ApiSaveError}
 @target(javascript)
@@ -20,7 +21,7 @@ import public/pages/teams/slug_/wire as public_team_detail_wire
 @target(javascript)
 pub type ServerFrame {
   Response(message: ToClient)
-  Push(module: String, message: ToClient)
+  Push(module: String, message: broadcasts.Event)
 }
 
 @target(javascript)
@@ -41,6 +42,14 @@ pub fn encode_request(
   message message: ToServer,
 ) -> BitArray {
   encode_any(#(request_id, module, message))
+}
+
+@target(javascript)
+pub fn encode_admin_games_request(
+  request_id request_id: Int,
+  message message: a,
+) -> BitArray {
+  encode_any(#(request_id, "admin/games", message))
 }
 
 @target(javascript)
@@ -117,6 +126,13 @@ pub fn decode_load_result(
 }
 
 @target(javascript)
+pub fn decode_admin_games_load_result(
+  bytes: BitArray,
+) -> Result(#(Int, Result(a, List(ApiLoadError))), Nil) {
+  decode_result_envelope(bytes)
+}
+
+@target(javascript)
 pub fn decode_public_game_detail_load_result(
   bytes: BitArray,
 ) -> Result(
@@ -160,6 +176,13 @@ pub fn decode_public_team_detail_load_result(
 pub fn decode_save_result(
   bytes: BitArray,
 ) -> Result(#(Int, Result(ToClient, List(ApiSaveError))), Nil) {
+  decode_result_envelope(bytes)
+}
+
+@target(javascript)
+pub fn decode_admin_games_save_result(
+  bytes: BitArray,
+) -> Result(#(Int, Result(a, List(ApiSaveError))), Nil) {
   decode_result_envelope(bytes)
 }
 

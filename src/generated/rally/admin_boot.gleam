@@ -1,7 +1,6 @@
 import admin/pages/games as admin_games_page
-import api/domain/game as api_game
 import api/to_client.{type ToClient}
-import api/to_server.{type ToServer}
+import broadcasts
 @target(javascript)
 import generated/libero/result as wire_result
 @target(javascript)
@@ -15,13 +14,6 @@ import lustre/effect.{type Effect}
 @target(javascript)
 import page_context.{type PageContext}
 
-pub fn requests(route: routes.Route) -> List(ToServer) {
-  case route {
-    routes.AdminHome | routes.AdminGames -> [to_server.LoadAdminGames]
-    routes.NotFound -> []
-  }
-}
-
 @target(javascript)
 pub fn load_client(
   page_context page_context: PageContext,
@@ -33,40 +25,26 @@ pub fn load_client(
 
 @target(javascript)
 fn request_effect(route: routes.Route) -> Effect(pages.Message) {
-  route
-  |> requests
-  |> list.map(fn(request) {
-    client_transport.send_load(
-      module: request_module(route),
-      message: request,
-      on_result: fn(result) { load_result_message(route, result) },
-    )
-  })
-  |> effect.batch
-}
-
-@target(javascript)
-fn request_module(route: routes.Route) -> String {
   case route {
-    routes.AdminHome | routes.AdminGames -> "admin/games"
-    routes.NotFound -> ""
+    routes.AdminHome | routes.AdminGames ->
+      client_transport.send_admin_games_load(
+        message: admin_games_page.AdminGamesLoad,
+        on_result: fn(result) { load_result_message(route, result) },
+      )
+    routes.NotFound -> effect.none()
   }
 }
 
 @target(javascript)
-fn load_result_message(
+pub fn load_result_message(
   route: routes.Route,
-  result: Result(ToClient, List(wire_result.ApiLoadError)),
+  result: Result(admin_games_page.LoadResult, List(wire_result.ApiLoadError)),
 ) -> pages.Message {
   case route, result {
-    routes.AdminHome, Ok(to_client.AdminGamesLoaded(games)) ->
-      pages.AdminHomeMsg(
-        admin_games_page.Loaded(Ok(list.map(games, admin_game_summary))),
-      )
-    routes.AdminGames, Ok(to_client.AdminGamesLoaded(games)) ->
-      pages.AdminGamesMsg(
-        admin_games_page.Loaded(Ok(list.map(games, admin_game_summary))),
-      )
+    routes.AdminHome, Ok(admin_games_page.AdminGamesLoadResult(games)) ->
+      pages.AdminHomeMsg(admin_games_page.Loaded(Ok(games)))
+    routes.AdminGames, Ok(admin_games_page.AdminGamesLoadResult(games)) ->
+      pages.AdminGamesMsg(admin_games_page.Loaded(Ok(games)))
     _, Error(errors) -> load_error_message(route, api_load_error(errors))
     _, Ok(_) -> load_error_message(route, "Unexpected admin load response.")
   }
@@ -100,34 +78,22 @@ fn api_load_error(errors: List(wire_result.ApiLoadError)) -> String {
 
 pub fn apply_message(
   page page: pages.Page,
-  message message: ToClient,
+  message _message: ToClient,
+) -> #(pages.Page, Effect(pages.Message)) {
+  #(page, effect.none())
+}
+
+pub fn apply_broadcast(
+  page page: pages.Page,
+  message message: broadcasts.Event,
 ) -> #(pages.Page, Effect(pages.Message)) {
   case page, message {
-    pages.AdminHomePage(model), to_client.AdminGamesLoaded(games) -> {
-      let #(model, page_effect) =
-        admin_games_page.admin_games_loaded(
-          model,
-          list.map(games, admin_game_summary),
-        )
-      #(pages.AdminHomePage(model), effect.map(page_effect, pages.AdminHomeMsg))
-    }
-    pages.AdminHomePage(model), to_client.GameUpdated(game) -> {
+    pages.AdminHomePage(model), broadcasts.BroadcastGameUpdated(game) -> {
       let #(model, page_effect) =
         admin_games_page.game_updated(model, admin_game_update(game))
       #(pages.AdminHomePage(model), effect.map(page_effect, pages.AdminHomeMsg))
     }
-    pages.AdminGamesPage(model), to_client.AdminGamesLoaded(games) -> {
-      let #(model, page_effect) =
-        admin_games_page.admin_games_loaded(
-          model,
-          list.map(games, admin_game_summary),
-        )
-      #(
-        pages.AdminGamesPage(model),
-        effect.map(page_effect, pages.AdminGamesMsg),
-      )
-    }
-    pages.AdminGamesPage(model), to_client.GameUpdated(game) -> {
+    pages.AdminGamesPage(model), broadcasts.BroadcastGameUpdated(game) -> {
       let #(model, page_effect) =
         admin_games_page.game_updated(model, admin_game_update(game))
       #(
@@ -149,39 +115,34 @@ pub fn apply_messages(
   })
 }
 
-fn admin_game_summary(
-  game: api_game.AdminGameSummary,
-) -> admin_games_page.AdminGameSummary {
-  admin_games_page.AdminGameSummary(
-    id: game.id,
-    home_code: game.home_code,
-    away_code: game.away_code,
-    home_score: game.home_score,
-    away_score: game.away_score,
-    status: admin_game_status(game.status),
-    needs_attention: game.needs_attention,
-  )
-}
-
 fn admin_game_update(
-  game: api_game.GameSnapshot,
+  game: broadcasts.GameSnapshot,
 ) -> admin_games_page.GameUpdate {
-  admin_games_page.GameUpdate(
-    id: game.id,
-    home_code: game.home.code,
-    away_code: game.away.code,
-    home_score: game.home_score,
-    away_score: game.away_score,
-    status: admin_game_status(game.status),
+  let broadcasts.BroadcastGameSnapshot(
+    id:,
+    home: broadcasts.BroadcastTeam(code: home_code, ..),
+    away: broadcasts.BroadcastTeam(code: away_code, ..),
+    home_score:,
+    away_score:,
+    status:,
+  ) = game
+
+  admin_games_page.AdminGamesUpdate(
+    id:,
+    home_code:,
+    away_code:,
+    home_score:,
+    away_score:,
+    status: admin_game_status(status),
   )
 }
 
 fn admin_game_status(
-  status: api_game.GameStatus,
+  status: broadcasts.GameStatus,
 ) -> admin_games_page.GameStatus {
   case status {
-    api_game.Scheduled -> admin_games_page.Scheduled
-    api_game.Live(period) -> admin_games_page.Live(period)
-    api_game.Final -> admin_games_page.Final
+    broadcasts.BroadcastScheduled -> admin_games_page.AdminGamesScheduled
+    broadcasts.BroadcastLive(period) -> admin_games_page.AdminGamesLive(period)
+    broadcasts.BroadcastFinal -> admin_games_page.AdminGamesFinal
   }
 }
