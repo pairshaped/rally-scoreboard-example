@@ -14,6 +14,8 @@ import public/pages/games/id_/wire as public_game_detail_wire
 import public/pages/games/wire as public_games_wire
 @target(javascript)
 import public/pages/standings/wire as public_standings_wire
+@target(javascript)
+import public/pages/teams/slug_/wire as public_team_detail_wire
 
 @target(javascript)
 pub type ServerFrame {
@@ -68,6 +70,18 @@ pub fn encode_public_standings_request(request_id request_id: Int) -> BitArray {
     request_id,
     "public/pages/standings",
     public_standings_wire.PublicStandingsLoad,
+  ))
+}
+
+@target(javascript)
+pub fn encode_public_team_detail_request(
+  request_id request_id: Int,
+  slug slug: String,
+) -> BitArray {
+  encode_any(#(
+    request_id,
+    "public/pages/teams/slug_",
+    public_team_detail_wire.PublicTeamDetailLoad(slug:),
   ))
 }
 
@@ -127,6 +141,16 @@ pub fn decode_public_standings_load_result(
   bytes: BitArray,
 ) -> Result(
   #(Int, Result(public_standings_wire.LoadResult, List(ApiLoadError))),
+  Nil,
+) {
+  decode_result_envelope(bytes)
+}
+
+@target(javascript)
+pub fn decode_public_team_detail_load_result(
+  bytes: BitArray,
+) -> Result(
+  #(Int, Result(public_team_detail_wire.LoadResult, List(ApiLoadError))),
   Nil,
 ) {
   decode_result_envelope(bytes)

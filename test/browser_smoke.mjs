@@ -175,6 +175,29 @@ try {
     await page.waitForTimeout(500);
   });
 
+  await step("load hydrated /teams/toronto-towers", async () => {
+    sentFrames.length = 0;
+    receivedFrames.length = 0;
+
+    await page.goto(url("/teams/toronto-towers"), {
+      waitUntil: "domcontentloaded",
+    });
+    await page.getByRole("heading", { name: "Toronto Towers" }).waitFor();
+    await page.getByText("Recent games").waitFor();
+    await page.waitForTimeout(500);
+
+    assert.equal(
+      await page.locator("#app").getAttribute("data-hydration"),
+      null,
+      "team detail hydration data should be consumed after browser boot",
+    );
+    assert.equal(
+      sentFrames.length,
+      0,
+      "hydrated direct /teams/toronto-towers load should not send an initial websocket load request",
+    );
+  });
+
   await step("sign in to admin", async () => {
     await page.goto(url("/sign_in?return_to=/admin/games"), {
       waitUntil: "domcontentloaded",

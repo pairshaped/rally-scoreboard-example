@@ -18,8 +18,6 @@ import generated/proute/public/pages as public_pages
 import generated/proute/public/routes as public_routes
 @target(erlang)
 import generated/rally/admin_boot
-@target(erlang)
-import generated/rally/public_boot
 
 @target(erlang)
 import gleam/bit_array
@@ -69,6 +67,10 @@ import public/pages/games/wire as public_games_wire
 import public/pages/standings as public_standings_page
 @target(erlang)
 import public/pages/standings/wire as public_standings_wire
+@target(erlang)
+import public/pages/teams/slug_ as public_team_detail_page
+@target(erlang)
+import public/pages/teams/slug_/wire as public_team_detail_wire
 
 // TYPES
 
@@ -200,14 +202,30 @@ fn public_boot_page(
         public_standings_hydration_payload(result),
       ])
     }
+    public_routes.TeamsSlug(slug) -> {
+      let result = public_team_detail_page.load(db, slug)
+      #(apply_public_team_detail_load_result(page, result), [
+        public_team_detail_hydration_payload(result),
+      ])
+    }
     _ -> {
-      let messages = public_boot_messages(db, route)
-      #(
-        public_boot.apply_messages(page, messages),
-        hydration_payloads(messages),
-      )
+      #(page, [])
     }
   }
+}
+
+@target(erlang)
+fn apply_public_team_detail_load_result(
+  page page: public_pages.Page,
+  result result: Result(
+    public_team_detail_page.TeamDetail,
+    public_team_detail_page.LoadError,
+  ),
+) -> public_pages.Page {
+  let message =
+    public_pages.TeamsSlugMsg(public_team_detail_page.Loaded(result))
+  let #(page, _) = public_pages.update(page, message)
+  page
 }
 
 @target(erlang)
@@ -284,6 +302,20 @@ fn apply_public_games_load_result(
 }
 
 @target(erlang)
+fn public_team_detail_hydration_payload(
+  result result: Result(
+    public_team_detail_page.TeamDetail,
+    public_team_detail_page.LoadError,
+  ),
+) -> String {
+  generated_server.ensure()
+  result
+  |> public_team_detail_wire_result
+  |> generated_server.encode_public_team_detail_load_result(request_id: 0)
+  |> bit_array.base64_url_encode(False)
+}
+
+@target(erlang)
 fn public_game_detail_hydration_payload(
   result result: Result(
     public_game_detail_page.GameDetail,
@@ -323,6 +355,25 @@ fn public_games_hydration_payload(
   |> public_games_wire_result
   |> generated_server.encode_public_games_load_result(request_id: 0)
   |> bit_array.base64_url_encode(False)
+}
+
+@target(erlang)
+fn public_team_detail_wire_result(
+  result result: Result(
+    public_team_detail_page.TeamDetail,
+    public_team_detail_page.LoadError,
+  ),
+) -> Result(public_team_detail_wire.LoadResult, List(ApiLoadError)) {
+  case result {
+    Ok(team) ->
+      Ok(
+        public_team_detail_wire.PublicTeamDetailLoaded(
+          public_team_detail_page.to_wire_detail(team),
+        ),
+      )
+    Error(public_team_detail_page.LoadError(message: message)) ->
+      Error([ApiLoadError(message:)])
+  }
 }
 
 @target(erlang)
@@ -394,18 +445,6 @@ fn boot_identity(
     Ok(user) -> #(Some(user.context), app_auth.can_access_admin(user))
     Error(Nil) -> #(None, False)
   }
-}
-
-@target(erlang)
-fn public_boot_messages(
-  db: sqlight.Connection,
-  route: public_routes.Route,
-) -> List(to_client.ToClient) {
-  dispatch_requests(
-    db: db,
-    requests: public_boot.requests(route),
-    admin_authorized: False,
-  )
 }
 
 @target(erlang)

@@ -55,6 +55,16 @@ import {
   PublicStandingsTeam,
   PublicStandingsGameSummary,
 } from "../../public/pages/standings/wire.mjs";
+import {
+  PublicTeamDetailLoad,
+  PublicTeamDetailLoaded,
+  PublicTeamDetailScheduled,
+  PublicTeamDetailLive,
+  PublicTeamDetailFinal,
+  PublicTeamDetailTeam,
+  PublicTeamDetailGameSummary,
+  PublicTeamDetailTeamDetail,
+} from "../../public/pages/teams/slug_/wire.mjs";
 
 const constructorRegistry = new Map();
 
@@ -543,6 +553,22 @@ export function ensure() {
   registerConstructor("public_standings_team", PublicStandingsTeam, 3, ["string", "string", "string"]);
   PublicStandingsGameSummary.__wireAtom = "public_standings_game_summary";
   registerConstructor("public_standings_game_summary", PublicStandingsGameSummary, 6, ["int", undefined, undefined, "int", "int", undefined]);
+  PublicTeamDetailLoad.__wireAtom = "public_team_detail_load";
+  registerConstructor("public_team_detail_load", PublicTeamDetailLoad, 1, ["string"]);
+  PublicTeamDetailLoaded.__wireAtom = "public_team_detail_loaded";
+  registerConstructor("public_team_detail_loaded", PublicTeamDetailLoaded, 1, [undefined]);
+  PublicTeamDetailScheduled.__wireAtom = "public_team_detail_scheduled";
+  registerConstructor("public_team_detail_scheduled", PublicTeamDetailScheduled, 0, []);
+  PublicTeamDetailLive.__wireAtom = "public_team_detail_live";
+  registerConstructor("public_team_detail_live", PublicTeamDetailLive, 1, ["string"]);
+  PublicTeamDetailFinal.__wireAtom = "public_team_detail_final";
+  registerConstructor("public_team_detail_final", PublicTeamDetailFinal, 0, []);
+  PublicTeamDetailTeam.__wireAtom = "public_team_detail_team";
+  registerConstructor("public_team_detail_team", PublicTeamDetailTeam, 3, ["string", "string", "string"]);
+  PublicTeamDetailGameSummary.__wireAtom = "public_team_detail_game_summary";
+  registerConstructor("public_team_detail_game_summary", PublicTeamDetailGameSummary, 6, ["int", undefined, undefined, "int", "int", undefined]);
+  PublicTeamDetailTeamDetail.__wireAtom = "public_team_detail_team_detail";
+  registerConstructor("public_team_detail_team_detail", PublicTeamDetailTeamDetail, 8, ["string", "string", "string", "int", "int", "int", "int", { kind: "list", element: undefined }]);
   Scheduled.__wireAtom = "scheduled";
   registerConstructor("scheduled", Scheduled, 0, []);
   Live.__wireAtom = "live";

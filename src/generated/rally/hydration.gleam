@@ -20,6 +20,8 @@ import public/pages/games/id_/wire as public_game_detail_wire
 import public/pages/games/wire as public_games_wire
 @target(javascript)
 import public/pages/standings/wire as public_standings_wire
+@target(javascript)
+import public/pages/teams/slug_/wire as public_team_detail_wire
 
 @target(javascript)
 pub fn messages() -> Result(List(ToClient), Nil) {
@@ -75,6 +77,21 @@ pub fn public_standings_load_result() -> Result(
 }
 
 @target(javascript)
+pub fn public_team_detail_load_result() -> Result(
+  Result(public_team_detail_wire.LoadResult, List(ApiLoadError)),
+  Nil,
+) {
+  case browser.take_boot_string("hydration") {
+    "" -> Error(Nil)
+    raw ->
+      case string.split(raw, ",") {
+        [encoded, ..] -> decode_public_team_detail_load_result(encoded)
+        [] -> Error(Nil)
+      }
+  }
+}
+
+@target(javascript)
 fn decode_all(
   encoded: List(String),
   decoded: List(ToClient),
@@ -104,6 +121,20 @@ fn decode_public_games_load_result(
   case bit_array.base64_url_decode(encoded) {
     Ok(bytes) ->
       case generated_client.decode_public_games_load_result(bytes) {
+        Ok(#(_, result)) -> Ok(result)
+        Error(Nil) -> Error(Nil)
+      }
+    Error(_) -> Error(Nil)
+  }
+}
+
+@target(javascript)
+fn decode_public_team_detail_load_result(
+  encoded: String,
+) -> Result(Result(public_team_detail_wire.LoadResult, List(ApiLoadError)), Nil) {
+  case bit_array.base64_url_decode(encoded) {
+    Ok(bytes) ->
+      case generated_client.decode_public_team_detail_load_result(bytes) {
         Ok(#(_, result)) -> Ok(result)
         Error(Nil) -> Error(Nil)
       }

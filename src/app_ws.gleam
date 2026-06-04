@@ -41,6 +41,10 @@ import public/pages/games/wire as public_games_wire
 import public/pages/standings as public_standings_page
 @target(erlang)
 import public/pages/standings/wire as public_standings_wire
+@target(erlang)
+import public/pages/teams/slug_ as public_team_detail_page
+@target(erlang)
+import public/pages/teams/slug_/wire as public_team_detail_wire
 
 // TYPES
 
@@ -142,7 +146,24 @@ fn handle_client_frame(
                 conn: conn,
                 request_id:,
               )
-            _ -> handle_root_client_frame(state: state, conn: conn, data: data)
+            _ ->
+              case generated_server.decode_public_team_detail_request(data) {
+                Ok(generated_server.PublicTeamDetailClientRequest(
+                  request_id: request_id,
+                  module: "public/pages/teams/slug_",
+                  message: public_team_detail_wire.PublicTeamDetailLoad(
+                    slug: slug,
+                  ),
+                )) ->
+                  handle_public_team_detail_load(
+                    state: state,
+                    conn: conn,
+                    request_id:,
+                    slug:,
+                  )
+                _ ->
+                  handle_root_client_frame(state: state, conn: conn, data: data)
+              }
           }
       }
   }
@@ -228,6 +249,35 @@ fn handle_public_standings_load(
     mist.send_binary_frame(
       conn,
       generated_server.encode_public_standings_load_result(
+        request_id: request_id,
+        result: result,
+      ),
+    )
+  Nil
+}
+
+@target(erlang)
+fn handle_public_team_detail_load(
+  state state: State,
+  conn conn: WebsocketConnection,
+  request_id request_id: Int,
+  slug slug: String,
+) -> Nil {
+  let result = case public_team_detail_page.load(state.db, slug) {
+    Ok(team) ->
+      Ok(
+        public_team_detail_wire.PublicTeamDetailLoaded(
+          public_team_detail_page.to_wire_detail(team),
+        ),
+      )
+    Error(public_team_detail_page.LoadError(message: message)) ->
+      Error([wire_result.ApiLoadError(message:)])
+  }
+
+  let _sent =
+    mist.send_binary_frame(
+      conn,
+      generated_server.encode_public_team_detail_load_result(
         request_id: request_id,
         result: result,
       ),

@@ -14,6 +14,8 @@ import public/pages/games/id_/wire as public_game_detail_wire
 import public/pages/games/wire as public_games_wire
 @target(javascript)
 import public/pages/standings/wire as public_standings_wire
+@target(javascript)
+import public/pages/teams/slug_/wire as public_team_detail_wire
 
 @target(javascript)
 pub fn connect(
@@ -89,6 +91,21 @@ pub fn send_public_standings_load(
 }
 
 @target(javascript)
+pub fn send_public_team_detail_load(
+  slug slug: String,
+  on_result on_result: fn(
+    Result(public_team_detail_wire.LoadResult, List(ApiLoadError)),
+  ) -> msg,
+) -> Effect(msg) {
+  effect.from(fn(dispatch) {
+    let request_id = next_request_id()
+    let frame =
+      generated_client.encode_public_team_detail_request(request_id, slug)
+    send_public_team_detail_load_frame(request_id, frame, on_result, dispatch)
+  })
+}
+
+@target(javascript)
 pub fn send_save(
   module module: String,
   message message: ToServer,
@@ -154,6 +171,18 @@ fn send_public_standings_load_frame(
   _request_id: Int,
   _frame: BitArray,
   _on_result: fn(Result(public_standings_wire.LoadResult, List(ApiLoadError))) ->
+    msg,
+  _dispatch: fn(msg) -> Nil,
+) -> Nil {
+  Nil
+}
+
+@target(javascript)
+@external(javascript, "./client_transport_ffi.mjs", "send_load_frame")
+fn send_public_team_detail_load_frame(
+  _request_id: Int,
+  _frame: BitArray,
+  _on_result: fn(Result(public_team_detail_wire.LoadResult, List(ApiLoadError))) ->
     msg,
   _dispatch: fn(msg) -> Nil,
 ) -> Nil {
