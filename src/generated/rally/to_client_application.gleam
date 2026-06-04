@@ -17,7 +17,6 @@ fn apply_public_frame(
   frame frame: client_protocol.ServerFrame,
 ) -> #(public_pages.Page, effect.Effect(public_pages.Message)) {
   case frame {
-    client_protocol.Response(_) -> #(page, effect.none())
     client_protocol.Push(message: message, ..) ->
       public_boot.apply_broadcast(page: page, message:)
   }
@@ -29,7 +28,6 @@ fn apply_admin_frame(
   frame frame: client_protocol.ServerFrame,
 ) -> #(admin_pages.Page, effect.Effect(admin_pages.Message)) {
   case frame {
-    client_protocol.Response(_) -> #(page, effect.none())
     client_protocol.Push(message: message, ..) ->
       admin_boot.apply_broadcast(page: page, message:)
   }

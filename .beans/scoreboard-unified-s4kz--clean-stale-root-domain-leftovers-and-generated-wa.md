@@ -8,7 +8,7 @@ tags:
     - rally
     - chase
 created_at: 2026-06-04T03:38:31Z
-updated_at: 2026-06-04T17:00:18Z
+updated_at: 2026-06-04T17:04:52Z
 parent: scoreboard-unified-wm8p
 blocked_by:
     - scoreboard-unified-qf1q
@@ -66,3 +66,17 @@ Validated with:
 • SCOREBOARD_BASE_URL=http://localhost:8104 node test/browser_smoke.mjs
 
 Remaining root ToClient/ToServer references are isolated to Rally-generated generic compatibility helpers in client_protocol/client_transport/hydration/server_protocol, so the next deletion should be made in Rally load-rpc generation and then regenerated into the app.
+
+
+
+Third cleanup pass moved the generic root-helper deletion into Rally load-rpc generation and regenerated chase. generated/rally/client_protocol.gleam, client_transport.gleam, hydration.gleam, and server_protocol.gleam no longer emit root ToClient/ToServer request/response/hydration helpers. The app-side to_client_application now only applies broadcast push frames.
+
+Validated with:
+
+• Rally `gleam build`
+• Rally `gleam test --target erlang` (load-rpc snapshots accepted; existing JSON fixture failures remain because fixtures/json_protocol/build/packages/libero/gleam.toml is missing)
+• Chase `gleam build --target erlang`
+• Chase `gleam build --target javascript`
+• Chase `gleam test --target erlang`
+• SCOREBOARD_BASE_URL=http://localhost:8105 node test/ws_result_smoke.mjs
+• SCOREBOARD_BASE_URL=http://localhost:8106 node test/browser_smoke.mjs
