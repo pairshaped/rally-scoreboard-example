@@ -1,6 +1,4 @@
 @target(javascript)
-import api/to_client.{type ToClient}
-@target(javascript)
 import generated/proute/admin/pages as admin_pages
 @target(javascript)
 import generated/proute/public/pages as public_pages
@@ -19,8 +17,7 @@ fn apply_public_frame(
   frame frame: client_protocol.ServerFrame,
 ) -> #(public_pages.Page, effect.Effect(public_pages.Message)) {
   case frame {
-    client_protocol.Response(message: message) ->
-      apply_public(page: page, message:)
+    client_protocol.Response(_) -> #(page, effect.none())
     client_protocol.Push(message: message, ..) ->
       public_boot.apply_broadcast(page: page, message:)
   }
@@ -32,8 +29,7 @@ fn apply_admin_frame(
   frame frame: client_protocol.ServerFrame,
 ) -> #(admin_pages.Page, effect.Effect(admin_pages.Message)) {
   case frame {
-    client_protocol.Response(message: message) ->
-      apply_admin(page: page, message:)
+    client_protocol.Response(_) -> #(page, effect.none())
     client_protocol.Push(message: message, ..) ->
       admin_boot.apply_broadcast(page: page, message:)
   }
@@ -59,20 +55,4 @@ pub fn decode_and_apply_admin(
     Ok(frame) -> apply_admin_frame(page: page, frame: frame)
     Error(Nil) -> #(page, effect.none())
   }
-}
-
-@target(javascript)
-pub fn apply_public(
-  page page: public_pages.Page,
-  message message: ToClient,
-) -> #(public_pages.Page, effect.Effect(public_pages.Message)) {
-  public_boot.apply_message(page: page, message: message)
-}
-
-@target(javascript)
-pub fn apply_admin(
-  page page: admin_pages.Page,
-  message message: ToClient,
-) -> #(admin_pages.Page, effect.Effect(admin_pages.Message)) {
-  admin_boot.apply_message(page: page, message: message)
 }

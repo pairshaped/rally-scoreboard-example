@@ -1,4 +1,3 @@
-import api/to_client.{type ToClient}
 import broadcasts
 @target(javascript)
 import generated/libero/result as wire_result
@@ -11,6 +10,7 @@ import generated/proute/public/routes
 import generated/rally/client_transport
 @target(javascript)
 import gleam/int
+@target(javascript)
 import gleam/list
 import lustre/effect.{type Effect}
 @target(javascript)
@@ -180,13 +180,6 @@ fn api_load_error(errors: List(wire_result.ApiLoadError)) -> String {
   }
 }
 
-pub fn apply_message(
-  page page: pages.Page,
-  message _message: ToClient,
-) -> #(pages.Page, Effect(pages.Message)) {
-  #(page, effect.none())
-}
-
 pub fn apply_broadcast(
   page page: pages.Page,
   message message: broadcasts.Event,
@@ -219,16 +212,6 @@ pub fn apply_broadcast(
     }
     _, _ -> #(page, effect.none())
   }
-}
-
-pub fn apply_messages(
-  page page: pages.Page,
-  messages messages: List(ToClient),
-) -> pages.Page {
-  list.fold(messages, page, fn(page, message) {
-    let #(page, _) = apply_message(page: page, message: message)
-    page
-  })
 }
 
 fn public_game_update(game: broadcasts.GameSnapshot) -> games_page.GameUpdate {

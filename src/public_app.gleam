@@ -18,8 +18,6 @@ import generated/rally/to_client_application
 @target(javascript)
 import gleam/int
 @target(javascript)
-import gleam/list
-@target(javascript)
 import gleam/option.{type Option, None, Some}
 
 @target(javascript)
@@ -112,7 +110,7 @@ fn initial_page(
     routes.GamesId(_) -> initial_public_game_detail_page(route, query_params)
     routes.Standings -> initial_public_standings_page(route, query_params)
     routes.TeamsSlug(_) -> initial_public_team_detail_page(route, query_params)
-    _ -> initial_root_hydrated_page(route, query_params)
+    _ -> public_boot.load_client(PageContext, query_params, route)
   }
 }
 
@@ -177,29 +175,6 @@ fn initial_public_standings_page(
       let message =
         public_boot.public_standings_load_result_message(route, result)
       let #(page, _) = pages.update(page, message)
-      #(page, effect.none())
-    }
-    Error(Nil) -> public_boot.load_client(PageContext, query_params, route)
-  }
-}
-
-@target(javascript)
-fn initial_root_hydrated_page(
-  route route: routes.Route,
-  query_params query_params: page_input.QueryParams,
-) -> #(pages.Page, Effect(pages.Message)) {
-  case hydration.messages() {
-    Ok(messages) -> {
-      let page =
-        list.fold(
-          messages,
-          pages.load_sync(PageContext, query_params, route),
-          fn(page, message) {
-            let #(page, _) =
-              to_client_application.apply_public(page: page, message: message)
-            page
-          },
-        )
       #(page, effect.none())
     }
     Error(Nil) -> public_boot.load_client(PageContext, query_params, route)

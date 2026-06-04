@@ -16,8 +16,6 @@ import generated/rally/hydration
 import generated/rally/to_client_application
 
 @target(javascript)
-import gleam/list
-@target(javascript)
 import gleam/option.{None}
 
 @target(javascript)
@@ -103,26 +101,7 @@ fn initial_page(
       let #(page, _) = pages.update(PageContext, page, message)
       #(page, effect.none())
     }
-    _, _ ->
-      case hydration.messages() {
-        Ok(messages) -> {
-          let page =
-            list.fold(
-              messages,
-              pages.load_sync(PageContext, query_params, route),
-              fn(page, message) {
-                let #(page, _) =
-                  to_client_application.apply_admin(
-                    page: page,
-                    message: message,
-                  )
-                page
-              },
-            )
-          #(page, effect.none())
-        }
-        Error(Nil) -> admin_boot.load_client(PageContext, query_params, route)
-      }
+    _, _ -> admin_boot.load_client(PageContext, query_params, route)
   }
 }
 
