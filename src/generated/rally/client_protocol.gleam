@@ -1,4 +1,6 @@
 @target(javascript)
+import generated/libero/etf as libero_etf
+@target(javascript)
 import generated/libero/result.{type ApiLoadError, type ApiSaveError}
 @target(javascript)
 import public/pages/games/id_/wire as public_game_detail_wire
@@ -143,13 +145,14 @@ pub fn decode_result_envelope(bytes: BitArray) -> Result(#(Int, a), Nil) {
 }
 
 @target(javascript)
-@external(javascript, "../libero/codec_ffi.mjs", "encode_value")
-fn encode_any(_value: a) -> BitArray {
-  panic as "generated/rally/client_protocol.encode_any external missing"
+fn encode_any(value: a) -> BitArray {
+  libero_etf.encode(value)
 }
 
 @target(javascript)
-@external(javascript, "../libero/codec_ffi.mjs", "decode_result")
-fn decode_any(_bytes: BitArray) -> Result(a, Nil) {
-  panic as "generated/rally/client_protocol.decode_any external missing"
+fn decode_any(bytes: BitArray) -> Result(a, Nil) {
+  case libero_etf.decode(bytes) {
+    Ok(value) -> Ok(value)
+    Error(_) -> Error(Nil)
+  }
 }

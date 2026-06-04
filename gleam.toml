@@ -33,3 +33,17 @@ output = "src/generated/sql"
 [tools.libero]
 js_output_dir = "src/generated/libero"
 erlang_output_dir = "src/generated/libero"
+type_seeds = [
+  "admin/pages/games.ServerMsg",
+  "admin/pages/games.LoadResult",
+  "admin/pages/games.GameUpdate",
+  "broadcasts.Event",
+  "public/pages/games/wire.ServerMsg",
+  "public/pages/games/wire.LoadResult",
+  "public/pages/games/id_/wire.ServerMsg",
+  "public/pages/games/id_/wire.LoadResult",
+  "public/pages/standings/wire.ServerMsg",
+  "public/pages/standings/wire.LoadResult",
+  "public/pages/teams/slug_/wire.ServerMsg",
+  "public/pages/teams/slug_/wire.LoadResult",
+]

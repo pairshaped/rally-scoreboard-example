@@ -9,13 +9,14 @@ Rally owns framework glue around those codecs: request ids, pending callback reg
 The app depends on these runtime surfaces:
 
 - `generated/libero/result` for page-local load and save error values at the Rally boundary.
-- `generated/libero/codec_ffi.mjs` for browser ETF encode/decode of page-local request, result, and broadcast values.
-- Libero Erlang codec helpers for safe server decode and ETF encode.
+- `generated/libero/etf` as the neutral ETF entrypoint used by Rally protocol glue.
+- `generated/libero/rpc_decoders` and `generated/libero/rpc_decoders_ffi.mjs` for browser constructor and decoder registration.
+- `generated/libero/generated@rpc_wire.erl` for typed server-side wire encoders and decoders.
 - `generated/rally/client_transport` for websocket connection, request ids, and result callback dispatch.
 - `generated/rally/client_protocol` and `generated/rally/server_protocol` for request, result, and push frame envelopes.
 - `generated/rally/browser`, boot, hydration, and mount helpers for browser-specific framework plumbing.
 
-Rally should not generate ETF codec modules, atom modules, wire modules, decoder registration modules, or Libero contract JSON. If generated Rally code needs a server-side codec entrypoint, Libero should expose a neutral generated helper that is not typed around a root app protocol. Rally can call that helper from `generated/rally/server_protocol`.
+Rally should not generate ETF codec modules, atom modules, wire modules, decoder registration modules, or Libero contract JSON. Generated Rally protocol glue may call Libero-generated neutral ETF helpers and per-type wire encoder functions when framing request results or broadcasts.
 
 The target page API remains:
 

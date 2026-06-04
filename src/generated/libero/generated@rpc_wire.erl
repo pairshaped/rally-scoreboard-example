@@ -11,6 +11,66 @@
 
 -module(generated@rpc_wire).
 -export([
+    encode_admin_pages_games__server_msg/1,
+    decode_admin_pages_games__server_msg/1,
+    encode_admin_pages_games__load_result/1,
+    decode_admin_pages_games__load_result/1,
+    encode_admin_pages_games__admin_game_summary/1,
+    decode_admin_pages_games__admin_game_summary/1,
+    encode_admin_pages_games__game_status/1,
+    decode_admin_pages_games__game_status/1,
+    encode_admin_pages_games__game_update/1,
+    decode_admin_pages_games__game_update/1,
+    encode_broadcasts__event/1,
+    decode_broadcasts__event/1,
+    encode_broadcasts__game_snapshot/1,
+    decode_broadcasts__game_snapshot/1,
+    encode_broadcasts__game_status/1,
+    decode_broadcasts__game_status/1,
+    encode_broadcasts__team/1,
+    decode_broadcasts__team/1,
+    encode_public_pages_games_wire__server_msg/1,
+    decode_public_pages_games_wire__server_msg/1,
+    encode_public_pages_games_wire__load_result/1,
+    decode_public_pages_games_wire__load_result/1,
+    encode_public_pages_games_wire__game_summary/1,
+    decode_public_pages_games_wire__game_summary/1,
+    encode_public_pages_games_wire__game_status/1,
+    decode_public_pages_games_wire__game_status/1,
+    encode_public_pages_games_wire__team/1,
+    decode_public_pages_games_wire__team/1,
+    encode_public_pages_games_id__wire__server_msg/1,
+    decode_public_pages_games_id__wire__server_msg/1,
+    encode_public_pages_games_id__wire__load_result/1,
+    decode_public_pages_games_id__wire__load_result/1,
+    encode_public_pages_games_id__wire__game_detail/1,
+    decode_public_pages_games_id__wire__game_detail/1,
+    encode_public_pages_games_id__wire__game_status/1,
+    decode_public_pages_games_id__wire__game_status/1,
+    encode_public_pages_games_id__wire__team/1,
+    decode_public_pages_games_id__wire__team/1,
+    encode_public_pages_standings_wire__server_msg/1,
+    decode_public_pages_standings_wire__server_msg/1,
+    encode_public_pages_standings_wire__load_result/1,
+    decode_public_pages_standings_wire__load_result/1,
+    encode_public_pages_standings_wire__game_summary/1,
+    decode_public_pages_standings_wire__game_summary/1,
+    encode_public_pages_standings_wire__game_status/1,
+    decode_public_pages_standings_wire__game_status/1,
+    encode_public_pages_standings_wire__team/1,
+    decode_public_pages_standings_wire__team/1,
+    encode_public_pages_teams_slug__wire__server_msg/1,
+    decode_public_pages_teams_slug__wire__server_msg/1,
+    encode_public_pages_teams_slug__wire__load_result/1,
+    decode_public_pages_teams_slug__wire__load_result/1,
+    encode_public_pages_teams_slug__wire__team_detail/1,
+    decode_public_pages_teams_slug__wire__team_detail/1,
+    encode_public_pages_teams_slug__wire__game_summary/1,
+    decode_public_pages_teams_slug__wire__game_summary/1,
+    encode_public_pages_teams_slug__wire__game_status/1,
+    decode_public_pages_teams_slug__wire__game_status/1,
+    encode_public_pages_teams_slug__wire__team/1,
+    decode_public_pages_teams_slug__wire__team/1,
     encode_term/1,
     decode_term/1,
     encode_float/1
@@ -22,7 +82,391 @@
 encode_float(F) when is_float(F) -> F;
 encode_float(N) when is_integer(N) -> N + 0.0.
 
+%% Type: admin/pages/games.ServerMsg
+encode_admin_pages_games__server_msg(admin_games_load) ->
+    '5ef9686a68';
+encode_admin_pages_games__server_msg({admin_games_update_score, F0, F1, F2, F3}) ->
+    {'af00474487', F0, F1, F2, F3};
+encode_admin_pages_games__server_msg({admin_games_mark_final, F0}) ->
+    {'f46fdf4a17', F0}.
 
+decode_admin_pages_games__server_msg(Value) -> decode_admin_pages_games__server_msg(Value, 0).
+
+decode_admin_pages_games__server_msg(_Value, Depth) when Depth >= 512 ->
+    error({wire_depth_exceeded, Depth});
+decode_admin_pages_games__server_msg('5ef9686a68', _Depth) ->
+    admin_games_load;
+decode_admin_pages_games__server_msg({'af00474487', F0, F1, F2, F3}, _Depth) ->
+    {admin_games_update_score, F0, F1, F2, F3};
+decode_admin_pages_games__server_msg({'f46fdf4a17', F0}, _Depth) ->
+    {admin_games_mark_final, F0}.
+
+%% Type: admin/pages/games.LoadResult
+encode_admin_pages_games__load_result({admin_games_load_result, F0}) ->
+    {'b7d9d0bb4f', [encode_admin_pages_games__admin_game_summary(_X0) || _X0 <- F0]}.
+
+decode_admin_pages_games__load_result(Value) -> decode_admin_pages_games__load_result(Value, 0).
+
+decode_admin_pages_games__load_result(_Value, Depth) when Depth >= 512 ->
+    error({wire_depth_exceeded, Depth});
+decode_admin_pages_games__load_result({'b7d9d0bb4f', F0}, Depth) ->
+    {admin_games_load_result, [decode_admin_pages_games__admin_game_summary(_X0, Depth + 1 + 1) || _X0 <- F0]}.
+
+%% Type: admin/pages/games.AdminGameSummary
+encode_admin_pages_games__admin_game_summary({admin_games_summary, F0, F1, F2, F3, F4, F5, F6}) ->
+    {'5e92494c47', F0, F1, F2, F3, F4, encode_admin_pages_games__game_status(F5), F6}.
+
+decode_admin_pages_games__admin_game_summary(Value) -> decode_admin_pages_games__admin_game_summary(Value, 0).
+
+decode_admin_pages_games__admin_game_summary(_Value, Depth) when Depth >= 512 ->
+    error({wire_depth_exceeded, Depth});
+decode_admin_pages_games__admin_game_summary({'5e92494c47', F0, F1, F2, F3, F4, F5, F6}, Depth) ->
+    {admin_games_summary, F0, F1, F2, F3, F4, decode_admin_pages_games__game_status(F5, Depth + 1), F6}.
+
+%% Type: admin/pages/games.GameStatus
+encode_admin_pages_games__game_status(admin_games_scheduled) ->
+    '9c7a520e31';
+encode_admin_pages_games__game_status({admin_games_live, F0}) ->
+    {'0e0f0ed8f3', F0};
+encode_admin_pages_games__game_status(admin_games_final) ->
+    '2bb88c38e5'.
+
+decode_admin_pages_games__game_status(Value) -> decode_admin_pages_games__game_status(Value, 0).
+
+decode_admin_pages_games__game_status(_Value, Depth) when Depth >= 512 ->
+    error({wire_depth_exceeded, Depth});
+decode_admin_pages_games__game_status('9c7a520e31', _Depth) ->
+    admin_games_scheduled;
+decode_admin_pages_games__game_status({'0e0f0ed8f3', F0}, _Depth) ->
+    {admin_games_live, F0};
+decode_admin_pages_games__game_status('2bb88c38e5', _Depth) ->
+    admin_games_final.
+
+%% Type: admin/pages/games.GameUpdate
+encode_admin_pages_games__game_update({admin_games_update, F0, F1, F2, F3, F4, F5}) ->
+    {'635cfb19da', F0, F1, F2, F3, F4, encode_admin_pages_games__game_status(F5)}.
+
+decode_admin_pages_games__game_update(Value) -> decode_admin_pages_games__game_update(Value, 0).
+
+decode_admin_pages_games__game_update(_Value, Depth) when Depth >= 512 ->
+    error({wire_depth_exceeded, Depth});
+decode_admin_pages_games__game_update({'635cfb19da', F0, F1, F2, F3, F4, F5}, Depth) ->
+    {admin_games_update, F0, F1, F2, F3, F4, decode_admin_pages_games__game_status(F5, Depth + 1)}.
+
+%% Type: broadcasts.Event
+encode_broadcasts__event({broadcast_game_updated, F0}) ->
+    {'10a502b9f6', encode_broadcasts__game_snapshot(F0)}.
+
+decode_broadcasts__event(Value) -> decode_broadcasts__event(Value, 0).
+
+decode_broadcasts__event(_Value, Depth) when Depth >= 512 ->
+    error({wire_depth_exceeded, Depth});
+decode_broadcasts__event({'10a502b9f6', F0}, Depth) ->
+    {broadcast_game_updated, decode_broadcasts__game_snapshot(F0, Depth + 1)}.
+
+%% Type: broadcasts.GameSnapshot
+encode_broadcasts__game_snapshot({broadcast_game_snapshot, F0, F1, F2, F3, F4, F5}) ->
+    {'e5610620cc', F0, encode_broadcasts__team(F1), encode_broadcasts__team(F2), F3, F4, encode_broadcasts__game_status(F5)}.
+
+decode_broadcasts__game_snapshot(Value) -> decode_broadcasts__game_snapshot(Value, 0).
+
+decode_broadcasts__game_snapshot(_Value, Depth) when Depth >= 512 ->
+    error({wire_depth_exceeded, Depth});
+decode_broadcasts__game_snapshot({'e5610620cc', F0, F1, F2, F3, F4, F5}, Depth) ->
+    {broadcast_game_snapshot, F0, decode_broadcasts__team(F1, Depth + 1), decode_broadcasts__team(F2, Depth + 1), F3, F4, decode_broadcasts__game_status(F5, Depth + 1)}.
+
+%% Type: broadcasts.GameStatus
+encode_broadcasts__game_status(broadcast_scheduled) ->
+    'f9185170a6';
+encode_broadcasts__game_status({broadcast_live, F0}) ->
+    {'082400c9c6', F0};
+encode_broadcasts__game_status(broadcast_final) ->
+    '4817cb7acf'.
+
+decode_broadcasts__game_status(Value) -> decode_broadcasts__game_status(Value, 0).
+
+decode_broadcasts__game_status(_Value, Depth) when Depth >= 512 ->
+    error({wire_depth_exceeded, Depth});
+decode_broadcasts__game_status('f9185170a6', _Depth) ->
+    broadcast_scheduled;
+decode_broadcasts__game_status({'082400c9c6', F0}, _Depth) ->
+    {broadcast_live, F0};
+decode_broadcasts__game_status('4817cb7acf', _Depth) ->
+    broadcast_final.
+
+%% Type: broadcasts.Team
+encode_broadcasts__team({broadcast_team, F0, F1, F2}) ->
+    {'f66451c2b4', F0, F1, F2}.
+
+decode_broadcasts__team(Value) -> decode_broadcasts__team(Value, 0).
+
+decode_broadcasts__team(_Value, Depth) when Depth >= 512 ->
+    error({wire_depth_exceeded, Depth});
+decode_broadcasts__team({'f66451c2b4', F0, F1, F2}, _Depth) ->
+    {broadcast_team, F0, F1, F2}.
+
+%% Type: public/pages/games/wire.ServerMsg
+encode_public_pages_games_wire__server_msg(public_games_load) ->
+    '670543b335'.
+
+decode_public_pages_games_wire__server_msg(Value) -> decode_public_pages_games_wire__server_msg(Value, 0).
+
+decode_public_pages_games_wire__server_msg(_Value, Depth) when Depth >= 512 ->
+    error({wire_depth_exceeded, Depth});
+decode_public_pages_games_wire__server_msg('670543b335', _Depth) ->
+    public_games_load.
+
+%% Type: public/pages/games/wire.LoadResult
+encode_public_pages_games_wire__load_result({public_games_loaded, F0}) ->
+    {'c45d4203f2', [encode_public_pages_games_wire__game_summary(_X0) || _X0 <- F0]}.
+
+decode_public_pages_games_wire__load_result(Value) -> decode_public_pages_games_wire__load_result(Value, 0).
+
+decode_public_pages_games_wire__load_result(_Value, Depth) when Depth >= 512 ->
+    error({wire_depth_exceeded, Depth});
+decode_public_pages_games_wire__load_result({'c45d4203f2', F0}, Depth) ->
+    {public_games_loaded, [decode_public_pages_games_wire__game_summary(_X0, Depth + 1 + 1) || _X0 <- F0]}.
+
+%% Type: public/pages/games/wire.GameSummary
+encode_public_pages_games_wire__game_summary({public_games_game_summary, F0, F1, F2, F3, F4, F5}) ->
+    {'d2d09f257a', F0, encode_public_pages_games_wire__team(F1), encode_public_pages_games_wire__team(F2), F3, F4, encode_public_pages_games_wire__game_status(F5)}.
+
+decode_public_pages_games_wire__game_summary(Value) -> decode_public_pages_games_wire__game_summary(Value, 0).
+
+decode_public_pages_games_wire__game_summary(_Value, Depth) when Depth >= 512 ->
+    error({wire_depth_exceeded, Depth});
+decode_public_pages_games_wire__game_summary({'d2d09f257a', F0, F1, F2, F3, F4, F5}, Depth) ->
+    {public_games_game_summary, F0, decode_public_pages_games_wire__team(F1, Depth + 1), decode_public_pages_games_wire__team(F2, Depth + 1), F3, F4, decode_public_pages_games_wire__game_status(F5, Depth + 1)}.
+
+%% Type: public/pages/games/wire.GameStatus
+encode_public_pages_games_wire__game_status(public_games_scheduled) ->
+    'ce9f4265f3';
+encode_public_pages_games_wire__game_status({public_games_live, F0}) ->
+    {'9452498ffb', F0};
+encode_public_pages_games_wire__game_status(public_games_final) ->
+    '58de046fb2'.
+
+decode_public_pages_games_wire__game_status(Value) -> decode_public_pages_games_wire__game_status(Value, 0).
+
+decode_public_pages_games_wire__game_status(_Value, Depth) when Depth >= 512 ->
+    error({wire_depth_exceeded, Depth});
+decode_public_pages_games_wire__game_status('ce9f4265f3', _Depth) ->
+    public_games_scheduled;
+decode_public_pages_games_wire__game_status({'9452498ffb', F0}, _Depth) ->
+    {public_games_live, F0};
+decode_public_pages_games_wire__game_status('58de046fb2', _Depth) ->
+    public_games_final.
+
+%% Type: public/pages/games/wire.Team
+encode_public_pages_games_wire__team({public_games_team, F0, F1, F2}) ->
+    {'621836eae2', F0, F1, F2}.
+
+decode_public_pages_games_wire__team(Value) -> decode_public_pages_games_wire__team(Value, 0).
+
+decode_public_pages_games_wire__team(_Value, Depth) when Depth >= 512 ->
+    error({wire_depth_exceeded, Depth});
+decode_public_pages_games_wire__team({'621836eae2', F0, F1, F2}, _Depth) ->
+    {public_games_team, F0, F1, F2}.
+
+%% Type: public/pages/games/id_/wire.ServerMsg
+encode_public_pages_games_id__wire__server_msg({public_game_detail_load, F0}) ->
+    {'aba9f55edb', F0}.
+
+decode_public_pages_games_id__wire__server_msg(Value) -> decode_public_pages_games_id__wire__server_msg(Value, 0).
+
+decode_public_pages_games_id__wire__server_msg(_Value, Depth) when Depth >= 512 ->
+    error({wire_depth_exceeded, Depth});
+decode_public_pages_games_id__wire__server_msg({'aba9f55edb', F0}, _Depth) ->
+    {public_game_detail_load, F0}.
+
+%% Type: public/pages/games/id_/wire.LoadResult
+encode_public_pages_games_id__wire__load_result({public_game_detail_loaded, F0}) ->
+    {'f0227706ed', encode_public_pages_games_id__wire__game_detail(F0)}.
+
+decode_public_pages_games_id__wire__load_result(Value) -> decode_public_pages_games_id__wire__load_result(Value, 0).
+
+decode_public_pages_games_id__wire__load_result(_Value, Depth) when Depth >= 512 ->
+    error({wire_depth_exceeded, Depth});
+decode_public_pages_games_id__wire__load_result({'f0227706ed', F0}, Depth) ->
+    {public_game_detail_loaded, decode_public_pages_games_id__wire__game_detail(F0, Depth + 1)}.
+
+%% Type: public/pages/games/id_/wire.GameDetail
+encode_public_pages_games_id__wire__game_detail({public_game_detail_game_detail, F0, F1, F2, F3, F4, F5}) ->
+    {'fe07310a28', F0, encode_public_pages_games_id__wire__team(F1), encode_public_pages_games_id__wire__team(F2), F3, F4, encode_public_pages_games_id__wire__game_status(F5)}.
+
+decode_public_pages_games_id__wire__game_detail(Value) -> decode_public_pages_games_id__wire__game_detail(Value, 0).
+
+decode_public_pages_games_id__wire__game_detail(_Value, Depth) when Depth >= 512 ->
+    error({wire_depth_exceeded, Depth});
+decode_public_pages_games_id__wire__game_detail({'fe07310a28', F0, F1, F2, F3, F4, F5}, Depth) ->
+    {public_game_detail_game_detail, F0, decode_public_pages_games_id__wire__team(F1, Depth + 1), decode_public_pages_games_id__wire__team(F2, Depth + 1), F3, F4, decode_public_pages_games_id__wire__game_status(F5, Depth + 1)}.
+
+%% Type: public/pages/games/id_/wire.GameStatus
+encode_public_pages_games_id__wire__game_status(public_game_detail_scheduled) ->
+    '068b97d9ae';
+encode_public_pages_games_id__wire__game_status({public_game_detail_live, F0}) ->
+    {'e5dc046a4a', F0};
+encode_public_pages_games_id__wire__game_status(public_game_detail_final) ->
+    'c46ef5198e'.
+
+decode_public_pages_games_id__wire__game_status(Value) -> decode_public_pages_games_id__wire__game_status(Value, 0).
+
+decode_public_pages_games_id__wire__game_status(_Value, Depth) when Depth >= 512 ->
+    error({wire_depth_exceeded, Depth});
+decode_public_pages_games_id__wire__game_status('068b97d9ae', _Depth) ->
+    public_game_detail_scheduled;
+decode_public_pages_games_id__wire__game_status({'e5dc046a4a', F0}, _Depth) ->
+    {public_game_detail_live, F0};
+decode_public_pages_games_id__wire__game_status('c46ef5198e', _Depth) ->
+    public_game_detail_final.
+
+%% Type: public/pages/games/id_/wire.Team
+encode_public_pages_games_id__wire__team({public_game_detail_team, F0, F1, F2}) ->
+    {'855e438e11', F0, F1, F2}.
+
+decode_public_pages_games_id__wire__team(Value) -> decode_public_pages_games_id__wire__team(Value, 0).
+
+decode_public_pages_games_id__wire__team(_Value, Depth) when Depth >= 512 ->
+    error({wire_depth_exceeded, Depth});
+decode_public_pages_games_id__wire__team({'855e438e11', F0, F1, F2}, _Depth) ->
+    {public_game_detail_team, F0, F1, F2}.
+
+%% Type: public/pages/standings/wire.ServerMsg
+encode_public_pages_standings_wire__server_msg(public_standings_load) ->
+    '4d44732914'.
+
+decode_public_pages_standings_wire__server_msg(Value) -> decode_public_pages_standings_wire__server_msg(Value, 0).
+
+decode_public_pages_standings_wire__server_msg(_Value, Depth) when Depth >= 512 ->
+    error({wire_depth_exceeded, Depth});
+decode_public_pages_standings_wire__server_msg('4d44732914', _Depth) ->
+    public_standings_load.
+
+%% Type: public/pages/standings/wire.LoadResult
+encode_public_pages_standings_wire__load_result({public_standings_loaded, F0}) ->
+    {'a7d83e5c3b', [encode_public_pages_standings_wire__game_summary(_X0) || _X0 <- F0]}.
+
+decode_public_pages_standings_wire__load_result(Value) -> decode_public_pages_standings_wire__load_result(Value, 0).
+
+decode_public_pages_standings_wire__load_result(_Value, Depth) when Depth >= 512 ->
+    error({wire_depth_exceeded, Depth});
+decode_public_pages_standings_wire__load_result({'a7d83e5c3b', F0}, Depth) ->
+    {public_standings_loaded, [decode_public_pages_standings_wire__game_summary(_X0, Depth + 1 + 1) || _X0 <- F0]}.
+
+%% Type: public/pages/standings/wire.GameSummary
+encode_public_pages_standings_wire__game_summary({public_standings_game_summary, F0, F1, F2, F3, F4, F5}) ->
+    {'9b7caa6767', F0, encode_public_pages_standings_wire__team(F1), encode_public_pages_standings_wire__team(F2), F3, F4, encode_public_pages_standings_wire__game_status(F5)}.
+
+decode_public_pages_standings_wire__game_summary(Value) -> decode_public_pages_standings_wire__game_summary(Value, 0).
+
+decode_public_pages_standings_wire__game_summary(_Value, Depth) when Depth >= 512 ->
+    error({wire_depth_exceeded, Depth});
+decode_public_pages_standings_wire__game_summary({'9b7caa6767', F0, F1, F2, F3, F4, F5}, Depth) ->
+    {public_standings_game_summary, F0, decode_public_pages_standings_wire__team(F1, Depth + 1), decode_public_pages_standings_wire__team(F2, Depth + 1), F3, F4, decode_public_pages_standings_wire__game_status(F5, Depth + 1)}.
+
+%% Type: public/pages/standings/wire.GameStatus
+encode_public_pages_standings_wire__game_status(public_standings_scheduled) ->
+    'de69dd54a9';
+encode_public_pages_standings_wire__game_status({public_standings_live, F0}) ->
+    {'66ea920688', F0};
+encode_public_pages_standings_wire__game_status(public_standings_final) ->
+    'a49bdfb3da'.
+
+decode_public_pages_standings_wire__game_status(Value) -> decode_public_pages_standings_wire__game_status(Value, 0).
+
+decode_public_pages_standings_wire__game_status(_Value, Depth) when Depth >= 512 ->
+    error({wire_depth_exceeded, Depth});
+decode_public_pages_standings_wire__game_status('de69dd54a9', _Depth) ->
+    public_standings_scheduled;
+decode_public_pages_standings_wire__game_status({'66ea920688', F0}, _Depth) ->
+    {public_standings_live, F0};
+decode_public_pages_standings_wire__game_status('a49bdfb3da', _Depth) ->
+    public_standings_final.
+
+%% Type: public/pages/standings/wire.Team
+encode_public_pages_standings_wire__team({public_standings_team, F0, F1, F2}) ->
+    {'83b1df5576', F0, F1, F2}.
+
+decode_public_pages_standings_wire__team(Value) -> decode_public_pages_standings_wire__team(Value, 0).
+
+decode_public_pages_standings_wire__team(_Value, Depth) when Depth >= 512 ->
+    error({wire_depth_exceeded, Depth});
+decode_public_pages_standings_wire__team({'83b1df5576', F0, F1, F2}, _Depth) ->
+    {public_standings_team, F0, F1, F2}.
+
+%% Type: public/pages/teams/slug_/wire.ServerMsg
+encode_public_pages_teams_slug__wire__server_msg({public_team_detail_load, F0}) ->
+    {'9860eebd2d', F0}.
+
+decode_public_pages_teams_slug__wire__server_msg(Value) -> decode_public_pages_teams_slug__wire__server_msg(Value, 0).
+
+decode_public_pages_teams_slug__wire__server_msg(_Value, Depth) when Depth >= 512 ->
+    error({wire_depth_exceeded, Depth});
+decode_public_pages_teams_slug__wire__server_msg({'9860eebd2d', F0}, _Depth) ->
+    {public_team_detail_load, F0}.
+
+%% Type: public/pages/teams/slug_/wire.LoadResult
+encode_public_pages_teams_slug__wire__load_result({public_team_detail_loaded, F0}) ->
+    {'2542f533b6', encode_public_pages_teams_slug__wire__team_detail(F0)}.
+
+decode_public_pages_teams_slug__wire__load_result(Value) -> decode_public_pages_teams_slug__wire__load_result(Value, 0).
+
+decode_public_pages_teams_slug__wire__load_result(_Value, Depth) when Depth >= 512 ->
+    error({wire_depth_exceeded, Depth});
+decode_public_pages_teams_slug__wire__load_result({'2542f533b6', F0}, Depth) ->
+    {public_team_detail_loaded, decode_public_pages_teams_slug__wire__team_detail(F0, Depth + 1)}.
+
+%% Type: public/pages/teams/slug_/wire.TeamDetail
+encode_public_pages_teams_slug__wire__team_detail({public_team_detail_team_detail, F0, F1, F2, F3, F4, F5, F6, F7}) ->
+    {'53d46e9b9f', F0, F1, F2, F3, F4, F5, F6, [encode_public_pages_teams_slug__wire__game_summary(_X0) || _X0 <- F7]}.
+
+decode_public_pages_teams_slug__wire__team_detail(Value) -> decode_public_pages_teams_slug__wire__team_detail(Value, 0).
+
+decode_public_pages_teams_slug__wire__team_detail(_Value, Depth) when Depth >= 512 ->
+    error({wire_depth_exceeded, Depth});
+decode_public_pages_teams_slug__wire__team_detail({'53d46e9b9f', F0, F1, F2, F3, F4, F5, F6, F7}, Depth) ->
+    {public_team_detail_team_detail, F0, F1, F2, F3, F4, F5, F6, [decode_public_pages_teams_slug__wire__game_summary(_X0, Depth + 1 + 1) || _X0 <- F7]}.
+
+%% Type: public/pages/teams/slug_/wire.GameSummary
+encode_public_pages_teams_slug__wire__game_summary({public_team_detail_game_summary, F0, F1, F2, F3, F4, F5}) ->
+    {'1139d71d23', F0, encode_public_pages_teams_slug__wire__team(F1), encode_public_pages_teams_slug__wire__team(F2), F3, F4, encode_public_pages_teams_slug__wire__game_status(F5)}.
+
+decode_public_pages_teams_slug__wire__game_summary(Value) -> decode_public_pages_teams_slug__wire__game_summary(Value, 0).
+
+decode_public_pages_teams_slug__wire__game_summary(_Value, Depth) when Depth >= 512 ->
+    error({wire_depth_exceeded, Depth});
+decode_public_pages_teams_slug__wire__game_summary({'1139d71d23', F0, F1, F2, F3, F4, F5}, Depth) ->
+    {public_team_detail_game_summary, F0, decode_public_pages_teams_slug__wire__team(F1, Depth + 1), decode_public_pages_teams_slug__wire__team(F2, Depth + 1), F3, F4, decode_public_pages_teams_slug__wire__game_status(F5, Depth + 1)}.
+
+%% Type: public/pages/teams/slug_/wire.GameStatus
+encode_public_pages_teams_slug__wire__game_status(public_team_detail_scheduled) ->
+    '4ac5f8cdbc';
+encode_public_pages_teams_slug__wire__game_status({public_team_detail_live, F0}) ->
+    {'3fa1eb1b1e', F0};
+encode_public_pages_teams_slug__wire__game_status(public_team_detail_final) ->
+    '3ab9fa5d55'.
+
+decode_public_pages_teams_slug__wire__game_status(Value) -> decode_public_pages_teams_slug__wire__game_status(Value, 0).
+
+decode_public_pages_teams_slug__wire__game_status(_Value, Depth) when Depth >= 512 ->
+    error({wire_depth_exceeded, Depth});
+decode_public_pages_teams_slug__wire__game_status('4ac5f8cdbc', _Depth) ->
+    public_team_detail_scheduled;
+decode_public_pages_teams_slug__wire__game_status({'3fa1eb1b1e', F0}, _Depth) ->
+    {public_team_detail_live, F0};
+decode_public_pages_teams_slug__wire__game_status('3ab9fa5d55', _Depth) ->
+    public_team_detail_final.
+
+%% Type: public/pages/teams/slug_/wire.Team
+encode_public_pages_teams_slug__wire__team({public_team_detail_team, F0, F1, F2}) ->
+    {'e2be8683f9', F0, F1, F2}.
+
+decode_public_pages_teams_slug__wire__team(Value) -> decode_public_pages_teams_slug__wire__team(Value, 0).
+
+decode_public_pages_teams_slug__wire__team(_Value, Depth) when Depth >= 512 ->
+    error({wire_depth_exceeded, Depth});
+decode_public_pages_teams_slug__wire__team({'e2be8683f9', F0, F1, F2}, _Depth) ->
+    {public_team_detail_team, F0, F1, F2}.
 
 encode_term(Term) -> encode_term(Term, 0).
 
@@ -40,8 +484,58 @@ decode_term(Term) -> decode_term(Term, 0).
 
 decode_term(_Term, Depth) when Depth >= 512 ->
     error({wire_depth_exceeded, Depth});
+decode_term(Atom, _Depth) when is_atom(Atom) ->
+    case Atom of
+        '5ef9686a68' -> admin_games_load;
+        '9c7a520e31' -> admin_games_scheduled;
+        '2bb88c38e5' -> admin_games_final;
+        'f9185170a6' -> broadcast_scheduled;
+        '4817cb7acf' -> broadcast_final;
+        '670543b335' -> public_games_load;
+        'ce9f4265f3' -> public_games_scheduled;
+        '58de046fb2' -> public_games_final;
+        '068b97d9ae' -> public_game_detail_scheduled;
+        'c46ef5198e' -> public_game_detail_final;
+        '4d44732914' -> public_standings_load;
+        'de69dd54a9' -> public_standings_scheduled;
+        'a49bdfb3da' -> public_standings_final;
+        '4ac5f8cdbc' -> public_team_detail_scheduled;
+        '3ab9fa5d55' -> public_team_detail_final;
+        Other -> Other
+    end;
 decode_term(Tuple, Depth) when is_tuple(Tuple), tuple_size(Tuple) > 0 ->
-    list_to_tuple([decode_term(E, Depth + 1) || E <- tuple_to_list(Tuple)]);
+    case {element(1, Tuple), tuple_size(Tuple)} of
+        {'af00474487', 5} -> decode_admin_pages_games__server_msg(Tuple, Depth + 1);
+        {'f46fdf4a17', 2} -> decode_admin_pages_games__server_msg(Tuple, Depth + 1);
+        {'b7d9d0bb4f', 2} -> decode_admin_pages_games__load_result(Tuple, Depth + 1);
+        {'5e92494c47', 8} -> decode_admin_pages_games__admin_game_summary(Tuple, Depth + 1);
+        {'0e0f0ed8f3', 2} -> decode_admin_pages_games__game_status(Tuple, Depth + 1);
+        {'635cfb19da', 7} -> decode_admin_pages_games__game_update(Tuple, Depth + 1);
+        {'10a502b9f6', 2} -> decode_broadcasts__event(Tuple, Depth + 1);
+        {'e5610620cc', 7} -> decode_broadcasts__game_snapshot(Tuple, Depth + 1);
+        {'082400c9c6', 2} -> decode_broadcasts__game_status(Tuple, Depth + 1);
+        {'f66451c2b4', 4} -> decode_broadcasts__team(Tuple, Depth + 1);
+        {'c45d4203f2', 2} -> decode_public_pages_games_wire__load_result(Tuple, Depth + 1);
+        {'d2d09f257a', 7} -> decode_public_pages_games_wire__game_summary(Tuple, Depth + 1);
+        {'9452498ffb', 2} -> decode_public_pages_games_wire__game_status(Tuple, Depth + 1);
+        {'621836eae2', 4} -> decode_public_pages_games_wire__team(Tuple, Depth + 1);
+        {'aba9f55edb', 2} -> decode_public_pages_games_id__wire__server_msg(Tuple, Depth + 1);
+        {'f0227706ed', 2} -> decode_public_pages_games_id__wire__load_result(Tuple, Depth + 1);
+        {'fe07310a28', 7} -> decode_public_pages_games_id__wire__game_detail(Tuple, Depth + 1);
+        {'e5dc046a4a', 2} -> decode_public_pages_games_id__wire__game_status(Tuple, Depth + 1);
+        {'855e438e11', 4} -> decode_public_pages_games_id__wire__team(Tuple, Depth + 1);
+        {'a7d83e5c3b', 2} -> decode_public_pages_standings_wire__load_result(Tuple, Depth + 1);
+        {'9b7caa6767', 7} -> decode_public_pages_standings_wire__game_summary(Tuple, Depth + 1);
+        {'66ea920688', 2} -> decode_public_pages_standings_wire__game_status(Tuple, Depth + 1);
+        {'83b1df5576', 4} -> decode_public_pages_standings_wire__team(Tuple, Depth + 1);
+        {'9860eebd2d', 2} -> decode_public_pages_teams_slug__wire__server_msg(Tuple, Depth + 1);
+        {'2542f533b6', 2} -> decode_public_pages_teams_slug__wire__load_result(Tuple, Depth + 1);
+        {'53d46e9b9f', 9} -> decode_public_pages_teams_slug__wire__team_detail(Tuple, Depth + 1);
+        {'1139d71d23', 7} -> decode_public_pages_teams_slug__wire__game_summary(Tuple, Depth + 1);
+        {'3fa1eb1b1e', 2} -> decode_public_pages_teams_slug__wire__game_status(Tuple, Depth + 1);
+        {'e2be8683f9', 4} -> decode_public_pages_teams_slug__wire__team(Tuple, Depth + 1);
+        _ -> list_to_tuple([decode_term(E, Depth + 1) || E <- tuple_to_list(Tuple)])
+    end;
 decode_term(List, Depth) when is_list(List) ->
     [decode_term(X, Depth + 1) || X <- List];
 decode_term(Map, Depth) when is_map(Map) ->
