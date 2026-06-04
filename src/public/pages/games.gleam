@@ -1,21 +1,32 @@
 @target(javascript)
-import api/to_server
-import components/ui
+import generated/libero/result as wire_result
 import generated/proute/public/page_input
 @target(javascript)
 import generated/rally/client_transport as api_client
 @target(erlang)
-import generated/sql/games_sql
+import generated/sql/public/pages/games_sql
+
 import gleam/int
 import gleam/list
+
 import lustre/attribute
 import lustre/effect.{type Effect}
 import lustre/element.{type Element}
 import lustre/element/html
 import lustre/event
-import page_context.{type PageContext}
 @target(erlang)
 import sqlight
+
+@target(javascript)
+import api/domain/game as api_game
+@target(javascript)
+import api/to_client
+@target(javascript)
+import api/to_server
+import components/ui
+import page_context.{type PageContext}
+
+// TYPES
 
 pub type GameStatus {
   Scheduled
@@ -56,6 +67,8 @@ pub type Message {
   Loaded(Result(List(GameSummary), LoadError))
 }
 
+// INIT
+
 pub fn init(
   page_context page_context: PageContext,
   query_params query_params: page_input.QueryParams,
@@ -69,6 +82,8 @@ pub fn initial_model(
 ) -> Model {
   Model(games: [])
 }
+
+// UPDATE
 
 pub fn update(
   model model: Model,
@@ -103,6 +118,8 @@ pub fn game_updated(
   #(Model(games: games), effect.none())
 }
 
+// VIEW
+
 pub fn view(model model: Model) -> Element(Message) {
   html.main([], [
     html.section([attribute.class("panel")], [
@@ -113,6 +130,8 @@ pub fn view(model model: Model) -> Element(Message) {
     ]),
   ])
 }
+
+// HELPERS
 
 fn view_game_grid(
   games: List(GameSummary),
@@ -193,16 +212,59 @@ fn update_summary(summary: GameSummary, game: GameUpdate) -> GameSummary {
   )
 }
 
-// CLIENT
+// EFFECTS
 
 @target(javascript)
 fn init_effect() -> Effect(Message) {
-  api_client.send(module: "public/games", message: to_server.LoadGames)
+  api_client.send_load(
+    module: "public/games",
+    message: to_server.LoadGames,
+    on_result: fn(result) { Loaded(map_load_result(result)) },
+  )
 }
 
 @target(erlang)
 fn init_effect() -> Effect(Message) {
   effect.none()
+}
+
+@target(javascript)
+fn map_load_result(
+  result: Result(to_client.ToClient, List(wire_result.ApiLoadError)),
+) -> Result(List(GameSummary), LoadError) {
+  case result {
+    Ok(to_client.GamesLoaded(games)) -> Ok(list.map(games, wire_game_summary))
+    Ok(_) -> Error(LoadError(message: "Unexpected games response."))
+    Error([wire_result.ApiLoadError(message: message), ..]) ->
+      Error(LoadError(message: message))
+    Error([]) -> Error(LoadError(message: "Could not load games."))
+  }
+}
+
+@target(javascript)
+fn wire_game_summary(game: api_game.PublicGameSummary) -> GameSummary {
+  GameSummary(
+    id: game.id,
+    home: wire_team(game.home),
+    away: wire_team(game.away),
+    home_score: game.home_score,
+    away_score: game.away_score,
+    status: wire_game_status(game.status),
+  )
+}
+
+@target(javascript)
+fn wire_team(team: api_game.Team) -> Team {
+  Team(code: team.code, name: team.name, slug: team.slug)
+}
+
+@target(javascript)
+fn wire_game_status(status: api_game.GameStatus) -> GameStatus {
+  case status {
+    api_game.Scheduled -> Scheduled
+    api_game.Live(period) -> Live(period)
+    api_game.Final -> Final
+  }
 }
 
 // SERVER

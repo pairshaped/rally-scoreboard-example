@@ -13,11 +13,7 @@ join(Topic) ->
 
 broadcast(Topic, Frame) ->
     Members = pg:get_members(scoreboard_topics, Topic),
-    Self = self(),
     lists:foreach(fun(Pid) ->
-        case Pid of
-            Self -> ok;
-            _ -> Pid ! {scoreboard_frame, Frame}
-        end
+        Pid ! {scoreboard_frame, Frame}
     end, Members),
     nil.

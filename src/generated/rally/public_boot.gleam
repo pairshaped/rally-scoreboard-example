@@ -3,6 +3,8 @@ import api/domain/team as api_team
 import api/to_client.{type ToClient}
 import api/to_server.{type ToServer}
 @target(javascript)
+import generated/libero/result as wire_result
+@target(javascript)
 import generated/proute/public/page_input
 import generated/proute/public/pages
 import generated/proute/public/routes
@@ -46,7 +48,11 @@ fn request_effect(route: routes.Route) -> Effect(pages.Message) {
   route
   |> requests
   |> list.map(fn(request) {
-    client_transport.send(module: request_module(route), message: request)
+    client_transport.send_load(
+      module: request_module(route),
+      message: request,
+      on_result: fn(result) { load_result_message(route, result) },
+    )
   })
   |> effect.batch
 }
@@ -58,6 +64,61 @@ fn request_module(route: routes.Route) -> String {
     routes.Standings -> "public/standings"
     routes.TeamsSlug(_) -> "public/teams"
     routes.SignIn | routes.NotFound -> ""
+  }
+}
+
+@target(javascript)
+fn load_result_message(
+  route: routes.Route,
+  result: Result(ToClient, List(wire_result.ApiLoadError)),
+) -> pages.Message {
+  case route, result {
+    routes.Home, Ok(to_client.GamesLoaded(games)) ->
+      pages.HomeMsg(games_page.Loaded(Ok(list.map(games, public_game_summary))))
+    routes.Games, Ok(to_client.GamesLoaded(games)) ->
+      pages.GamesMsg(
+        games_page.Loaded(Ok(list.map(games, public_game_summary))),
+      )
+    routes.GamesId(_), Ok(to_client.GameLoaded(game)) ->
+      pages.GamesIdMsg(games_id_page.Loaded(Ok(detail_game(game))))
+    routes.Standings, Ok(to_client.GamesLoaded(games)) ->
+      pages.StandingsMsg(
+        standings_page.Loaded(Ok(list.map(games, standings_game_summary))),
+      )
+    routes.TeamsSlug(_), Ok(to_client.TeamLoaded(team)) ->
+      pages.TeamsSlugMsg(teams_slug_page.Loaded(Ok(team_detail(team))))
+    _, Error(errors) -> load_error_message(route, api_load_error(errors))
+    _, Ok(_) -> load_error_message(route, "Unexpected load response.")
+  }
+}
+
+@target(javascript)
+fn load_error_message(route: routes.Route, message: String) -> pages.Message {
+  case route {
+    routes.Home | routes.Games ->
+      pages.GamesMsg(games_page.Loaded(Error(games_page.LoadError(message:))))
+    routes.GamesId(_) ->
+      pages.GamesIdMsg(
+        games_id_page.Loaded(Error(games_id_page.LoadError(message:))),
+      )
+    routes.Standings ->
+      pages.StandingsMsg(
+        standings_page.Loaded(Error(standings_page.LoadError(message:))),
+      )
+    routes.TeamsSlug(_) ->
+      pages.TeamsSlugMsg(
+        teams_slug_page.Loaded(Error(teams_slug_page.LoadError(message:))),
+      )
+    routes.SignIn | routes.NotFound ->
+      pages.GamesMsg(games_page.Loaded(Error(games_page.LoadError(message:))))
+  }
+}
+
+@target(javascript)
+fn api_load_error(errors: List(wire_result.ApiLoadError)) -> String {
+  case errors {
+    [wire_result.ApiLoadError(message: message), ..] -> message
+    [] -> "Could not load page."
   }
 }
 
@@ -175,7 +236,6 @@ fn detail_game(game: api_game.GameDetail) -> games_id_page.GameDetail {
     home_score: game.home_score,
     away_score: game.away_score,
     status: detail_game_status(game.status),
-    scoring_summary: game.scoring_summary,
   )
 }
 

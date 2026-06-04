@@ -28,10 +28,11 @@ pub fn send(message: ToServer) -> BitArray {
 
 @target(javascript)
 pub fn encode_request(
+  request_id request_id: Int,
   module module: String,
   message message: ToServer,
 ) -> BitArray {
-  encode_any(#(module, message))
+  encode_any(#(request_id, module, message))
 }
 
 @target(javascript)
@@ -61,21 +62,21 @@ pub fn decode_server_frame(bytes: BitArray) -> Result(ServerFrame, Nil) {
 @target(javascript)
 pub fn decode_load_result(
   bytes: BitArray,
-) -> Result(Result(Nil, List(ApiLoadError)), Nil) {
-  decode_result_frame(bytes)
+) -> Result(#(Int, Result(ToClient, List(ApiLoadError))), Nil) {
+  decode_result_envelope(bytes)
 }
 
 @target(javascript)
 pub fn decode_save_result(
   bytes: BitArray,
-) -> Result(Result(Nil, List(ApiSaveError)), Nil) {
-  decode_result_frame(bytes)
+) -> Result(#(Int, Result(Nil, List(ApiSaveError))), Nil) {
+  decode_result_envelope(bytes)
 }
 
 @target(javascript)
-fn decode_result_frame(bytes: BitArray) -> Result(a, Nil) {
+pub fn decode_result_envelope(bytes: BitArray) -> Result(#(Int, a), Nil) {
   case bytes {
-    <<0, payload:bits>> -> decode_any(payload)
+    <<2, payload:bits>> -> decode_any(payload)
     _ -> Error(Nil)
   }
 }

@@ -7,11 +7,21 @@ import api/to_server
 @target(erlang)
 import app_api
 @target(erlang)
+import app_topics
+@target(erlang)
 import app_ws
 import authentication_context
 @target(erlang)
+import gleam/dynamic/decode
+@target(erlang)
+import gleam/erlang/atom
+@target(erlang)
+import gleam/erlang/process
+@target(erlang)
 import gleam/list
 import gleam/option.{None, Some}
+@target(erlang)
+import gleam/result
 import gleeunit
 import gleeunit/should
 @target(erlang)
@@ -115,6 +125,31 @@ pub fn only_game_updates_are_global_mutation_broadcasts_test() {
     reply: games_loaded,
   )
   |> should.equal(False)
+}
+
+@target(erlang)
+pub fn app_topics_broadcasts_to_self_test() {
+  process.flush_messages()
+  app_topics.start()
+  app_topics.join("self-test")
+
+  let frame = <<"hello">>
+  let selector =
+    process.new_selector()
+    |> process.select_record(
+      tag: atom.create("scoreboard_frame"),
+      fields: 1,
+      mapping: fn(msg) {
+        msg
+        |> decode.run(decode.at([1], decode.bit_array))
+        |> result.unwrap(<<>>)
+      },
+    )
+
+  app_topics.broadcast("self-test", frame)
+
+  process.selector_receive(selector, within: 1000)
+  |> should.equal(Ok(frame))
 }
 
 @target(erlang)

@@ -11,6 +11,8 @@ gleam build --target erlang
 
 Target-specific behavior is marked at the declaration or import boundary. Today that means Gleam's `@target(javascript)` and `@target(erlang)` syntax. The architecture depends on target-scoped declarations, not on that exact spelling.
 
+Rally should not generate a full client app from server-shaped source. Generated code is limited to thin route, wire, codec, hydration, SSR, boot, transport, server dispatch, and build metadata glue.
+
 ## Shape
 
 - `src/public/pages/**` and `src/admin/pages/**` contain authored page modules.
@@ -19,6 +21,8 @@ Target-specific behavior is marked at the declaration or import boundary. Today 
 - `src/generated/rally/**` is generated page protocol, SSR, hydration, browser boot, client transport, and server dispatch glue.
 - `src/generated/sql/**` is generated typed SQL for Erlang-only server paths.
 
+Authored SQL lives beside the page or workflow that owns it, in a local `sql/` directory. Generated SQL stays under `src/generated/sql/**`.
+
 Generated source is checked in while this project proves the shape. That includes tracer generated code used before full generator coverage exists.
 
 ## Page Contract
@@ -26,6 +30,12 @@ Generated source is checked in while this project proves the shape. That include
 Pages own their local `Model`, browser `Msg`, `ServerCommand`, shared `view`, JavaScript-only `init` and `update`, and Erlang-only `load` and `handle` functions.
 
 Page data shapes belong to the page that renders and updates them. Shared types are reserved for stable app concepts independent of a page.
+
+Wire-crossing types may reference page-local types, approved root wire types under `src/wire/**`, primitives, and containers. Helper, service, query, business, formatting, and display types can be used as behavior, but their owned shapes cannot cross the wire.
+
+Client-side application behavior is authored in Gleam. JS or TS is reserved for tiny FFI modules around browser APIs.
+
+Generated output and rewritten source should preserve the Rally/Gleam house style: stable section layout for large modules and grouped, sorted imports.
 
 ## Current Commands
 

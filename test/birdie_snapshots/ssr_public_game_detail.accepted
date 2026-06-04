@@ -1,8 +1,6 @@
 ---
 version: 2.0.0
 title: ssr public game detail
-file: ./test/ssr_snapshot_test.gleam
-test_name: ssr_public_game_detail_snapshot_test
 ---
 hydration_count: 1
 
@@ -74,10 +72,6 @@ hydration_count: 1
 </div>
 <span class="badge live">3rd</span>
 </div>
-<h2>Scoring summary</h2>
-<ul>
-<li>MTL 2, TOR 4</li>
-</ul>
 </div>
 </section>
 </main>

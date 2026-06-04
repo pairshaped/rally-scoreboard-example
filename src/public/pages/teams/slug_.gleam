@@ -1,24 +1,37 @@
 @target(javascript)
-import api/to_server
+import generated/libero/result as wire_result
 import generated/proute/public/page_input
 @target(javascript)
 import generated/rally/client_transport as api_client
 @target(erlang)
-import generated/sql/games_sql
+import generated/sql/public/pages/games_sql
 @target(erlang)
-import generated/sql/teams_sql
+import generated/sql/public/pages/teams/slug__sql as teams_sql
+
 import gleam/bool
 import gleam/int
 import gleam/list
 import gleam/option.{type Option, None, Some}
+
 import lustre/attribute
 import lustre/effect.{type Effect}
 import lustre/element.{type Element}
 import lustre/element/html
 import lustre/event
-import page_context.{type PageContext}
 @target(erlang)
 import sqlight
+
+@target(javascript)
+import api/domain/game as api_game
+@target(javascript)
+import api/domain/team as api_team
+@target(javascript)
+import api/to_client
+@target(javascript)
+import api/to_server
+import page_context.{type PageContext}
+
+// TYPES
 
 pub type GameStatus {
   Scheduled
@@ -79,6 +92,8 @@ pub type Message {
   NavigateGame(id: Int)
 }
 
+// INIT
+
 pub fn init(
   page_context page_context: PageContext,
   route_params route_params: page_input.TeamsSlugRouteParams,
@@ -97,6 +112,8 @@ pub fn initial_model(
 ) -> Model {
   Model(team: None)
 }
+
+// UPDATE
 
 pub fn update(
   model model: Model,
@@ -129,6 +146,8 @@ pub fn game_updated(
   }
 }
 
+// VIEW
+
 pub fn view(model model: Model) -> Element(Message) {
   html.main([], [
     view_team_detail(model.team, fn(slug) { NavigateTeam(slug:) }, fn(id) {
@@ -136,6 +155,8 @@ pub fn view(model model: Model) -> Element(Message) {
     }),
   ])
 }
+
+// HELPERS
 
 fn apply_game_updated(team: TeamDetail, snapshot: GameUpdate) -> TeamDetail {
   use <- bool.guard(!game_belongs_to_team(team.code, snapshot), team)
@@ -339,16 +360,73 @@ fn status_badge(status: GameStatus) -> Element(msg) {
   }
 }
 
-// CLIENT
+// EFFECTS
 
 @target(javascript)
 fn init_effect(slug: String) -> Effect(Message) {
-  api_client.send(module: "public/teams", message: to_server.LoadTeam(slug:))
+  api_client.send_load(
+    module: "public/teams",
+    message: to_server.LoadTeam(slug:),
+    on_result: fn(result) { Loaded(map_load_result(result)) },
+  )
 }
 
 @target(erlang)
 fn init_effect(_slug: String) -> Effect(Message) {
   effect.none()
+}
+
+@target(javascript)
+fn map_load_result(
+  result: Result(to_client.ToClient, List(wire_result.ApiLoadError)),
+) -> Result(TeamDetail, LoadError) {
+  case result {
+    Ok(to_client.TeamLoaded(team)) -> Ok(wire_team_detail(team))
+    Ok(_) -> Error(LoadError(message: "Unexpected team response."))
+    Error([wire_result.ApiLoadError(message: message), ..]) ->
+      Error(LoadError(message: message))
+    Error([]) -> Error(LoadError(message: "Could not load team."))
+  }
+}
+
+@target(javascript)
+fn wire_team_detail(team: api_team.TeamDetail) -> TeamDetail {
+  TeamDetail(
+    code: team.code,
+    name: team.name,
+    slug: team.slug,
+    wins: team.wins,
+    losses: team.losses,
+    points_for: team.points_for,
+    points_against: team.points_against,
+    recent_games: list.map(team.recent_games, wire_game_summary),
+  )
+}
+
+@target(javascript)
+fn wire_game_summary(game: api_game.PublicGameSummary) -> GameSummary {
+  GameSummary(
+    id: game.id,
+    home: wire_team(game.home),
+    away: wire_team(game.away),
+    home_score: game.home_score,
+    away_score: game.away_score,
+    status: wire_game_status(game.status),
+  )
+}
+
+@target(javascript)
+fn wire_team(team: api_game.Team) -> Team {
+  Team(code: team.code, name: team.name, slug: team.slug)
+}
+
+@target(javascript)
+fn wire_game_status(status: api_game.GameStatus) -> GameStatus {
+  case status {
+    api_game.Scheduled -> Scheduled
+    api_game.Live(period) -> Live(period)
+    api_game.Final -> Final
+  }
 }
 
 // SERVER

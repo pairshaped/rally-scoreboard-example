@@ -2,7 +2,7 @@ import gleam/dynamic/decode
 import gleam/option.{type Option}
 import sqlight
 
-/// Generated from src/sql/teams/get_team_by_slug.sql
+/// Generated from src/public/pages/teams/slug_/sql/get_team_by_slug.sql
 pub type GetTeamBySlugRow {
   GetTeamBySlugRow(
     code: Option(String),
@@ -15,7 +15,7 @@ pub type GetTeamBySlugRow {
   )
 }
 
-/// Generated from src/sql/teams/get_team_by_slug.sql
+/// Generated from src/public/pages/teams/slug_/sql/get_team_by_slug.sql
 pub fn get_team_by_slug(
   db db: sqlight.Connection,
   slug slug: String,
@@ -45,12 +45,12 @@ pub fn get_team_by_slug(
   )
 }
 
-/// Generated from src/sql/teams/list_teams.sql
+/// Generated from src/public/pages/teams/slug_/sql/list_teams.sql
 pub type ListTeamsRow {
   ListTeamsRow(code: Option(String), name: String, slug: String)
 }
 
-/// Generated from src/sql/teams/list_teams.sql
+/// Generated from src/public/pages/teams/slug_/sql/list_teams.sql
 pub fn list_teams(
   db db: sqlight.Connection,
 ) -> Result(List(ListTeamsRow), sqlight.Error) {

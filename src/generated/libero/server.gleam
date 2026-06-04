@@ -11,7 +11,7 @@ import generated/libero/to_server_codec
 
 @target(erlang)
 pub type ClientRequest {
-  ClientRequest(module: String, message: ToServer)
+  ClientRequest(request_id: Int, module: String, message: ToServer)
 }
 
 @target(erlang)
@@ -28,7 +28,8 @@ pub fn decode(bytes: BitArray) -> Result(ToServer, Nil) {
 @target(erlang)
 pub fn decode_request(bytes: BitArray) -> Result(ClientRequest, Nil) {
   case decode_any(bytes) {
-    Ok(#(module, message)) -> Ok(ClientRequest(module:, message:))
+    Ok(#(request_id, module, message)) ->
+      Ok(ClientRequest(request_id:, module:, message:))
     _ -> Error(Nil)
   }
 }
@@ -46,22 +47,24 @@ pub fn encode_response(message message: ToClient) -> BitArray {
 
 @target(erlang)
 pub fn encode_load_result(
-  result result: Result(Nil, List(ApiLoadError)),
+  request_id request_id: Int,
+  result result: Result(ToClient, List(ApiLoadError)),
 ) -> BitArray {
-  encode_result_frame(result)
+  encode_result_frame(request_id, result)
 }
 
 @target(erlang)
 pub fn encode_save_result(
+  request_id request_id: Int,
   result result: Result(Nil, List(ApiSaveError)),
 ) -> BitArray {
-  encode_result_frame(result)
+  encode_result_frame(request_id, result)
 }
 
 @target(erlang)
-fn encode_result_frame(result: a) -> BitArray {
-  let payload = encode_any(result)
-  <<0, payload:bits>>
+fn encode_result_frame(request_id: Int, result: a) -> BitArray {
+  let payload = encode_any(#(request_id, result))
+  <<2, payload:bits>>
 }
 
 @target(erlang)

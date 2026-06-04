@@ -1,4 +1,31 @@
 @target(erlang)
+import generated/libero/result.{
+  type ApiLoadError, type ApiSaveError, ApiLoadError, ApiSaveError,
+}
+@target(erlang)
+import generated/libero/server as generated_server
+@target(erlang)
+import generated/sql/admin/pages/games_sql as admin_games_sql
+@target(erlang)
+import generated/sql/public/pages/games/id__sql as game_detail_sql
+@target(erlang)
+import generated/sql/public/pages/games_sql as public_games_sql
+@target(erlang)
+import generated/sql/public/pages/standings_sql
+@target(erlang)
+import generated/sql/public/pages/teams/slug__sql as teams_sql
+
+@target(erlang)
+import gleam/int
+@target(erlang)
+import gleam/list
+@target(erlang)
+import gleam/option.{type Option, None, Some}
+
+@target(erlang)
+import sqlight
+
+@target(erlang)
 import api/domain/game.{
   type AdminGameSummary, type GameDetail, type GameSnapshot, type GameStatus,
   type PublicGameSummary, AdminGameSummary, Final, GameDetail, GameSnapshot,
@@ -12,32 +39,16 @@ import api/domain/team.{TeamDetail}
 import api/to_client.{type ToClient}
 @target(erlang)
 import api/to_server.{type ToServer}
-@target(erlang)
-import generated/libero/result.{
-  type ApiLoadError, type ApiSaveError, ApiLoadError, ApiSaveError,
-}
-@target(erlang)
-import generated/libero/server as generated_server
-@target(erlang)
-import generated/sql/games_sql
-@target(erlang)
-import generated/sql/standings_sql
-@target(erlang)
-import generated/sql/teams_sql
-@target(erlang)
-import gleam/int
-@target(erlang)
-import gleam/list
-@target(erlang)
-import gleam/option.{type Option, None, Some}
-@target(erlang)
-import sqlight
+
+// TYPES
 
 @target(erlang)
 pub type DispatchReply {
-  LoadReply(result: Result(Nil, List(ApiLoadError)), messages: List(ToClient))
+  LoadReply(result: Result(ToClient, List(ApiLoadError)))
   SaveReply(result: Result(Nil, List(ApiSaveError)), messages: List(ToClient))
 }
+
+// DISPATCH
 
 @target(erlang)
 pub fn dispatch(
@@ -104,19 +115,27 @@ fn is_admin_message(message: ToServer) -> Bool {
   }
 }
 
+// REPLIES
+
 @target(erlang)
 pub fn reply_messages(reply: DispatchReply) -> List(ToClient) {
   case reply {
-    LoadReply(messages: messages, ..) -> messages
+    LoadReply(result: Ok(message)) -> [message]
+    LoadReply(result: Error(_)) -> []
     SaveReply(messages: messages, ..) -> messages
   }
 }
 
 @target(erlang)
-pub fn reply_result(reply: DispatchReply) -> BitArray {
+pub fn reply_result(
+  reply: DispatchReply,
+  request_id request_id: Int,
+) -> BitArray {
   case reply {
-    LoadReply(result, ..) -> generated_server.encode_load_result(result)
-    SaveReply(result, ..) -> generated_server.encode_save_result(result)
+    LoadReply(result) ->
+      generated_server.encode_load_result(request_id: request_id, result:)
+    SaveReply(result, ..) ->
+      generated_server.encode_save_result(request_id: request_id, result:)
   }
 }
 
@@ -125,22 +144,24 @@ pub fn push(module module: String, message message: ToClient) -> BitArray {
   generated_server.encode_push(module, message)
 }
 
+// LOADERS
+
 @target(erlang)
 fn load_games(db: sqlight.Connection) -> DispatchReply {
-  case games_sql.list_public_games(db: db, team_filter: "") {
+  case public_games_sql.list_public_games(db: db, team_filter: "") {
     Ok(rows) ->
-      load_succeeded([
+      load_succeeded(
         to_client.GamesLoaded(list.map(rows, public_game_summary_from_row)),
-      ])
+      )
     Error(sqlight.SqlightError(..)) -> load_failed("Could not load games.")
   }
 }
 
 @target(erlang)
 fn load_game(db: sqlight.Connection, game_id: Int) -> DispatchReply {
-  case games_sql.get_game(db: db, game_id: game_id) {
+  case game_detail_sql.get_game(db: db, game_id: game_id) {
     Ok([row, ..]) ->
-      load_succeeded([to_client.GameLoaded(game_detail_from_row(row))])
+      load_succeeded(to_client.GameLoaded(game_detail_from_row(row)))
     Ok([]) -> load_failed("Game not found.")
     Error(sqlight.SqlightError(..)) -> load_failed("Could not load game.")
   }
@@ -150,9 +171,9 @@ fn load_game(db: sqlight.Connection, game_id: Int) -> DispatchReply {
 fn load_standings(db: sqlight.Connection) -> DispatchReply {
   case standings_sql.list_standings(db) {
     Ok(rows) ->
-      load_succeeded([
+      load_succeeded(
         to_client.StandingsLoaded(list.map(rows, standing_from_row)),
-      ])
+      )
     Error(sqlight.SqlightError(..)) -> load_failed("Could not load standings.")
   }
 }
@@ -173,9 +194,9 @@ fn load_team_games(
 ) -> DispatchReply {
   let team_code = optional_string(row.code)
 
-  case games_sql.list_public_games(db: db, team_filter: team_code) {
+  case public_games_sql.list_public_games(db: db, team_filter: team_code) {
     Ok(games) ->
-      load_succeeded([
+      load_succeeded(
         to_client.TeamLoaded(TeamDetail(
           code: team_code,
           name: row.name,
@@ -186,22 +207,24 @@ fn load_team_games(
           points_against: row.points_against,
           recent_games: list.map(games, public_game_summary_from_row),
         )),
-      ])
+      )
     Error(sqlight.SqlightError(..)) -> load_failed("Could not load team games.")
   }
 }
 
 @target(erlang)
 fn load_admin_games(db: sqlight.Connection) -> DispatchReply {
-  case games_sql.list_admin_games(db) {
+  case admin_games_sql.list_admin_games(db) {
     Ok(rows) ->
-      load_succeeded([
+      load_succeeded(
         to_client.AdminGamesLoaded(list.map(rows, admin_game_summary_from_row)),
-      ])
+      )
     Error(sqlight.SqlightError(..)) ->
       load_failed("Could not load admin games.")
   }
 }
+
+// SAVES
 
 // nolint: label_possible -- private ToServer handler mirrors constructor field order.
 @target(erlang)
@@ -213,7 +236,13 @@ fn update_score(
   period: String,
 ) -> DispatchReply {
   case
-    games_sql.update_game_score(db, home_score, away_score, period, game_id)
+    admin_games_sql.update_game_score(
+      db,
+      home_score,
+      away_score,
+      period,
+      game_id,
+    )
   {
     Ok([_, ..]) -> saved_game_reply(db, game_id)
     Ok([]) -> save_failed("Game not found.")
@@ -223,7 +252,7 @@ fn update_score(
 
 @target(erlang)
 fn mark_final(db: sqlight.Connection, game_id: Int) -> DispatchReply {
-  case games_sql.update_game_final(db: db, game_id: game_id) {
+  case admin_games_sql.update_game_final(db: db, game_id: game_id) {
     Ok([_, ..]) -> saved_game_reply(db, game_id)
     Ok([]) -> save_failed("Game not found.")
     Error(sqlight.SqlightError(..)) -> save_failed("Could not mark final.")
@@ -239,13 +268,21 @@ fn correct_result(
   away_score: Int,
 ) -> DispatchReply {
   case
-    games_sql.update_game_score(db, home_score, away_score, "Final", game_id)
+    admin_games_sql.update_game_score(
+      db,
+      home_score,
+      away_score,
+      "Final",
+      game_id,
+    )
   {
     Ok([_, ..]) -> mark_final(db, game_id)
     Ok([]) -> save_failed("Game not found.")
     Error(sqlight.SqlightError(..)) -> save_failed("Could not correct result.")
   }
 }
+
+// HELPERS
 
 @target(erlang)
 fn saved_game_reply(db: sqlight.Connection, game_id: Int) -> DispatchReply {
@@ -256,13 +293,13 @@ fn saved_game_reply(db: sqlight.Connection, game_id: Int) -> DispatchReply {
 }
 
 @target(erlang)
-fn load_succeeded(messages: List(ToClient)) -> DispatchReply {
-  LoadReply(result: Ok(Nil), messages:)
+fn load_succeeded(message: ToClient) -> DispatchReply {
+  LoadReply(result: Ok(message))
 }
 
 @target(erlang)
 fn load_failed(message: String) -> DispatchReply {
-  LoadReply(result: Error([ApiLoadError(message:)]), messages: [])
+  LoadReply(result: Error([ApiLoadError(message:)]))
 }
 
 @target(erlang)
@@ -280,7 +317,7 @@ fn game_snapshot(
   db: sqlight.Connection,
   game_id: Int,
 ) -> Result(GameSnapshot, Nil) {
-  case games_sql.get_game(db: db, game_id: game_id) {
+  case game_detail_sql.get_game(db: db, game_id: game_id) {
     Ok([row, ..]) -> Ok(game_snapshot_from_row(row))
     _ -> Error(Nil)
   }
@@ -288,7 +325,7 @@ fn game_snapshot(
 
 @target(erlang)
 fn public_game_summary_from_row(
-  row: games_sql.ListPublicGamesRow,
+  row: public_games_sql.ListPublicGamesRow,
 ) -> PublicGameSummary {
   PublicGameSummary(
     id: row.id,
@@ -301,7 +338,7 @@ fn public_game_summary_from_row(
 }
 
 @target(erlang)
-fn game_detail_from_row(row: games_sql.GetGameRow) -> GameDetail {
+fn game_detail_from_row(row: game_detail_sql.GetGameRow) -> GameDetail {
   GameDetail(
     id: row.id,
     home: Team(row.home_code, row.home_name, row.home_slug),
@@ -314,7 +351,7 @@ fn game_detail_from_row(row: games_sql.GetGameRow) -> GameDetail {
 }
 
 @target(erlang)
-fn game_snapshot_from_row(row: games_sql.GetGameRow) -> GameSnapshot {
+fn game_snapshot_from_row(row: game_detail_sql.GetGameRow) -> GameSnapshot {
   GameSnapshot(
     id: row.id,
     home: Team(row.home_code, row.home_name, row.home_slug),
@@ -327,7 +364,7 @@ fn game_snapshot_from_row(row: games_sql.GetGameRow) -> GameSnapshot {
 
 @target(erlang)
 fn admin_game_summary_from_row(
-  row: games_sql.ListAdminGamesRow,
+  row: admin_games_sql.ListAdminGamesRow,
 ) -> AdminGameSummary {
   AdminGameSummary(
     id: row.id,
@@ -371,7 +408,7 @@ fn optional_string(value: Option(String)) -> String {
 }
 
 @target(erlang)
-fn score_summary(row: games_sql.GetGameRow) -> String {
+fn score_summary(row: game_detail_sql.GetGameRow) -> String {
   row.away_code
   <> " "
   <> int.to_string(row.away_score)

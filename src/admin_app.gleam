@@ -1,10 +1,4 @@
 @target(javascript)
-import admin/client_shared_state.{
-  type AdminClientSharedState, AdminClientSharedState,
-}
-@target(javascript)
-import app_shell
-@target(javascript)
 import generated/proute/admin/page_input
 @target(javascript)
 import generated/proute/admin/pages
@@ -20,18 +14,29 @@ import generated/rally/browser_mount
 import generated/rally/hydration
 @target(javascript)
 import generated/rally/to_client_application
+
 @target(javascript)
 import gleam/list
 @target(javascript)
 import gleam/option.{None}
+
 @target(javascript)
 import lustre
 @target(javascript)
 import lustre/effect.{type Effect}
 @target(javascript)
 import lustre/element.{type Element}
+
+@target(javascript)
+import admin/client_shared_state.{
+  type AdminClientSharedState, AdminClientSharedState,
+}
+@target(javascript)
+import app_shell
 @target(javascript)
 import page_context.{PageContext}
+
+// TYPES
 
 @target(javascript)
 type Model {
@@ -46,6 +51,8 @@ type Msg {
   ShellNavigate(String)
   BrowserPathChanged(String)
 }
+
+// INIT
 
 @target(javascript)
 pub fn main() -> Nil {
@@ -107,6 +114,8 @@ fn initial_page(
   }
 }
 
+// UPDATE
+
 @target(javascript)
 fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
   case msg {
@@ -141,6 +150,8 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
   }
 }
 
+// VIEW
+
 @target(javascript)
 fn view(model: Model) -> Element(Msg) {
   app_shell.admin(
@@ -151,6 +162,8 @@ fn view(model: Model) -> Element(Msg) {
     content: pages.view(model.page) |> element.map(PageMsg),
   )
 }
+
+// HELPERS
 
 @target(javascript)
 fn navigate(

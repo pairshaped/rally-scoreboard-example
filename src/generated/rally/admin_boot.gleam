@@ -3,6 +3,8 @@ import api/domain/game as api_game
 import api/to_client.{type ToClient}
 import api/to_server.{type ToServer}
 @target(javascript)
+import generated/libero/result as wire_result
+@target(javascript)
 import generated/proute/admin/page_input
 import generated/proute/admin/pages
 import generated/proute/admin/routes
@@ -34,7 +36,11 @@ fn request_effect(route: routes.Route) -> Effect(pages.Message) {
   route
   |> requests
   |> list.map(fn(request) {
-    client_transport.send(module: request_module(route), message: request)
+    client_transport.send_load(
+      module: request_module(route),
+      message: request,
+      on_result: fn(result) { load_result_message(route, result) },
+    )
   })
   |> effect.batch
 }
@@ -44,6 +50,51 @@ fn request_module(route: routes.Route) -> String {
   case route {
     routes.AdminHome | routes.AdminGames -> "admin/games"
     routes.NotFound -> ""
+  }
+}
+
+@target(javascript)
+fn load_result_message(
+  route: routes.Route,
+  result: Result(ToClient, List(wire_result.ApiLoadError)),
+) -> pages.Message {
+  case route, result {
+    routes.AdminHome, Ok(to_client.AdminGamesLoaded(games)) ->
+      pages.AdminHomeMsg(
+        admin_games_page.Loaded(Ok(list.map(games, admin_game_summary))),
+      )
+    routes.AdminGames, Ok(to_client.AdminGamesLoaded(games)) ->
+      pages.AdminGamesMsg(
+        admin_games_page.Loaded(Ok(list.map(games, admin_game_summary))),
+      )
+    _, Error(errors) -> load_error_message(route, api_load_error(errors))
+    _, Ok(_) -> load_error_message(route, "Unexpected admin load response.")
+  }
+}
+
+@target(javascript)
+fn load_error_message(route: routes.Route, message: String) -> pages.Message {
+  case route {
+    routes.AdminHome ->
+      pages.AdminHomeMsg(
+        admin_games_page.Loaded(Error(admin_games_page.LoadError(message:))),
+      )
+    routes.AdminGames ->
+      pages.AdminGamesMsg(
+        admin_games_page.Loaded(Error(admin_games_page.LoadError(message:))),
+      )
+    routes.NotFound ->
+      pages.AdminGamesMsg(
+        admin_games_page.Loaded(Error(admin_games_page.LoadError(message:))),
+      )
+  }
+}
+
+@target(javascript)
+fn api_load_error(errors: List(wire_result.ApiLoadError)) -> String {
+  case errors {
+    [wire_result.ApiLoadError(message: message), ..] -> message
+    [] -> "Could not load page."
   }
 }
 

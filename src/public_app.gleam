@@ -1,6 +1,4 @@
 @target(javascript)
-import app_shell
-@target(javascript)
 import generated/proute/public/page_input
 @target(javascript)
 import generated/proute/public/pages
@@ -16,18 +14,23 @@ import generated/rally/hydration
 import generated/rally/public_boot
 @target(javascript)
 import generated/rally/to_client_application
+
 @target(javascript)
 import gleam/int
 @target(javascript)
 import gleam/list
 @target(javascript)
 import gleam/option.{type Option, None, Some}
+
 @target(javascript)
 import lustre
 @target(javascript)
 import lustre/effect.{type Effect}
 @target(javascript)
 import lustre/element.{type Element}
+
+@target(javascript)
+import app_shell
 @target(javascript)
 import page_context.{PageContext}
 @target(javascript)
@@ -43,6 +46,8 @@ import public/pages/standings as standings_page
 @target(javascript)
 import public/pages/teams/slug_ as teams_slug_page
 
+// TYPES
+
 @target(javascript)
 type Model {
   Model(page: pages.Page, shared_state: PublicClientSharedState)
@@ -56,6 +61,8 @@ type Msg {
   ShellNavigate(String)
   BrowserPathChanged(String)
 }
+
+// INIT
 
 @target(javascript)
 pub fn main() -> Nil {
@@ -118,6 +125,8 @@ fn initial_page(
   }
 }
 
+// UPDATE
+
 @target(javascript)
 fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
   case msg {
@@ -157,6 +166,8 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
   }
 }
 
+// VIEW
+
 @target(javascript)
 fn view(model: Model) -> Element(Msg) {
   app_shell.public(
@@ -168,6 +179,8 @@ fn view(model: Model) -> Element(Msg) {
     content: pages.view(model.page) |> element.map(PageMsg),
   )
 }
+
+// HELPERS
 
 @target(javascript)
 fn page_navigation(message: pages.Message) -> Option(routes.Route) {

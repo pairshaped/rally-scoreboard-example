@@ -8,8 +8,11 @@ import gleam/io
 import gleam/option.{None}
 @target(erlang)
 import gleam/string
+
 @target(erlang)
 import mist.{type ResponseData}
+
+// STATIC
 
 @target(erlang)
 pub fn serve_static(path: String) -> Response(ResponseData) {
@@ -40,6 +43,8 @@ pub fn serve_static(path: String) -> Response(ResponseData) {
     }
   }
 }
+
+// CSS
 
 @target(erlang)
 pub fn css() -> String {

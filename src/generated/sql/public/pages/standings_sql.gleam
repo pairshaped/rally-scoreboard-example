@@ -2,7 +2,7 @@ import gleam/dynamic/decode
 import gleam/option.{type Option}
 import sqlight
 
-/// Generated from src/sql/standings/list_standings.sql
+/// Generated from src/public/pages/standings/sql/list_standings.sql
 pub type ListStandingsRow {
   ListStandingsRow(
     team_code: Option(String),
@@ -15,7 +15,7 @@ pub type ListStandingsRow {
   )
 }
 
-/// Generated from src/sql/standings/list_standings.sql
+/// Generated from src/public/pages/standings/sql/list_standings.sql
 pub fn list_standings(
   db db: sqlight.Connection,
 ) -> Result(List(ListStandingsRow), sqlight.Error) {

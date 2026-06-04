@@ -1,20 +1,4 @@
 @target(erlang)
-import api/to_client
-@target(erlang)
-import api/to_server.{type ToServer}
-@target(erlang)
-import app_api
-@target(erlang)
-import app_auth
-@target(erlang)
-import app_auth_http
-@target(erlang)
-import app_session
-@target(erlang)
-import app_shell
-@target(erlang)
-import authentication_context.{type AuthenticationContext}
-@target(erlang)
 import generated/libero/to_client_codec
 @target(erlang)
 import generated/proute/admin/page_input as admin_page_input
@@ -32,6 +16,7 @@ import generated/proute/public/routes as public_routes
 import generated/rally/admin_boot
 @target(erlang)
 import generated/rally/public_boot
+
 @target(erlang)
 import gleam/bit_array
 @target(erlang)
@@ -40,19 +25,41 @@ import gleam/http/request.{type Request}
 import gleam/list
 @target(erlang)
 import gleam/option.{type Option, None, Some}
+
 @target(erlang)
 import lustre/element
 @target(erlang)
 import mist.{type Connection}
 @target(erlang)
-import page_context.{PageContext}
-@target(erlang)
 import sqlight
+
+@target(erlang)
+import api/to_client
+@target(erlang)
+import api/to_server.{type ToServer}
+@target(erlang)
+import app_api
+@target(erlang)
+import app_auth
+@target(erlang)
+import app_auth_http
+@target(erlang)
+import app_session
+@target(erlang)
+import app_shell
+@target(erlang)
+import authentication_context.{type AuthenticationContext}
+@target(erlang)
+import page_context.{PageContext}
+
+// TYPES
 
 @target(erlang)
 pub type SsrApp {
   SsrApp(html: String, hydration: List(String))
 }
+
+// PUBLIC
 
 @target(erlang)
 pub fn public(
@@ -105,6 +112,8 @@ pub fn public_render(
   )
 }
 
+// ADMIN
+
 @target(erlang)
 pub fn admin(
   req req: Request(Connection),
@@ -146,6 +155,8 @@ pub fn admin_render(
     hydration: hydration_payloads(messages),
   )
 }
+
+// HELPERS
 
 @target(erlang)
 fn boot_identity(

@@ -1,11 +1,19 @@
 let socket = null;
 let socketUrl = null;
 let pending = [];
+let pendingResults = new Map();
 let listeners = new Set();
 let reconnectTimer = null;
 let reconnectAttempts = 0;
+let requestId = 0;
 
-import { BitArray } from "../gleam.mjs";
+import { BitArray, Ok } from "../../gleam.mjs";
+import { decode_result_envelope } from "../libero/client.mjs";
+
+export function next_request_id() {
+  requestId += 1;
+  return requestId;
+}
 
 export function connect(url, onFrame) {
   socketUrl = url;
@@ -30,6 +38,18 @@ export function send_frame(frame) {
       detail: { bytes, frame },
     }),
   );
+  return undefined;
+}
+
+export function send_load_frame(requestId, frame, onResult, dispatch) {
+  pendingResults.set(requestId, { onResult, dispatch });
+  send_frame(frame);
+  return undefined;
+}
+
+export function send_save_frame(requestId, frame, onResult, dispatch) {
+  pendingResults.set(requestId, { onResult, dispatch });
+  send_frame(frame);
   return undefined;
 }
 
@@ -63,6 +83,8 @@ function ensure_socket() {
     if (!bytes) return;
 
     const frame = new BitArray(bytes);
+    if (dispatch_result_frame(frame)) return;
+
     for (const listener of listeners) {
       try { listener(frame); } catch (_) {}
     }
@@ -79,6 +101,21 @@ function ensure_socket() {
     if (current) current.close();
     schedule_reconnect();
   });
+}
+
+function dispatch_result_frame(frame) {
+  if (frame.byteAt(0) !== 2) return false;
+
+  const decoded = decode_result_envelope(frame);
+  if (!(decoded instanceof Ok)) return true;
+
+  const [requestId, result] = decoded[0];
+  const pending = pendingResults.get(requestId);
+  if (!pending) return true;
+
+  pendingResults.delete(requestId);
+  pending.dispatch(pending.onResult(result));
+  return true;
 }
 
 function schedule_reconnect() {

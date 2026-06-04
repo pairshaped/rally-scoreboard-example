@@ -1,21 +1,31 @@
 @target(javascript)
-import api/to_server
+import generated/libero/result as wire_result
 import generated/proute/public/page_input
 @target(javascript)
 import generated/rally/client_transport as api_client
 @target(erlang)
-import generated/sql/games_sql
+import generated/sql/public/pages/games/id__sql as games_sql
+
 import gleam/int
-import gleam/list
 import gleam/option.{type Option, None, Some}
+
 import lustre/attribute
 import lustre/effect.{type Effect}
 import lustre/element.{type Element}
 import lustre/element/html
 import lustre/event
-import page_context.{type PageContext}
 @target(erlang)
 import sqlight
+
+@target(javascript)
+import api/domain/game as api_game
+@target(javascript)
+import api/to_client
+@target(javascript)
+import api/to_server
+import page_context.{type PageContext}
+
+// TYPES
 
 pub type GameStatus {
   Scheduled
@@ -35,7 +45,6 @@ pub type GameDetail {
     home_score: Int,
     away_score: Int,
     status: GameStatus,
-    scoring_summary: List(String),
   )
 }
 
@@ -56,6 +65,8 @@ pub type Message {
   NavigateTeam(slug: String)
 }
 
+// INIT
+
 pub fn init(
   page_context page_context: PageContext,
   route_params route_params: page_input.GamesIdRouteParams,
@@ -74,6 +85,8 @@ pub fn initial_model(
 ) -> Model {
   Model(game: None)
 }
+
+// UPDATE
 
 pub fn update(
   model model: Model,
@@ -106,6 +119,8 @@ pub fn game_updated(
   }
 }
 
+// VIEW
+
 pub fn view(model model: Model) -> Element(Message) {
   html.main([], [
     html.section([attribute.class("panel")], [
@@ -114,6 +129,8 @@ pub fn view(model model: Model) -> Element(Message) {
     ]),
   ])
 }
+
+// HELPERS
 
 fn view_game_detail(
   game: Option(GameDetail),
@@ -152,13 +169,6 @@ fn view_game_detail(
           ]),
           status_badge(game.status),
         ]),
-        html.h2([], [html.text("Scoring summary")]),
-        html.ul(
-          [],
-          list.map(game.scoring_summary, fn(item) {
-            html.li([], [html.text(item)])
-          }),
-        ),
       ])
   }
 }
@@ -187,15 +197,16 @@ fn status_badge(status: GameStatus) -> Element(msg) {
   }
 }
 
-// CLIENT
+// EFFECTS
 
 @target(javascript)
 fn init_effect(id: String) -> Effect(Message) {
   case int.parse(id) {
     Ok(game_id) ->
-      api_client.send(
+      api_client.send_load(
         module: "public/games",
         message: to_server.LoadGame(game_id:),
+        on_result: fn(result) { Loaded(map_load_result(result)) },
       )
     Error(Nil) -> effect.none()
   }
@@ -204,6 +215,45 @@ fn init_effect(id: String) -> Effect(Message) {
 @target(erlang)
 fn init_effect(_id: String) -> Effect(Message) {
   effect.none()
+}
+
+@target(javascript)
+fn map_load_result(
+  result: Result(to_client.ToClient, List(wire_result.ApiLoadError)),
+) -> Result(GameDetail, LoadError) {
+  case result {
+    Ok(to_client.GameLoaded(game)) -> Ok(wire_game_detail(game))
+    Ok(_) -> Error(LoadError(message: "Unexpected game response."))
+    Error([wire_result.ApiLoadError(message: message), ..]) ->
+      Error(LoadError(message: message))
+    Error([]) -> Error(LoadError(message: "Could not load game."))
+  }
+}
+
+@target(javascript)
+fn wire_game_detail(game: api_game.GameDetail) -> GameDetail {
+  GameDetail(
+    id: game.id,
+    home: wire_team(game.home),
+    away: wire_team(game.away),
+    home_score: game.home_score,
+    away_score: game.away_score,
+    status: wire_game_status(game.status),
+  )
+}
+
+@target(javascript)
+fn wire_team(team: api_game.Team) -> Team {
+  Team(code: team.code, name: team.name, slug: team.slug)
+}
+
+@target(javascript)
+fn wire_game_status(status: api_game.GameStatus) -> GameStatus {
+  case status {
+    api_game.Scheduled -> Scheduled
+    api_game.Live(period) -> Live(period)
+    api_game.Final -> Final
+  }
 }
 
 // SERVER
@@ -230,7 +280,6 @@ fn game_detail_from_row(row: games_sql.GetGameRow) -> GameDetail {
     home_score: row.home_score,
     away_score: row.away_score,
     status: game_status(row.period, row.final),
-    scoring_summary: [score_summary(row)],
   )
 }
 
@@ -241,15 +290,4 @@ fn game_status(period: String, final: Int) -> GameStatus {
     False, "Scheduled" -> Scheduled
     False, _ -> Live(period)
   }
-}
-
-@target(erlang)
-fn score_summary(row: games_sql.GetGameRow) -> String {
-  row.away_code
-  <> " "
-  <> int.to_string(row.away_score)
-  <> ", "
-  <> row.home_code
-  <> " "
-  <> int.to_string(row.home_score)
 }

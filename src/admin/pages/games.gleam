@@ -1,20 +1,31 @@
 @target(javascript)
-import api/to_server
+import generated/libero/result as wire_result
 import generated/proute/admin/page_input
 @target(javascript)
 import generated/rally/client_transport as api_client
 @target(erlang)
-import generated/sql/games_sql
+import generated/sql/admin/pages/games_sql
+
 import gleam/int
 import gleam/list
+
 import lustre/attribute
 import lustre/effect.{type Effect}
 import lustre/element.{type Element}
 import lustre/element/html
 import lustre/event
-import page_context.{type PageContext}
 @target(erlang)
 import sqlight
+
+@target(javascript)
+import api/domain/game as api_game
+@target(javascript)
+import api/to_client
+@target(javascript)
+import api/to_server
+import page_context.{type PageContext}
+
+// TYPES
 
 pub type GameStatus {
   Scheduled
@@ -53,7 +64,7 @@ pub type SaveError {
   SaveError(message: String)
 }
 
-pub type ServerCommand {
+pub type ServerMsg {
   ServerUpdateScore(
     game_id: Int,
     home_score: Int,
@@ -73,7 +84,10 @@ pub type Message {
   Loaded(Result(List(AdminGameSummary), LoadError))
   MarkFinal(id: Int)
   Saved(Result(GameUpdate, SaveError))
+  SaveFinished(id: Int, result: Result(Nil, SaveError))
 }
+
+// INIT
 
 pub fn init(
   page_context page_context: PageContext,
@@ -89,6 +103,8 @@ pub fn initial_model(
   Model(games: [])
 }
 
+// UPDATE
+
 pub fn update(
   _page_context: PageContext,
   model model: Model,
@@ -102,6 +118,8 @@ pub fn update(
       effect.none(),
     )
     Saved(Error(_)) -> #(model, effect.none())
+    SaveFinished(_, Ok(Nil)) -> #(model, effect.none())
+    SaveFinished(_, Error(_)) -> #(model, effect.none())
     AdjustAway(..) | AdjustHome(..) | MarkFinal(..) -> #(
       model,
       message_effect(msg),
@@ -123,6 +141,8 @@ pub fn game_updated(
   #(upsert_game(model, game_update_summary(game)), effect.none())
 }
 
+// VIEW
+
 pub fn view(model model: Model) -> Element(Message) {
   view_games(
     games: model.games,
@@ -135,6 +155,8 @@ pub fn view(model model: Model) -> Element(Message) {
     on_mark_final: fn(id) { MarkFinal(id:) },
   )
 }
+
+// HELPERS
 
 fn view_games(
   games games: List(AdminGameSummary),
@@ -252,11 +274,15 @@ fn status_badge(status: GameStatus) -> Element(msg) {
   }
 }
 
-// CLIENT
+// EFFECTS
 
 @target(javascript)
 fn init_effect() -> Effect(Message) {
-  api_client.send(module: "admin/games", message: to_server.LoadAdminGames)
+  api_client.send_load(
+    module: "admin/games",
+    message: to_server.LoadAdminGames,
+    on_result: fn(result) { Loaded(map_load_result(result)) },
+  )
 }
 
 @target(erlang)
@@ -265,10 +291,48 @@ fn init_effect() -> Effect(Message) {
 }
 
 @target(javascript)
+fn map_load_result(
+  result: Result(to_client.ToClient, List(wire_result.ApiLoadError)),
+) -> Result(List(AdminGameSummary), LoadError) {
+  case result {
+    Ok(to_client.AdminGamesLoaded(games)) ->
+      Ok(list.map(games, wire_admin_game_summary))
+    Ok(_) -> Error(LoadError(message: "Unexpected admin games response."))
+    Error([wire_result.ApiLoadError(message: message), ..]) ->
+      Error(LoadError(message: message))
+    Error([]) -> Error(LoadError(message: "Could not load admin games."))
+  }
+}
+
+@target(javascript)
+fn wire_admin_game_summary(
+  game: api_game.AdminGameSummary,
+) -> AdminGameSummary {
+  AdminGameSummary(
+    id: game.id,
+    home_code: game.home_code,
+    away_code: game.away_code,
+    home_score: game.home_score,
+    away_score: game.away_score,
+    status: wire_game_status(game.status),
+    needs_attention: game.needs_attention,
+  )
+}
+
+@target(javascript)
+fn wire_game_status(status: api_game.GameStatus) -> GameStatus {
+  case status {
+    api_game.Scheduled -> Scheduled
+    api_game.Live(period) -> Live(period)
+    api_game.Final -> Final
+  }
+}
+
+@target(javascript)
 fn message_effect(msg: Message) -> Effect(Message) {
   case msg {
     AdjustAway(id, home_score, away_score, delta) ->
-      api_client.send(
+      api_client.send_save(
         module: "admin/games",
         message: to_server.UpdateScore(
           game_id: id,
@@ -276,9 +340,10 @@ fn message_effect(msg: Message) -> Effect(Message) {
           away_score: clamp_score(away_score + delta),
           period: "Live",
         ),
+        on_result: fn(result) { SaveFinished(id, map_save_result(result)) },
       )
     AdjustHome(id, home_score, away_score, delta) ->
-      api_client.send(
+      api_client.send_save(
         module: "admin/games",
         message: to_server.UpdateScore(
           game_id: id,
@@ -286,10 +351,15 @@ fn message_effect(msg: Message) -> Effect(Message) {
           away_score: away_score,
           period: "Live",
         ),
+        on_result: fn(result) { SaveFinished(id, map_save_result(result)) },
       )
     MarkFinal(id) ->
-      api_client.send(module: "admin/games", message: to_server.MarkFinal(id))
-    Loaded(_) | Saved(_) -> effect.none()
+      api_client.send_save(
+        module: "admin/games",
+        message: to_server.MarkFinal(id),
+        on_result: fn(result) { SaveFinished(id, map_save_result(result)) },
+      )
+    Loaded(_) | Saved(_) | SaveFinished(..) -> effect.none()
   }
 }
 
@@ -304,6 +374,18 @@ fn clamp_score(score: Int) -> Int {
   case score < 0 {
     True -> 0
     False -> score
+  }
+}
+
+@target(javascript)
+fn map_save_result(
+  result: Result(Nil, List(wire_result.ApiSaveError)),
+) -> Result(Nil, SaveError) {
+  case result {
+    Ok(Nil) -> Ok(Nil)
+    Error([wire_result.ApiSaveError(message: message, ..), ..]) ->
+      Error(SaveError(message: message))
+    Error([]) -> Error(SaveError(message: "Could not save game."))
   }
 }
 
@@ -323,9 +405,9 @@ pub fn load(
 @target(erlang)
 pub fn handle(
   db: sqlight.Connection,
-  command: ServerCommand,
+  msg: ServerMsg,
 ) -> Result(GameUpdate, SaveError) {
-  case command {
+  case msg {
     ServerUpdateScore(game_id, home_score, away_score, period) ->
       case
         games_sql.update_game_score(

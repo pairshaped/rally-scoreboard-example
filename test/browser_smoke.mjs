@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { realpathSync } from "node:fs";
 import { createRequire } from "node:module";
 import { execFileSync, spawn } from "node:child_process";
 import path from "node:path";
@@ -55,7 +56,7 @@ try {
     "hydrated direct /games load should not send an initial websocket load request",
   );
 
-  await step("navigate from games to standings with result and data", async () => {
+  await step("navigate from games to standings with load result", async () => {
     sentFrames.length = 0;
     receivedFrames.length = 0;
 
@@ -72,13 +73,18 @@ try {
     );
     assert.equal(
       receivedFrames.length,
-      2,
-      "SPA standings navigation should receive load result and GamesLoaded: "
+      1,
+      "SPA standings navigation should receive one load result: "
         + receivedFrames.map(frameSummary).join(", "),
+    );
+    assert.equal(
+      frameKind(receivedFrames[0]),
+      "result",
+      "SPA standings navigation should receive loaded data in the result frame",
     );
   });
 
-  await step("navigate from standings to games with result and data", async () => {
+  await step("navigate from standings to games with load result", async () => {
     sentFrames.length = 0;
     receivedFrames.length = 0;
 
@@ -95,17 +101,22 @@ try {
     );
     assert.equal(
       receivedFrames.length,
-      2,
-      "SPA games navigation should receive load result and GamesLoaded: "
+      1,
+      "SPA games navigation should receive one load result: "
         + receivedFrames.map(frameSummary).join(", "),
+    );
+    assert.equal(
+      frameKind(receivedFrames[0]),
+      "result",
+      "SPA games navigation should receive loaded data in the result frame",
     );
   });
 
   await step("navigate to game detail", async () => {
     await page.getByRole("link", { name: "Details" }).first().click();
     await page.waitForURL("**/games/1");
-    await page.getByText("Scoring summary").waitFor();
-    await page.getByText("3rd").first().waitFor();
+    await page.getByRole("heading", { name: "Game detail" }).waitFor();
+    await page.getByText("Toronto Towers").first().waitFor();
   });
   assert.ok(
     sentFrames.length > 0,
@@ -131,6 +142,35 @@ try {
     await page.getByText("Finalize").first().waitFor();
   });
 
+  await step("admin score save receives result and self broadcast", async () => {
+    sentFrames.length = 0;
+    receivedFrames.length = 0;
+
+    const firstCard = page.locator(".game-card").first();
+    const awayScore = firstCard.locator(".score").first();
+    const before = Number(await awayScore.textContent());
+
+    await firstCard.locator(".score-control").nth(1).click();
+    await expectText(awayScore, String(before + 1));
+    await page.waitForTimeout(500);
+
+    assert.equal(
+      sentFrames.length,
+      1,
+      "admin score click should send one websocket save request",
+    );
+    assert.ok(
+      receivedFrames.some(frame => frameKind(frame) === "result"),
+      "admin score click should receive a correlated save result: "
+        + receivedFrames.map(frameSummary).join(", "),
+    );
+    assert.ok(
+      receivedFrames.some(frame => frameKind(frame) === "push"),
+      "admin score click should receive its own GameUpdated broadcast: "
+        + receivedFrames.map(frameSummary).join(", "),
+    );
+  });
+
 } finally {
   if (browser) {
     await browser.close();
@@ -150,17 +190,21 @@ function loadPlaywright() {
     try {
       cliPath = execFileSync(
         "sh",
-        ["-lc", "readlink -f $(command -v playwright)"],
+        ["-lc", "command -v playwright || command -v playwright-cli"],
         { encoding: "utf8" },
       ).trim();
     } catch {
       throw new Error(
-        "Playwright is not installed. Install it globally with `pnpm add -g playwright`.",
+        "Playwright is not installed. Install `playwright` or `playwright-cli`.",
       );
     }
 
-    const packageRoot = path.dirname(cliPath);
-    return createRequire(path.join(packageRoot, "package.json"))("playwright");
+    const cliRequire = createRequire(realpathSync(cliPath));
+    try {
+      return cliRequire("playwright");
+    } catch (_) {
+      return cliRequire("playwright-core");
+    }
   }
 }
 
@@ -253,13 +297,38 @@ function sleep(ms) {
 }
 
 function frameSummary(payload) {
+  const bytes = frameBytes(payload);
+  return `${frameKind(payload)}:${bytes.length}`;
+}
+
+function frameKind(payload) {
+  const bytes = frameBytes(payload);
+  return bytes[0] === 0
+    ? "response"
+    : bytes[0] === 1
+    ? "push"
+    : bytes[0] === 2
+    ? "result"
+    : "raw";
+}
+
+function frameBytes(payload) {
   const bytes = payload instanceof Buffer
     ? payload
     : payload instanceof Uint8Array
     ? Buffer.from(payload)
     : Buffer.from(String(payload));
-  const kind = bytes[0] === 0 ? "response" : bytes[0] === 1 ? "push" : "raw";
-  return `${kind}:${bytes.length}`;
+  return bytes;
+}
+
+async function expectText(locator, text) {
+  const deadline = Date.now() + 5_000;
+  while (Date.now() < deadline) {
+    if (await locator.textContent() === text) return;
+    await sleep(100);
+  }
+
+  assert.equal(await locator.textContent(), text);
 }
 
 async function step(name, work) {

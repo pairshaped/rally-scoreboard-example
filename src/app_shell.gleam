@@ -1,11 +1,15 @@
-import authentication_context.{type AuthenticationContext}
 import gleam/option.{type Option, None, Some}
 import gleam/string
+
 import lustre/attribute
 import lustre/element.{type Element}
 import lustre/element/html
 import lustre/element/svg
 import lustre/event
+
+import authentication_context.{type AuthenticationContext}
+
+// SHELLS
 
 pub fn public(
   current_path current_path: String,
@@ -46,6 +50,8 @@ pub fn admin(
     content,
   ])
 }
+
+// TOPBARS
 
 fn public_topbar(
   subtitle subtitle: String,
@@ -146,6 +152,8 @@ fn session_link(
   }
 }
 
+// CONTROLS
+
 fn nav_link(
   href href: String,
   label label: String,
@@ -197,6 +205,8 @@ fn theme_switch(
     moon_icon(),
   ])
 }
+
+// ICONS
 
 fn sun_icon() -> Element(msg) {
   svg.svg(icon_attrs("Light mode"), [
@@ -254,6 +264,8 @@ fn line_attrs(
     attribute.attribute("y2", y2),
   ]
 }
+
+// HELPERS
 
 fn is_games_path(path: String) -> Bool {
   path == "/" || string.starts_with(path, "/games")

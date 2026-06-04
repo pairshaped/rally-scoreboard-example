@@ -9,13 +9,14 @@ mist = ">= 6.0.3 and < 7.0.0"
 gleam_http = ">= 4.3.0 and < 5.0.0"
 gleam_erlang = ">= 1.3.0 and < 2.0.0"
 gleam_crypto = ">= 1.6.0 and < 2.0.0"
+gleam_json = ">= 3.1.0 and < 4.0.0"
+libero = { path = "../libero" }
 
 [dev-dependencies]
 gleeunit = ">= 1.0.0 and < 2.0.0"
 birdie = ">= 2.0.0 and < 3.0.0"
 glinter = ">= 2.19.0 and < 3.0.0"
-marmot = ">= 1.7.1 and < 2.0.0"
-libero = { path = "../libero" }
+marmot = { path = "../marmot" }
 proute = { path = "../proute" }
 
 [tools.glinter]
@@ -26,7 +27,6 @@ scan_paths = ["src"]
 
 [tools.marmot]
 database = "db/scoreboard.db"
-sql_dir = "src/sql"
 output = "src/generated/sql"
 
 [tools.libero]
