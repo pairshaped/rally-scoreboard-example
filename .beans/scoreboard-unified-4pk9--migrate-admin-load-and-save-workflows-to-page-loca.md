@@ -1,14 +1,14 @@
 ---
 # scoreboard-unified-4pk9
 title: Migrate admin load and save workflows to page-local contracts
-status: in-progress
+status: completed
 type: feature
 priority: high
 tags:
     - rally
     - chase
 created_at: 2026-06-04T03:38:31Z
-updated_at: 2026-06-04T16:08:35Z
+updated_at: 2026-06-04T16:48:16Z
 parent: scoreboard-unified-wm8p
 blocked_by:
     - scoreboard-unified-adc2
@@ -56,3 +56,15 @@ Validated with:
 - `gleam test --target erlang`
 - `SCOREBOARD_BASE_URL=http://localhost:8097 node test/ws_result_smoke.mjs`
 - `SCOREBOARD_BASE_URL=http://localhost:8098 node test/browser_smoke.mjs`
+
+
+
+Regeneration-safe follow-up is now complete. Rally commit d8115f9 generates the page-owned admin load/save RPC glue, and chase commit 20b2841 regenerates the app glue from Rally. The admin save path still sends the origin connection a correlated page-local GameUpdate result and broadcasts the root broadcasts.Event only to peer connections.
+
+Validated with:
+
+• gleam build --target erlang
+• gleam build --target javascript
+• gleam test --target erlang
+• SCOREBOARD_BASE_URL=http://localhost:8099 node test/ws_result_smoke.mjs
+• SCOREBOARD_BASE_URL=http://localhost:8100 node test/browser_smoke.mjs
