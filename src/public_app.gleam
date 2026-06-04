@@ -109,6 +109,7 @@ fn initial_page(
 ) -> #(pages.Page, Effect(pages.Message)) {
   case route {
     routes.Home | routes.Games -> initial_public_games_page(route, query_params)
+    routes.Standings -> initial_public_standings_page(route, query_params)
     _ -> initial_root_hydrated_page(route, query_params)
   }
 }
@@ -122,6 +123,23 @@ fn initial_public_games_page(
     Ok(result) -> {
       let page = pages.load_sync(PageContext, query_params, route)
       let message = public_boot.public_games_load_result_message(route, result)
+      let #(page, _) = pages.update(page, message)
+      #(page, effect.none())
+    }
+    Error(Nil) -> public_boot.load_client(PageContext, query_params, route)
+  }
+}
+
+@target(javascript)
+fn initial_public_standings_page(
+  route route: routes.Route,
+  query_params query_params: page_input.QueryParams,
+) -> #(pages.Page, Effect(pages.Message)) {
+  case hydration.public_standings_load_result() {
+    Ok(result) -> {
+      let page = pages.load_sync(PageContext, query_params, route)
+      let message =
+        public_boot.public_standings_load_result_message(route, result)
       let #(page, _) = pages.update(page, message)
       #(page, effect.none())
     }

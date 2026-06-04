@@ -10,6 +10,8 @@ import generated/libero/to_client_codec
 import generated/libero/to_server_codec
 @target(erlang)
 import public/pages/games/wire as public_games_wire
+@target(erlang)
+import public/pages/standings/wire as public_standings_wire
 
 @target(erlang)
 pub type ClientRequest {
@@ -22,6 +24,15 @@ pub type PublicGamesClientRequest {
     request_id: Int,
     module: String,
     message: public_games_wire.ServerMsg,
+  )
+}
+
+@target(erlang)
+pub type PublicStandingsClientRequest {
+  PublicStandingsClientRequest(
+    request_id: Int,
+    module: String,
+    message: public_standings_wire.ServerMsg,
   )
 }
 
@@ -57,6 +68,17 @@ pub fn decode_public_games_request(
 }
 
 @target(erlang)
+pub fn decode_public_standings_request(
+  bytes: BitArray,
+) -> Result(PublicStandingsClientRequest, Nil) {
+  case decode_any(bytes) {
+    Ok(#(request_id, module, message)) ->
+      Ok(PublicStandingsClientRequest(request_id:, module:, message:))
+    _ -> Error(Nil)
+  }
+}
+
+@target(erlang)
 pub fn encode(message: ToClient) -> BitArray {
   to_client_codec.encode(message)
 }
@@ -79,6 +101,14 @@ pub fn encode_load_result(
 pub fn encode_public_games_load_result(
   request_id request_id: Int,
   result result: Result(public_games_wire.LoadResult, List(ApiLoadError)),
+) -> BitArray {
+  encode_result_frame(request_id, result)
+}
+
+@target(erlang)
+pub fn encode_public_standings_load_result(
+  request_id request_id: Int,
+  result result: Result(public_standings_wire.LoadResult, List(ApiLoadError)),
 ) -> BitArray {
   encode_result_frame(request_id, result)
 }

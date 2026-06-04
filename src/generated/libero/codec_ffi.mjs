@@ -37,6 +37,15 @@ import {
   PublicGamesTeam,
   PublicGamesGameSummary,
 } from "../../public/pages/games/wire.mjs";
+import {
+  PublicStandingsLoad,
+  PublicStandingsLoaded,
+  PublicStandingsScheduled,
+  PublicStandingsLive,
+  PublicStandingsFinal,
+  PublicStandingsTeam,
+  PublicStandingsGameSummary,
+} from "../../public/pages/standings/wire.mjs";
 
 const constructorRegistry = new Map();
 
@@ -497,6 +506,20 @@ export function ensure() {
   registerConstructor("public_games_team", PublicGamesTeam, 3, ["string", "string", "string"]);
   PublicGamesGameSummary.__wireAtom = "public_games_game_summary";
   registerConstructor("public_games_game_summary", PublicGamesGameSummary, 6, ["int", undefined, undefined, "int", "int", undefined]);
+  PublicStandingsLoad.__wireAtom = "public_standings_load";
+  registerConstructor("public_standings_load", PublicStandingsLoad, 0, []);
+  PublicStandingsLoaded.__wireAtom = "public_standings_loaded";
+  registerConstructor("public_standings_loaded", PublicStandingsLoaded, 1, [{ kind: "list", element: undefined }]);
+  PublicStandingsScheduled.__wireAtom = "public_standings_scheduled";
+  registerConstructor("public_standings_scheduled", PublicStandingsScheduled, 0, []);
+  PublicStandingsLive.__wireAtom = "public_standings_live";
+  registerConstructor("public_standings_live", PublicStandingsLive, 1, ["string"]);
+  PublicStandingsFinal.__wireAtom = "public_standings_final";
+  registerConstructor("public_standings_final", PublicStandingsFinal, 0, []);
+  PublicStandingsTeam.__wireAtom = "public_standings_team";
+  registerConstructor("public_standings_team", PublicStandingsTeam, 3, ["string", "string", "string"]);
+  PublicStandingsGameSummary.__wireAtom = "public_standings_game_summary";
+  registerConstructor("public_standings_game_summary", PublicStandingsGameSummary, 6, ["int", undefined, undefined, "int", "int", undefined]);
   Scheduled.__wireAtom = "scheduled";
   registerConstructor("scheduled", Scheduled, 0, []);
   Live.__wireAtom = "live";

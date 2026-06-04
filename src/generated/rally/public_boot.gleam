@@ -20,6 +20,8 @@ import public/pages/games/id_ as games_id_page
 @target(javascript)
 import public/pages/games/wire as public_games_wire
 import public/pages/standings as standings_page
+@target(javascript)
+import public/pages/standings/wire as public_standings_wire
 import public/pages/teams/slug_ as teams_slug_page
 
 pub fn requests(route: routes.Route) -> List(ToServer) {
@@ -30,7 +32,7 @@ pub fn requests(route: routes.Route) -> List(ToServer) {
         Ok(game_id) -> [to_server.LoadGame(game_id:)]
         Error(Nil) -> []
       }
-    routes.Standings -> [to_server.LoadGames]
+    routes.Standings -> []
     routes.TeamsSlug(slug) -> [to_server.LoadTeam(slug:)]
     routes.SignIn | routes.NotFound -> []
   }
@@ -51,6 +53,10 @@ fn request_effect(route: routes.Route) -> Effect(pages.Message) {
     routes.Home | routes.Games ->
       client_transport.send_public_games_load(on_result: fn(result) {
         public_games_load_result_message(route, result)
+      })
+    routes.Standings ->
+      client_transport.send_public_standings_load(on_result: fn(result) {
+        public_standings_load_result_message(route, result)
       })
     _ ->
       route
@@ -96,6 +102,26 @@ pub fn public_games_load_result_message(
 }
 
 @target(javascript)
+pub fn public_standings_load_result_message(
+  route: routes.Route,
+  result: Result(
+    public_standings_wire.LoadResult,
+    List(wire_result.ApiLoadError),
+  ),
+) -> pages.Message {
+  case route, result {
+    routes.Standings, Ok(public_standings_wire.PublicStandingsLoaded(games)) ->
+      pages.StandingsMsg(
+        standings_page.Loaded(
+          Ok(list.map(games, standings_page.from_wire_summary)),
+        ),
+      )
+    _, Error(errors) -> load_error_message(route, api_load_error(errors))
+    _, Ok(_) -> load_error_message(route, "Unexpected standings response.")
+  }
+}
+
+@target(javascript)
 fn load_result_message(
   route: routes.Route,
   result: Result(ToClient, List(wire_result.ApiLoadError)),
@@ -103,10 +129,6 @@ fn load_result_message(
   case route, result {
     routes.GamesId(_), Ok(to_client.GameLoaded(game)) ->
       pages.GamesIdMsg(games_id_page.Loaded(Ok(detail_game(game))))
-    routes.Standings, Ok(to_client.GamesLoaded(games)) ->
-      pages.StandingsMsg(
-        standings_page.Loaded(Ok(list.map(games, standings_game_summary))),
-      )
     routes.TeamsSlug(_), Ok(to_client.TeamLoaded(team)) ->
       pages.TeamsSlugMsg(teams_slug_page.Loaded(Ok(team_detail(team))))
     _, Error(errors) -> load_error_message(route, api_load_error(errors))
@@ -151,20 +173,10 @@ pub fn apply_message(
   message message: ToClient,
 ) -> #(pages.Page, Effect(pages.Message)) {
   case page, message {
-    pages.HomePage(model), to_client.GamesLoaded(games) -> {
-      let #(model, page_effect) =
-        games_page.games_loaded(model, list.map(games, public_game_summary))
-      #(pages.HomePage(model), effect.map(page_effect, pages.HomeMsg))
-    }
     pages.HomePage(model), to_client.GameUpdated(game) -> {
       let #(model, page_effect) =
         games_page.game_updated(model, public_game_update(game))
       #(pages.HomePage(model), effect.map(page_effect, pages.HomeMsg))
-    }
-    pages.GamesPage(model), to_client.GamesLoaded(games) -> {
-      let #(model, page_effect) =
-        games_page.games_loaded(model, list.map(games, public_game_summary))
-      #(pages.GamesPage(model), effect.map(page_effect, pages.GamesMsg))
     }
     pages.GamesPage(model), to_client.GameUpdated(game) -> {
       let #(model, page_effect) =
@@ -180,14 +192,6 @@ pub fn apply_message(
       let #(model, page_effect) =
         games_id_page.game_updated(model, detail_game_update(game))
       #(pages.GamesIdPage(model), effect.map(page_effect, pages.GamesIdMsg))
-    }
-    pages.StandingsPage(model), to_client.GamesLoaded(games) -> {
-      let #(model, page_effect) =
-        standings_page.games_loaded(
-          model,
-          list.map(games, standings_game_summary),
-        )
-      #(pages.StandingsPage(model), effect.map(page_effect, pages.StandingsMsg))
     }
     pages.StandingsPage(model), to_client.GameUpdated(game) -> {
       let #(model, page_effect) =
@@ -218,19 +222,6 @@ pub fn apply_messages(
   })
 }
 
-fn public_game_summary(
-  game: api_game.PublicGameSummary,
-) -> games_page.GameSummary {
-  games_page.GameSummary(
-    id: game.id,
-    home: public_team(game.home),
-    away: public_team(game.away),
-    home_score: game.home_score,
-    away_score: game.away_score,
-    status: public_game_status(game.status),
-  )
-}
-
 fn public_game_update(game: api_game.GameSnapshot) -> games_page.GameUpdate {
   games_page.GameUpdate(
     id: game.id,
@@ -238,10 +229,6 @@ fn public_game_update(game: api_game.GameSnapshot) -> games_page.GameUpdate {
     away_score: game.away_score,
     status: public_game_status(game.status),
   )
-}
-
-fn public_team(team: api_game.Team) -> games_page.Team {
-  games_page.Team(code: team.code, name: team.name, slug: team.slug)
 }
 
 fn public_game_status(status: api_game.GameStatus) -> games_page.GameStatus {
@@ -284,19 +271,6 @@ fn detail_game_status(status: api_game.GameStatus) -> games_id_page.GameStatus {
   }
 }
 
-fn standings_game_summary(
-  game: api_game.PublicGameSummary,
-) -> standings_page.GameSummary {
-  standings_page.GameSummary(
-    id: game.id,
-    home: standings_team(game.home),
-    away: standings_team(game.away),
-    home_score: game.home_score,
-    away_score: game.away_score,
-    status: standings_game_status(game.status),
-  )
-}
-
 fn standings_game_update(
   game: api_game.GameSnapshot,
 ) -> standings_page.GameUpdate {
@@ -306,10 +280,6 @@ fn standings_game_update(
     away_score: game.away_score,
     status: standings_game_status(game.status),
   )
-}
-
-fn standings_team(team: api_game.Team) -> standings_page.Team {
-  standings_page.Team(code: team.code, name: team.name, slug: team.slug)
 }
 
 fn standings_game_status(

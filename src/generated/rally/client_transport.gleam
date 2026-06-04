@@ -10,6 +10,8 @@ import generated/libero/result.{type ApiLoadError, type ApiSaveError}
 import lustre/effect.{type Effect}
 @target(javascript)
 import public/pages/games/wire as public_games_wire
+@target(javascript)
+import public/pages/standings/wire as public_standings_wire
 
 @target(javascript)
 pub fn connect(
@@ -57,6 +59,19 @@ pub fn send_public_games_load(
 }
 
 @target(javascript)
+pub fn send_public_standings_load(
+  on_result on_result: fn(
+    Result(public_standings_wire.LoadResult, List(ApiLoadError)),
+  ) -> msg,
+) -> Effect(msg) {
+  effect.from(fn(dispatch) {
+    let request_id = next_request_id()
+    let frame = generated_client.encode_public_standings_request(request_id)
+    send_public_standings_load_frame(request_id, frame, on_result, dispatch)
+  })
+}
+
+@target(javascript)
 pub fn send_save(
   module module: String,
   message message: ToServer,
@@ -98,6 +113,18 @@ fn send_public_games_load_frame(
   _request_id: Int,
   _frame: BitArray,
   _on_result: fn(Result(public_games_wire.LoadResult, List(ApiLoadError))) ->
+    msg,
+  _dispatch: fn(msg) -> Nil,
+) -> Nil {
+  Nil
+}
+
+@target(javascript)
+@external(javascript, "./client_transport_ffi.mjs", "send_load_frame")
+fn send_public_standings_load_frame(
+  _request_id: Int,
+  _frame: BitArray,
+  _on_result: fn(Result(public_standings_wire.LoadResult, List(ApiLoadError))) ->
     msg,
   _dispatch: fn(msg) -> Nil,
 ) -> Nil {

@@ -10,6 +10,8 @@ import generated/libero/to_client_codec
 import generated/libero/to_server_codec
 @target(javascript)
 import public/pages/games/wire as public_games_wire
+@target(javascript)
+import public/pages/standings/wire as public_standings_wire
 
 @target(javascript)
 pub type ServerFrame {
@@ -43,6 +45,15 @@ pub fn encode_public_games_request(request_id request_id: Int) -> BitArray {
     request_id,
     "public/pages/games",
     public_games_wire.PublicGamesLoad,
+  ))
+}
+
+@target(javascript)
+pub fn encode_public_standings_request(request_id request_id: Int) -> BitArray {
+  encode_any(#(
+    request_id,
+    "public/pages/standings",
+    public_standings_wire.PublicStandingsLoad,
   ))
 }
 
@@ -82,6 +93,16 @@ pub fn decode_public_games_load_result(
   bytes: BitArray,
 ) -> Result(
   #(Int, Result(public_games_wire.LoadResult, List(ApiLoadError))),
+  Nil,
+) {
+  decode_result_envelope(bytes)
+}
+
+@target(javascript)
+pub fn decode_public_standings_load_result(
+  bytes: BitArray,
+) -> Result(
+  #(Int, Result(public_standings_wire.LoadResult, List(ApiLoadError))),
   Nil,
 ) {
   decode_result_envelope(bytes)

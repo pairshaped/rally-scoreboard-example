@@ -56,31 +56,24 @@ try {
     "hydrated direct /games load should not send an initial websocket load request",
   );
 
-  await step("navigate from games to standings with load result", async () => {
+  await step("load hydrated /standings", async () => {
     sentFrames.length = 0;
     receivedFrames.length = 0;
 
-    await page.getByRole("link", { name: "Standings" }).click();
-    await page.waitForURL("**/standings");
+    await page.goto(url("/standings"), { waitUntil: "domcontentloaded" });
     await page.getByRole("heading", { name: "League table" }).waitFor();
     await page.getByText("Toronto Towers").first().waitFor();
     await page.waitForTimeout(500);
 
     assert.equal(
+      await page.locator("#app").getAttribute("data-hydration"),
+      null,
+      "standings hydration data should be consumed after browser boot",
+    );
+    assert.equal(
       sentFrames.length,
-      1,
-      "SPA standings navigation should send one websocket load request",
-    );
-    assert.equal(
-      receivedFrames.length,
-      1,
-      "SPA standings navigation should receive one load result: "
-        + receivedFrames.map(frameSummary).join(", "),
-    );
-    assert.equal(
-      frameKind(receivedFrames[0]),
-      "result",
-      "SPA standings navigation should receive loaded data in the result frame",
+      0,
+      "hydrated direct /standings load should not send an initial websocket load request",
     );
   });
 
@@ -112,7 +105,37 @@ try {
     );
   });
 
+  await step("navigate from games to standings with load result", async () => {
+    sentFrames.length = 0;
+    receivedFrames.length = 0;
+
+    await page.getByRole("link", { name: "Standings" }).click();
+    await page.waitForURL("**/standings");
+    await page.getByRole("heading", { name: "League table" }).waitFor();
+    await page.getByText("Toronto Towers").first().waitFor();
+    await page.waitForTimeout(500);
+
+    assert.equal(
+      sentFrames.length,
+      1,
+      "SPA standings navigation should send one websocket load request",
+    );
+    assert.equal(
+      receivedFrames.length,
+      1,
+      "SPA standings navigation should receive one load result: "
+        + receivedFrames.map(frameSummary).join(", "),
+    );
+    assert.equal(
+      frameKind(receivedFrames[0]),
+      "result",
+      "SPA standings navigation should receive loaded data in the result frame",
+    );
+  });
+
   await step("navigate to game detail", async () => {
+    await page.getByRole("link", { name: "Games" }).click();
+    await page.waitForURL("**/games");
     await page.getByRole("link", { name: "Details" }).first().click();
     await page.waitForURL("**/games/1");
     await page.getByRole("heading", { name: "Game detail" }).waitFor();
