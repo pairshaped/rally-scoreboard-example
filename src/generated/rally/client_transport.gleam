@@ -1,7 +1,7 @@
 @target(javascript)
-import generated/libero/result.{type ApiLoadError, type ApiSaveError}
-@target(javascript)
 import generated/rally/client_protocol
+@target(javascript)
+import generated/rally/result.{type ApiLoadError, type ApiSaveError}
 @target(javascript)
 import lustre/effect.{type Effect}
 @target(javascript)

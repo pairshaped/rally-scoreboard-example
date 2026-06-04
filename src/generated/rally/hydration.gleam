@@ -1,9 +1,9 @@
 @target(javascript)
-import generated/libero/result.{type ApiLoadError}
-@target(javascript)
 import generated/rally/browser
 @target(javascript)
 import generated/rally/client_protocol
+@target(javascript)
+import generated/rally/result.{type ApiLoadError}
 @target(javascript)
 import gleam/bit_array
 @target(javascript)

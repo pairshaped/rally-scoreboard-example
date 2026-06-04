@@ -1,8 +1,8 @@
-@target(javascript)
-import generated/libero/result as wire_result
 import generated/proute/admin/page_input
 @target(javascript)
 import generated/rally/client_transport as api_client
+@target(javascript)
+import generated/rally/result as wire_result
 @target(erlang)
 import generated/sql/admin/pages/games_sql
 

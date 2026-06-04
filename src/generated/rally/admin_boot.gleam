@@ -1,14 +1,14 @@
 import admin/pages/games as admin_games_page
 import broadcasts
 @target(javascript)
-import generated/libero/result as wire_result
-@target(javascript)
 import generated/proute/admin/page_input
 import generated/proute/admin/pages
 @target(javascript)
 import generated/proute/admin/routes
 @target(javascript)
 import generated/rally/client_transport
+@target(javascript)
+import generated/rally/result as wire_result
 import lustre/effect.{type Effect}
 @target(javascript)
 import page_context.{type PageContext}

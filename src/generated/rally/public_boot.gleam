@@ -1,13 +1,13 @@
 import broadcasts
 @target(javascript)
-import generated/libero/result as wire_result
-@target(javascript)
 import generated/proute/public/page_input
 import generated/proute/public/pages
 @target(javascript)
 import generated/proute/public/routes
 @target(javascript)
 import generated/rally/client_transport
+@target(javascript)
+import generated/rally/result as wire_result
 @target(javascript)
 import gleam/int
 @target(javascript)

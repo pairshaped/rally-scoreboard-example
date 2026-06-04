@@ -1,5 +1,5 @@
 @target(erlang)
-import generated/libero/result as wire_result
+import generated/rally/result as wire_result
 @target(erlang)
 import generated/rally/server_protocol
 

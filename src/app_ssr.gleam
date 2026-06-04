@@ -1,6 +1,4 @@
 @target(erlang)
-import generated/libero/result.{type ApiLoadError, ApiLoadError}
-@target(erlang)
 import generated/proute/admin/page_input as admin_page_input
 @target(erlang)
 import generated/proute/admin/pages as admin_pages
@@ -12,6 +10,8 @@ import generated/proute/public/page_input as public_page_input
 import generated/proute/public/pages as public_pages
 @target(erlang)
 import generated/proute/public/routes as public_routes
+@target(erlang)
+import generated/rally/result.{type ApiLoadError, ApiLoadError}
 @target(erlang)
 import generated/rally/server_protocol
 

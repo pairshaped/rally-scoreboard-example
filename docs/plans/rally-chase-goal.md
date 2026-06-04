@@ -362,7 +362,7 @@ Run:
 ```sh
 gleam run -m marmot
 gleam run -m proute
-gleam run -m libero
+gleam run -m rally load-rpc
 gleam build --target javascript
 gleam build --target erlang
 gleam test

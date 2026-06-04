@@ -1,7 +1,7 @@
 @target(javascript)
 import generated/libero/etf as libero_etf
 @target(javascript)
-import generated/libero/result.{type ApiLoadError, type ApiSaveError}
+import generated/rally/result.{type ApiLoadError, type ApiSaveError}
 @target(javascript)
 import public/pages/games/id_/wire as public_game_detail_wire
 @target(javascript)
