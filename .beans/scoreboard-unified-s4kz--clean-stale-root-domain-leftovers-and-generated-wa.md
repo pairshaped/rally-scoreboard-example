@@ -8,7 +8,7 @@ tags:
     - rally
     - chase
 created_at: 2026-06-04T03:38:31Z
-updated_at: 2026-06-04T17:04:52Z
+updated_at: 2026-06-04T17:08:34Z
 parent: scoreboard-unified-wm8p
 blocked_by:
     - scoreboard-unified-qf1q
@@ -80,3 +80,11 @@ Validated with:
 • Chase `gleam test --target erlang`
 • SCOREBOARD_BASE_URL=http://localhost:8105 node test/ws_result_smoke.mjs
 • SCOREBOARD_BASE_URL=http://localhost:8106 node test/browser_smoke.mjs
+
+
+Fourth cleanup pass removed the dead shared status_badge helper from src/components/ui.gleam, which was the last authored UI import of root api/domain/game. Remaining root API/domain references are now isolated to stale Libero root codec output and Rally server_protocol codec-runtime imports, so deleting those modules belongs with the runtime dependency bean rather than this app-owned cleanup slice.
+
+Validated with:
+
+• gleam build --target erlang
+• gleam build --target javascript
