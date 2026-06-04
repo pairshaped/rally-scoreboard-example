@@ -6,6 +6,8 @@ Libero owns ETF wire encoding, decoding, decoder registration, atom registration
 
 Rally owns framework glue around those codecs: request ids, pending callback registration, websocket transport, result envelopes, push frame dispatch, hydration decoding, browser boot, SSR composition, and server dispatch. Rally-generated modules live under `src/generated/rally/**`, and may wrap Libero-generated helpers when the app-facing API needs a smaller surface. For Rally-managed wire surfaces, Rally derives the Libero type seed manifest and invokes Libero's generator API.
 
+Rally-generated code may consume Libero runtime modules directly. Any package that contains generated imports of `libero/*` lists Libero as a runtime dependency, like a package with Marmot-generated SQL access code lists the database runtime it uses. App authors can also use Libero directly when they choose to write Libero contracts or build another integration on top of Libero.
+
 The app depends on these runtime surfaces:
 
 - `generated/rally/result` for page-local load and save error values at the Rally boundary.
