@@ -1,14 +1,14 @@
 ---
 # scoreboard-unified-v4f9
 title: Replace root API contracts with a page-local public games load
-status: in-progress
+status: done
 type: feature
 priority: high
 tags:
     - rally
     - chase
 created_at: 2026-06-04T03:38:31Z
-updated_at: 2026-06-04T03:48:50Z
+updated_at: 2026-06-04T03:56:18Z
 parent: scoreboard-unified-wm8p
 ---
 
@@ -30,10 +30,10 @@ This is the first tracer bullet for the intended Rally direction: centralized `s
 ## Acceptance criteria
 
 - [x] Public games navigation loads via a page-local load contract.
-- [ ] The public games load path does not reference root `api/to_server`, root `api/to_client`, or root `api/domain/game` types.
+- [x] The public games load path does not reference root `api/to_server`, root `api/to_client`, or root `api/domain/game` types.
 - [x] Load success arrives as one correlated result frame carrying the loaded payload.
 - [x] Existing public games SSR, hydration, navigation, and live score update tests pass.
-- [ ] The implementation documents any temporary bridge code that should later be generated.
+- [x] The implementation documents any temporary bridge code that should later be generated.
 
 ## Blocked by
 
@@ -52,3 +52,15 @@ Validated with:
 - `gleam test`
 - `node test/ws_result_smoke.mjs`
 - `node test/browser_smoke.mjs`
+
+Completed the tracer by moving direct SSR/hydration for Home/Games onto the page-local public games contract. Server rendering now calls `public/pages/games.load` directly, renders the page-local model, and emits a page-local hydration result frame. Browser boot decodes that page-local hydration before falling back to root hydration for other routes.
+
+Removed the stale Home/Games `LoadGames` request fallback from generated public boot glue. The hand-written generated-code behavior remains intentional chase debt and is tracked by `scoreboard-unified-adc2`.
+
+Validated with:
+
+- `gleam build --target javascript`
+- `gleam build --target erlang`
+- `gleam test`
+- `node test/ws_result_smoke.mjs`
+- `SCOREBOARD_BASE_URL=http://localhost:8097 node test/browser_smoke.mjs`

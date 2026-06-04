@@ -24,7 +24,7 @@ import public/pages/teams/slug_ as teams_slug_page
 
 pub fn requests(route: routes.Route) -> List(ToServer) {
   case route {
-    routes.Home | routes.Games -> [to_server.LoadGames]
+    routes.Home | routes.Games -> []
     routes.GamesId(id) ->
       case int.parse(id) {
         Ok(game_id) -> [to_server.LoadGame(game_id:)]
@@ -77,7 +77,7 @@ fn request_module(route: routes.Route) -> String {
 }
 
 @target(javascript)
-fn public_games_load_result_message(
+pub fn public_games_load_result_message(
   route: routes.Route,
   result: Result(public_games_wire.LoadResult, List(wire_result.ApiLoadError)),
 ) -> pages.Message {
@@ -101,12 +101,6 @@ fn load_result_message(
   result: Result(ToClient, List(wire_result.ApiLoadError)),
 ) -> pages.Message {
   case route, result {
-    routes.Home, Ok(to_client.GamesLoaded(games)) ->
-      pages.HomeMsg(games_page.Loaded(Ok(list.map(games, public_game_summary))))
-    routes.Games, Ok(to_client.GamesLoaded(games)) ->
-      pages.GamesMsg(
-        games_page.Loaded(Ok(list.map(games, public_game_summary))),
-      )
     routes.GamesId(_), Ok(to_client.GameLoaded(game)) ->
       pages.GamesIdMsg(games_id_page.Loaded(Ok(detail_game(game))))
     routes.Standings, Ok(to_client.GamesLoaded(games)) ->
@@ -123,7 +117,9 @@ fn load_result_message(
 @target(javascript)
 fn load_error_message(route: routes.Route, message: String) -> pages.Message {
   case route {
-    routes.Home | routes.Games ->
+    routes.Home ->
+      pages.HomeMsg(games_page.Loaded(Error(games_page.LoadError(message:))))
+    routes.Games ->
       pages.GamesMsg(games_page.Loaded(Error(games_page.LoadError(message:))))
     routes.GamesId(_) ->
       pages.GamesIdMsg(

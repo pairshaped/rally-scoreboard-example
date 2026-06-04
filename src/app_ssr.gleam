@@ -1,4 +1,8 @@
 @target(erlang)
+import generated/libero/result.{type ApiLoadError, ApiLoadError}
+@target(erlang)
+import generated/libero/server as generated_server
+@target(erlang)
 import generated/libero/to_client_codec
 @target(erlang)
 import generated/proute/admin/page_input as admin_page_input
@@ -51,6 +55,10 @@ import app_shell
 import authentication_context.{type AuthenticationContext}
 @target(erlang)
 import page_context.{PageContext}
+@target(erlang)
+import public/pages/games as public_games_page
+@target(erlang)
+import public/pages/games/wire as public_games_wire
 
 // TYPES
 
@@ -93,10 +101,7 @@ pub fn public_render(
   can_access_admin can_access_admin: Bool,
 ) -> SsrApp {
   let route = public_routes.parse_path(path)
-  let messages = public_boot_messages(db, route)
-  let page =
-    public_pages.load_sync(PageContext, query_params, route)
-    |> public_boot.apply_messages(messages)
+  let #(page, hydration) = public_boot_page(db, query_params, route)
 
   SsrApp(
     html: app_shell.public(
@@ -108,7 +113,7 @@ pub fn public_render(
       content: public_pages.view(page) |> element.map(fn(_) { Nil }),
     )
       |> element.to_string,
-    hydration: hydration_payloads(messages),
+    hydration: hydration,
   )
 }
 
@@ -157,6 +162,97 @@ pub fn admin_render(
 }
 
 // HELPERS
+
+@target(erlang)
+fn public_boot_page(
+  db db: sqlight.Connection,
+  query_params query_params: public_page_input.QueryParams,
+  route route: public_routes.Route,
+) -> #(public_pages.Page, List(String)) {
+  let page = public_pages.load_sync(PageContext, query_params, route)
+
+  case route {
+    public_routes.Home | public_routes.Games -> {
+      let result = public_games_page.load(db)
+      #(apply_public_games_load_result(page, route, result), [
+        public_games_hydration_payload(result),
+      ])
+    }
+    _ -> {
+      let messages = public_boot_messages(db, route)
+      #(
+        public_boot.apply_messages(page, messages),
+        hydration_payloads(messages),
+      )
+    }
+  }
+}
+
+@target(erlang)
+fn apply_public_games_load_result(
+  page page: public_pages.Page,
+  route route: public_routes.Route,
+  result result: Result(
+    List(public_games_page.GameSummary),
+    public_games_page.LoadError,
+  ),
+) -> public_pages.Page {
+  let message = case route, result {
+    public_routes.Home, Ok(games) ->
+      public_pages.HomeMsg(public_games_page.Loaded(Ok(games)))
+    public_routes.Games, Ok(games) ->
+      public_pages.GamesMsg(public_games_page.Loaded(Ok(games)))
+    public_routes.Home, Error(error) ->
+      public_pages.HomeMsg(public_games_page.Loaded(Error(error)))
+    public_routes.Games, Error(error) ->
+      public_pages.GamesMsg(public_games_page.Loaded(Error(error)))
+    _, _ ->
+      public_pages.GamesMsg(
+        public_games_page.Loaded(
+          Error(public_games_page.LoadError(
+            message: "Unexpected public games route.",
+          )),
+        ),
+      )
+  }
+
+  let #(page, _) = public_pages.update(page, message)
+  page
+}
+
+@target(erlang)
+fn public_games_hydration_payload(
+  result result: Result(
+    List(public_games_page.GameSummary),
+    public_games_page.LoadError,
+  ),
+) -> String {
+  generated_server.ensure()
+  result
+  |> public_games_wire_result
+  |> generated_server.encode_public_games_load_result(request_id: 0)
+  |> bit_array.base64_url_encode(False)
+}
+
+@target(erlang)
+fn public_games_wire_result(
+  result result: Result(
+    List(public_games_page.GameSummary),
+    public_games_page.LoadError,
+  ),
+) -> Result(public_games_wire.LoadResult, List(ApiLoadError)) {
+  case result {
+    Ok(games) ->
+      Ok(
+        public_games_wire.PublicGamesLoaded(list.map(
+          games,
+          public_games_page.to_wire_summary,
+        )),
+      )
+    Error(public_games_page.LoadError(message: message)) ->
+      Error([ApiLoadError(message:)])
+  }
+}
 
 @target(erlang)
 fn boot_identity(

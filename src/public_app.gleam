@@ -107,6 +107,33 @@ fn initial_page(
   route route: routes.Route,
   query_params query_params: page_input.QueryParams,
 ) -> #(pages.Page, Effect(pages.Message)) {
+  case route {
+    routes.Home | routes.Games -> initial_public_games_page(route, query_params)
+    _ -> initial_root_hydrated_page(route, query_params)
+  }
+}
+
+@target(javascript)
+fn initial_public_games_page(
+  route route: routes.Route,
+  query_params query_params: page_input.QueryParams,
+) -> #(pages.Page, Effect(pages.Message)) {
+  case hydration.public_games_load_result() {
+    Ok(result) -> {
+      let page = pages.load_sync(PageContext, query_params, route)
+      let message = public_boot.public_games_load_result_message(route, result)
+      let #(page, _) = pages.update(page, message)
+      #(page, effect.none())
+    }
+    Error(Nil) -> public_boot.load_client(PageContext, query_params, route)
+  }
+}
+
+@target(javascript)
+fn initial_root_hydrated_page(
+  route route: routes.Route,
+  query_params query_params: page_input.QueryParams,
+) -> #(pages.Page, Effect(pages.Message)) {
   case hydration.messages() {
     Ok(messages) -> {
       let page =
