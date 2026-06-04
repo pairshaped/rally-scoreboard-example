@@ -1,8 +1,6 @@
 import generated/proute/admin/page_input
 @target(javascript)
-import generated/rally/client_transport as api_client
-@target(javascript)
-import generated/rally/result as wire_result
+import generated/rally/server
 @target(erlang)
 import generated/sql/admin/pages/games_sql
 
@@ -275,10 +273,9 @@ fn status_badge(status: GameStatus) -> Element(msg) {
 
 @target(javascript)
 fn init_effect() -> Effect(Message) {
-  api_client.send_admin_games_load(
-    message: AdminGamesLoad,
-    on_result: fn(result) { Loaded(map_load_result(result)) },
-  )
+  server.load_admin_games(message: AdminGamesLoad, on_result: fn(result) {
+    Loaded(map_load_result(result))
+  })
 }
 
 @target(erlang)
@@ -288,11 +285,11 @@ fn init_effect() -> Effect(Message) {
 
 @target(javascript)
 fn map_load_result(
-  result: Result(LoadResult, List(wire_result.ApiLoadError)),
+  result: Result(LoadResult, List(server.LoadError)),
 ) -> Result(List(AdminGameSummary), LoadError) {
   case result {
     Ok(AdminGamesLoadResult(games)) -> Ok(games)
-    Error([wire_result.ApiLoadError(message: message), ..]) ->
+    Error([server.LoadError(message: message), ..]) ->
       Error(LoadError(message: message))
     Error([]) -> Error(LoadError(message: "Could not load admin games."))
   }
@@ -302,7 +299,7 @@ fn map_load_result(
 fn message_effect(msg: Message) -> Effect(Message) {
   case msg {
     AdjustAway(id, home_score, away_score, delta) ->
-      api_client.send_admin_games_save(
+      server.save_admin_games(
         message: AdminGamesUpdateScore(
           game_id: id,
           home_score: home_score,
@@ -312,7 +309,7 @@ fn message_effect(msg: Message) -> Effect(Message) {
         on_result: fn(result) { Saved(map_save_result(result)) },
       )
     AdjustHome(id, home_score, away_score, delta) ->
-      api_client.send_admin_games_save(
+      server.save_admin_games(
         message: AdminGamesUpdateScore(
           game_id: id,
           home_score: clamp_score(home_score + delta),
@@ -322,7 +319,7 @@ fn message_effect(msg: Message) -> Effect(Message) {
         on_result: fn(result) { Saved(map_save_result(result)) },
       )
     MarkFinal(id) ->
-      api_client.send_admin_games_save(
+      server.save_admin_games(
         message: AdminGamesMarkFinal(id),
         on_result: fn(result) { Saved(map_save_result(result)) },
       )
@@ -346,11 +343,11 @@ fn clamp_score(score: Int) -> Int {
 
 @target(javascript)
 fn map_save_result(
-  result: Result(GameUpdate, List(wire_result.ApiSaveError)),
+  result: Result(GameUpdate, List(server.SaveError)),
 ) -> Result(GameUpdate, SaveError) {
   case result {
     Ok(game) -> Ok(game)
-    Error([wire_result.ApiSaveError(message: message, ..), ..]) ->
+    Error([server.SaveError(message: message, ..), ..]) ->
       Error(SaveError(message: message))
     Error([]) -> Error(SaveError(message: "Could not save game."))
   }

@@ -1,8 +1,6 @@
 import generated/proute/public/page_input
 @target(javascript)
-import generated/rally/client_transport as api_client
-@target(javascript)
-import generated/rally/result as wire_result
+import generated/rally/server
 @target(erlang)
 import generated/sql/public/pages/games_sql
 @target(erlang)
@@ -357,7 +355,7 @@ fn status_badge(status: GameStatus) -> Element(msg) {
 
 @target(javascript)
 fn init_effect(slug: String) -> Effect(Message) {
-  api_client.send_public_team_detail_load(slug:, on_result: fn(result) {
+  server.load_public_team_detail(slug:, on_result: fn(result) {
     Loaded(map_load_result(result))
   })
 }
@@ -369,11 +367,11 @@ fn init_effect(_slug: String) -> Effect(Message) {
 
 @target(javascript)
 fn map_load_result(
-  result: Result(wire.LoadResult, List(wire_result.ApiLoadError)),
+  result: Result(wire.LoadResult, List(server.LoadError)),
 ) -> Result(TeamDetail, LoadError) {
   case result {
     Ok(wire.PublicTeamDetailLoaded(team)) -> Ok(from_wire_detail(team))
-    Error([wire_result.ApiLoadError(message: message), ..]) ->
+    Error([server.LoadError(message: message), ..]) ->
       Error(LoadError(message: message))
     Error([]) -> Error(LoadError(message: "Could not load team."))
   }

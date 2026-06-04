@@ -1,8 +1,6 @@
 import generated/proute/public/page_input
 @target(javascript)
-import generated/rally/client_transport as api_client
-@target(javascript)
-import generated/rally/result as wire_result
+import generated/rally/server
 @target(erlang)
 import generated/sql/public/pages/games_sql
 
@@ -319,7 +317,7 @@ fn section_head(title: String) -> Element(msg) {
 
 @target(javascript)
 fn init_effect() -> Effect(Message) {
-  api_client.send_public_standings_load(on_result: fn(result) {
+  server.load_public_standings(on_result: fn(result) {
     Loaded(map_load_result(result))
   })
 }
@@ -331,12 +329,12 @@ fn init_effect() -> Effect(Message) {
 
 @target(javascript)
 fn map_load_result(
-  result: Result(wire.LoadResult, List(wire_result.ApiLoadError)),
+  result: Result(wire.LoadResult, List(server.LoadError)),
 ) -> Result(List(GameSummary), LoadError) {
   case result {
     Ok(wire.PublicStandingsLoaded(games)) ->
       Ok(list.map(games, from_wire_summary))
-    Error([wire_result.ApiLoadError(message: message), ..]) ->
+    Error([server.LoadError(message: message), ..]) ->
       Error(LoadError(message: message))
     Error([]) -> Error(LoadError(message: "Could not load standings."))
   }
