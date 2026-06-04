@@ -28,6 +28,15 @@ import { Scheduled } from "../../api/domain/game.mjs";
 import { Live } from "../../api/domain/game.mjs";
 import { Final } from "../../api/domain/game.mjs";
 import { ApiLoadError, ApiSaveError } from "./result.mjs";
+import {
+  PublicGamesLoad,
+  PublicGamesLoaded,
+  PublicGamesScheduled,
+  PublicGamesLive,
+  PublicGamesFinal,
+  PublicGamesTeam,
+  PublicGamesGameSummary,
+} from "../../public/pages/games/wire.mjs";
 
 const constructorRegistry = new Map();
 
@@ -474,6 +483,20 @@ export function ensure() {
   registerConstructor("api_load_error", ApiLoadError, 1, ["string"]);
   ApiSaveError.__wireAtom = "api_save_error";
   registerConstructor("api_save_error", ApiSaveError, 2, [{ kind: "option", element: "string" }, "string"]);
+  PublicGamesLoad.__wireAtom = "public_games_load";
+  registerConstructor("public_games_load", PublicGamesLoad, 0, []);
+  PublicGamesLoaded.__wireAtom = "public_games_loaded";
+  registerConstructor("public_games_loaded", PublicGamesLoaded, 1, [{ kind: "list", element: undefined }]);
+  PublicGamesScheduled.__wireAtom = "public_games_scheduled";
+  registerConstructor("public_games_scheduled", PublicGamesScheduled, 0, []);
+  PublicGamesLive.__wireAtom = "public_games_live";
+  registerConstructor("public_games_live", PublicGamesLive, 1, ["string"]);
+  PublicGamesFinal.__wireAtom = "public_games_final";
+  registerConstructor("public_games_final", PublicGamesFinal, 0, []);
+  PublicGamesTeam.__wireAtom = "public_games_team";
+  registerConstructor("public_games_team", PublicGamesTeam, 3, ["string", "string", "string"]);
+  PublicGamesGameSummary.__wireAtom = "public_games_game_summary";
+  registerConstructor("public_games_game_summary", PublicGamesGameSummary, 6, ["int", undefined, undefined, "int", "int", undefined]);
   Scheduled.__wireAtom = "scheduled";
   registerConstructor("scheduled", Scheduled, 0, []);
   Live.__wireAtom = "live";

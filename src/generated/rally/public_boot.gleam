@@ -17,6 +17,8 @@ import lustre/effect.{type Effect}
 import page_context.{type PageContext}
 import public/pages/games as games_page
 import public/pages/games/id_ as games_id_page
+@target(javascript)
+import public/pages/games/wire as public_games_wire
 import public/pages/standings as standings_page
 import public/pages/teams/slug_ as teams_slug_page
 
@@ -45,16 +47,23 @@ pub fn load_client(
 
 @target(javascript)
 fn request_effect(route: routes.Route) -> Effect(pages.Message) {
-  route
-  |> requests
-  |> list.map(fn(request) {
-    client_transport.send_load(
-      module: request_module(route),
-      message: request,
-      on_result: fn(result) { load_result_message(route, result) },
-    )
-  })
-  |> effect.batch
+  case route {
+    routes.Home | routes.Games ->
+      client_transport.send_public_games_load(on_result: fn(result) {
+        public_games_load_result_message(route, result)
+      })
+    _ ->
+      route
+      |> requests
+      |> list.map(fn(request) {
+        client_transport.send_load(
+          module: request_module(route),
+          message: request,
+          on_result: fn(result) { load_result_message(route, result) },
+        )
+      })
+      |> effect.batch
+  }
 }
 
 @target(javascript)
@@ -64,6 +73,25 @@ fn request_module(route: routes.Route) -> String {
     routes.Standings -> "public/standings"
     routes.TeamsSlug(_) -> "public/teams"
     routes.SignIn | routes.NotFound -> ""
+  }
+}
+
+@target(javascript)
+fn public_games_load_result_message(
+  route: routes.Route,
+  result: Result(public_games_wire.LoadResult, List(wire_result.ApiLoadError)),
+) -> pages.Message {
+  case route, result {
+    routes.Home, Ok(public_games_wire.PublicGamesLoaded(games)) ->
+      pages.HomeMsg(
+        games_page.Loaded(Ok(list.map(games, games_page.from_wire_summary))),
+      )
+    routes.Games, Ok(public_games_wire.PublicGamesLoaded(games)) ->
+      pages.GamesMsg(
+        games_page.Loaded(Ok(list.map(games, games_page.from_wire_summary))),
+      )
+    _, Error(errors) -> load_error_message(route, api_load_error(errors))
+    _, Ok(_) -> load_error_message(route, "Unexpected public games response.")
   }
 }
 

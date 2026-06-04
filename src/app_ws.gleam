@@ -1,4 +1,6 @@
 @target(erlang)
+import generated/libero/result as wire_result
+@target(erlang)
 import generated/libero/server as generated_server
 
 @target(erlang)
@@ -27,6 +29,10 @@ import api/to_server.{type ToServer}
 import app_api
 @target(erlang)
 import app_topics
+@target(erlang)
+import public/pages/games as public_games_page
+@target(erlang)
+import public/pages/games/wire as public_games_wire
 
 // TYPES
 
@@ -91,6 +97,51 @@ pub fn handler(
 
 @target(erlang)
 fn handle_client_frame(
+  state state: State,
+  conn conn: WebsocketConnection,
+  data data: BitArray,
+) -> Nil {
+  case generated_server.decode_public_games_request(data) {
+    Ok(generated_server.PublicGamesClientRequest(
+      request_id: request_id,
+      module: "public/pages/games",
+      message: public_games_wire.PublicGamesLoad,
+    )) -> handle_public_games_load(state: state, conn: conn, request_id:)
+    _ -> handle_root_client_frame(state: state, conn: conn, data: data)
+  }
+}
+
+@target(erlang)
+fn handle_public_games_load(
+  state state: State,
+  conn conn: WebsocketConnection,
+  request_id request_id: Int,
+) -> Nil {
+  let result = case public_games_page.load(state.db) {
+    Ok(games) ->
+      Ok(
+        public_games_wire.PublicGamesLoaded(list.map(
+          games,
+          public_games_page.to_wire_summary,
+        )),
+      )
+    Error(public_games_page.LoadError(message: message)) ->
+      Error([wire_result.ApiLoadError(message:)])
+  }
+
+  let _sent =
+    mist.send_binary_frame(
+      conn,
+      generated_server.encode_public_games_load_result(
+        request_id: request_id,
+        result: result,
+      ),
+    )
+  Nil
+}
+
+@target(erlang)
+fn handle_root_client_frame(
   state state: State,
   conn conn: WebsocketConnection,
   data data: BitArray,

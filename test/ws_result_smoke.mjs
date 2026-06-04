@@ -1,12 +1,11 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 
-import { LoadGames } from "../build/dev/javascript/scoreboard_unified/api/to_server.mjs";
-import { GamesLoaded } from "../build/dev/javascript/scoreboard_unified/api/to_client.mjs";
 import {
   decode_result_envelope,
-  encode_request,
+  encode_public_games_request,
 } from "../build/dev/javascript/scoreboard_unified/generated/libero/client.mjs";
+import { PublicGamesLoaded } from "../build/dev/javascript/scoreboard_unified/public/pages/games/wire.mjs";
 import { BitArray, Ok } from "../build/dev/javascript/scoreboard_unified/gleam.mjs";
 
 const baseUrl = process.env.SCOREBOARD_BASE_URL ?? "http://localhost:8081";
@@ -29,8 +28,8 @@ try {
   assert.equal(decodedResult[0][0], requestId);
   assert.ok(decodedResult[0][1] instanceof Ok, "load result should be Ok");
   assert.ok(
-    decodedResult[0][1][0] instanceof GamesLoaded,
-    "load result should carry the loaded data payload",
+    decodedResult[0][1][0] instanceof PublicGamesLoaded,
+    "load result should carry the page-local loaded data payload",
   );
 } finally {
   if (server) {
@@ -50,7 +49,7 @@ async function requestFrames() {
     }, 5_000);
 
     socket.addEventListener("open", () => {
-      const frame = encode_request(requestId, "public/games", new LoadGames());
+      const frame = encode_public_games_request(requestId);
       socket.send(frame.rawBuffer);
     });
 

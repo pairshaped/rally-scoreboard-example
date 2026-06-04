@@ -17,14 +17,9 @@ import lustre/event
 @target(erlang)
 import sqlight
 
-@target(javascript)
-import api/domain/game as api_game
-@target(javascript)
-import api/to_client
-@target(javascript)
-import api/to_server
 import components/ui
 import page_context.{type PageContext}
+import public/pages/games/wire
 
 // TYPES
 
@@ -216,11 +211,9 @@ fn update_summary(summary: GameSummary, game: GameUpdate) -> GameSummary {
 
 @target(javascript)
 fn init_effect() -> Effect(Message) {
-  api_client.send_load(
-    module: "public/games",
-    message: to_server.LoadGames,
-    on_result: fn(result) { Loaded(map_load_result(result)) },
-  )
+  api_client.send_public_games_load(on_result: fn(result) {
+    Loaded(map_load_result(result))
+  })
 }
 
 @target(erlang)
@@ -230,40 +223,69 @@ fn init_effect() -> Effect(Message) {
 
 @target(javascript)
 fn map_load_result(
-  result: Result(to_client.ToClient, List(wire_result.ApiLoadError)),
+  result: Result(wire.LoadResult, List(wire_result.ApiLoadError)),
 ) -> Result(List(GameSummary), LoadError) {
   case result {
-    Ok(to_client.GamesLoaded(games)) -> Ok(list.map(games, wire_game_summary))
-    Ok(_) -> Error(LoadError(message: "Unexpected games response."))
+    Ok(wire.PublicGamesLoaded(games)) -> Ok(list.map(games, from_wire_summary))
     Error([wire_result.ApiLoadError(message: message), ..]) ->
       Error(LoadError(message: message))
     Error([]) -> Error(LoadError(message: "Could not load games."))
   }
 }
 
-@target(javascript)
-fn wire_game_summary(game: api_game.PublicGameSummary) -> GameSummary {
-  GameSummary(
+pub fn to_wire_summary(game: GameSummary) -> wire.GameSummary {
+  wire.PublicGamesGameSummary(
     id: game.id,
-    home: wire_team(game.home),
-    away: wire_team(game.away),
+    home: to_wire_team(game.home),
+    away: to_wire_team(game.away),
     home_score: game.home_score,
     away_score: game.away_score,
-    status: wire_game_status(game.status),
+    status: to_wire_status(game.status),
   )
 }
 
-@target(javascript)
-fn wire_team(team: api_game.Team) -> Team {
-  Team(code: team.code, name: team.name, slug: team.slug)
+pub fn from_wire_summary(game: wire.GameSummary) -> GameSummary {
+  let wire.PublicGamesGameSummary(
+    id:,
+    home:,
+    away:,
+    home_score:,
+    away_score:,
+    status:,
+  ) = game
+
+  GameSummary(
+    id:,
+    home: from_wire_team(home),
+    away: from_wire_team(away),
+    home_score:,
+    away_score:,
+    status: from_wire_status(status),
+  )
 }
 
-@target(javascript)
-fn wire_game_status(status: api_game.GameStatus) -> GameStatus {
+fn to_wire_team(team: Team) -> wire.Team {
+  wire.PublicGamesTeam(code: team.code, name: team.name, slug: team.slug)
+}
+
+fn from_wire_team(team: wire.Team) -> Team {
+  let wire.PublicGamesTeam(code:, name:, slug:) = team
+  Team(code:, name:, slug:)
+}
+
+fn to_wire_status(status: GameStatus) -> wire.GameStatus {
   case status {
-    api_game.Scheduled -> Scheduled
-    api_game.Live(period) -> Live(period)
-    api_game.Final -> Final
+    Scheduled -> wire.PublicGamesScheduled
+    Live(period) -> wire.PublicGamesLive(period)
+    Final -> wire.PublicGamesFinal
+  }
+}
+
+fn from_wire_status(status: wire.GameStatus) -> GameStatus {
+  case status {
+    wire.PublicGamesScheduled -> Scheduled
+    wire.PublicGamesLive(period) -> Live(period)
+    wire.PublicGamesFinal -> Final
   }
 }
 

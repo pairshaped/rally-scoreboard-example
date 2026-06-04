@@ -8,10 +8,21 @@ import generated/libero/result.{type ApiLoadError, type ApiSaveError}
 import generated/libero/to_client_codec
 @target(erlang)
 import generated/libero/to_server_codec
+@target(erlang)
+import public/pages/games/wire as public_games_wire
 
 @target(erlang)
 pub type ClientRequest {
   ClientRequest(request_id: Int, module: String, message: ToServer)
+}
+
+@target(erlang)
+pub type PublicGamesClientRequest {
+  PublicGamesClientRequest(
+    request_id: Int,
+    module: String,
+    message: public_games_wire.ServerMsg,
+  )
 }
 
 @target(erlang)
@@ -35,6 +46,17 @@ pub fn decode_request(bytes: BitArray) -> Result(ClientRequest, Nil) {
 }
 
 @target(erlang)
+pub fn decode_public_games_request(
+  bytes: BitArray,
+) -> Result(PublicGamesClientRequest, Nil) {
+  case decode_any(bytes) {
+    Ok(#(request_id, module, message)) ->
+      Ok(PublicGamesClientRequest(request_id:, module:, message:))
+    _ -> Error(Nil)
+  }
+}
+
+@target(erlang)
 pub fn encode(message: ToClient) -> BitArray {
   to_client_codec.encode(message)
 }
@@ -49,6 +71,14 @@ pub fn encode_response(message message: ToClient) -> BitArray {
 pub fn encode_load_result(
   request_id request_id: Int,
   result result: Result(ToClient, List(ApiLoadError)),
+) -> BitArray {
+  encode_result_frame(request_id, result)
+}
+
+@target(erlang)
+pub fn encode_public_games_load_result(
+  request_id request_id: Int,
+  result result: Result(public_games_wire.LoadResult, List(ApiLoadError)),
 ) -> BitArray {
   encode_result_frame(request_id, result)
 }
