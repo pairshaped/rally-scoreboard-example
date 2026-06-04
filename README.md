@@ -11,7 +11,7 @@ gleam build --target erlang
 
 Target-specific behavior is marked at the declaration or import boundary. Today that means Gleam's `@target(javascript)` and `@target(erlang)` syntax. The architecture depends on target-scoped declarations, not on that exact spelling.
 
-Rally should not generate a full client app from server-shaped source. Generated code is limited to thin route, wire, codec, hydration, SSR, boot, transport, server dispatch, and build metadata glue.
+Rally should not generate a full client app from server-shaped source. Rally-generated code is limited to thin route, wire, hydration, SSR, boot, transport, server dispatch, build metadata, and Libero codec composition glue.
 
 ## Shape
 

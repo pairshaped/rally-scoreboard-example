@@ -1,7 +1,7 @@
 ---
 # scoreboard-unified-u7w3
 title: Resolve the Libero and Rally runtime dependency strategy
-status: draft
+status: completed
 type: task
 priority: high
 tags:
@@ -9,7 +9,7 @@ tags:
     - chase
     - hitl
 created_at: 2026-06-04T03:38:31Z
-updated_at: 2026-06-04T03:38:31Z
+updated_at: 2026-06-04T17:10:12Z
 parent: scoreboard-unified-wm8p
 ---
 
@@ -41,3 +41,20 @@ This is intentionally draft/HITL. The decision affects the dependency story, gen
 ## Blocked by
 
 Needs human design review before implementation.
+
+
+Decision recorded in ADR 0011: keep Libero and Rally runtime dependencies, with Libero owning ETF codec/runtime output and Rally composing neutral Libero helpers from generated/rally glue.
+
+Current runtime inventory captured in ADR 0011:
+
+• generated/libero/result for page-local API boundary errors
+• generated/libero/codec_ffi.mjs for browser ETF encode/decode
+• Libero Erlang codec helpers for safe server decode and ETF encode
+• generated/rally/client_transport for websocket connection, request ids, and callback dispatch
+• generated/rally/client_protocol and generated/rally/server_protocol for envelopes
+• generated/rally browser, boot, hydration, and mount helpers for browser framework plumbing
+
+Follow-up implementation beans:
+
+• scoreboard-unified-58jn: Expose neutral Libero ETF codec helper
+• scoreboard-unified-cu1k: Consume neutral Libero codec helper in Rally glue

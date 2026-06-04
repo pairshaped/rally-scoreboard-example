@@ -20,3 +20,4 @@ The ADRs describe the intended design.
 - [0008: Use API RPC Effects](0008-use-api-rpc-effects.md)
 - [0009: Separate Libero Proute And Rally Roles](0009-separate-libero-proute-and-rally-roles.md)
 - [0010: Separate Mutation Results From Broadcast Events](0010-separate-mutation-results-from-broadcast-events.md)
+- [0011: Keep Codec Runtime Dependencies](0011-keep-codec-runtime-dependencies.md)

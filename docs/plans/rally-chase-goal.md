@@ -17,7 +17,7 @@ The target is not to make the current app prettier in place. The target is to ma
 9. Proute identifies the page, action, or channel before Rally decodes page-local wire payloads.
 10. Rally-generated framework glue lives under `src/generated/rally`.
 11. Rally does not generate a full client app from server-shaped source.
-12. Generated code is limited to thin wire glue, codecs, route glue, build metadata, browser boot, hydration, SSR, client transport, and server dispatch.
+12. Rally-generated code is limited to thin wire glue around Libero codecs, route glue, build metadata, browser boot, hydration, SSR, client transport, and server dispatch.
 13. Client-side application behavior is authored in Gleam. JS or TS is only for tiny FFI modules that touch browser APIs.
 14. Whole modules full of target annotations are generated or split out of user-authored code.
 15. Authored SQL lives beside the page or workflow that owns it, in a local `sql/` directory.
@@ -31,6 +31,7 @@ The target is not to make the current app prettier in place. The target is to ma
 - Do not preserve the global app API shape.
 - Do not introduce shared page payload types to reduce duplicate fields.
 - Do not make Proute responsible for Rally transport, SSR, hydration, or codecs.
+- Do not make Rally generate Libero-owned ETF codec modules, atom modules, wire modules, decoder registration modules, or contract JSON.
 - Do not hand-write polished generator output before the page contract is proven.
 - Do not write client application behavior in JS or TS.
 - Do not allow helper, service, query, business, or display types to cross the wire, even transitively.
