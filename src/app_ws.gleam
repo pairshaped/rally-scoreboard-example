@@ -24,13 +24,9 @@ import sqlight
 @target(erlang)
 import admin/pages/games as admin_games_page
 @target(erlang)
-import api/to_server.{type ToServer}
-@target(erlang)
 import app_api
 @target(erlang)
 import app_topics
-@target(erlang)
-import broadcasts
 @target(erlang)
 import public/pages/games as public_games_page
 @target(erlang)
@@ -176,12 +172,7 @@ fn handle_client_frame(
                         request_id:,
                         slug:,
                       )
-                    _ ->
-                      handle_root_client_frame(
-                        state: state,
-                        conn: conn,
-                        data: data,
-                      )
+                    _ -> Nil
                   }
               }
           }
@@ -409,62 +400,4 @@ fn handle_public_team_detail_load(
       ),
     )
   Nil
-}
-
-@target(erlang)
-fn handle_root_client_frame(
-  state state: State,
-  conn conn: WebsocketConnection,
-  data data: BitArray,
-) -> Nil {
-  case server_protocol.decode_request(data) {
-    Ok(server_protocol.ClientRequest(
-      request_id: request_id,
-      message: request_message,
-      ..,
-    )) -> {
-      let reply =
-        app_api.dispatch_reply(
-          db: state.db,
-          message: request_message,
-          admin_authorized: state.admin_authorized,
-        )
-      let _sent =
-        mist.send_binary_frame(conn, app_api.reply_result(reply, request_id:))
-      broadcast_if_live_update(request: request_message, reply: reply)
-    }
-    Error(Nil) -> Nil
-  }
-}
-
-@target(erlang)
-fn broadcast_if_live_update(
-  request request: ToServer,
-  reply reply: app_api.DispatchReply,
-) -> Nil {
-  case reply {
-    app_api.SaveReply(messages: messages, ..) ->
-      list.each(messages, fn(message) {
-        case should_broadcast_live_update(request: request, reply: message) {
-          True ->
-            app_topics.broadcast_except_self(
-              "app",
-              app_api.push(module: "app", message: message),
-            )
-          False -> Nil
-        }
-      })
-    app_api.LoadReply(..) -> Nil
-  }
-}
-
-// nolint: unused_exports -- tests lock down the mutation-only broadcast policy.
-@target(erlang)
-pub fn should_broadcast_live_update(
-  request request: ToServer,
-  reply reply: broadcasts.Event,
-) -> Bool {
-  case request, reply {
-    _, broadcasts.BroadcastGameUpdated(_) -> True
-  }
 }

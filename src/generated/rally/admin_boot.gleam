@@ -6,6 +6,7 @@ import generated/libero/result as wire_result
 @target(javascript)
 import generated/proute/admin/page_input
 import generated/proute/admin/pages
+@target(javascript)
 import generated/proute/admin/routes
 @target(javascript)
 import generated/rally/client_transport
