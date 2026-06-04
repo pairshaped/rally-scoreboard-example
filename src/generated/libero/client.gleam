@@ -9,6 +9,8 @@ import generated/libero/to_client_codec
 @target(javascript)
 import generated/libero/to_server_codec
 @target(javascript)
+import public/pages/games/id_/wire as public_game_detail_wire
+@target(javascript)
 import public/pages/games/wire as public_games_wire
 @target(javascript)
 import public/pages/standings/wire as public_standings_wire
@@ -45,6 +47,18 @@ pub fn encode_public_games_request(request_id request_id: Int) -> BitArray {
     request_id,
     "public/pages/games",
     public_games_wire.PublicGamesLoad,
+  ))
+}
+
+@target(javascript)
+pub fn encode_public_game_detail_request(
+  request_id request_id: Int,
+  game_id game_id: Int,
+) -> BitArray {
+  encode_any(#(
+    request_id,
+    "public/pages/games/id_",
+    public_game_detail_wire.PublicGameDetailLoad(game_id:),
   ))
 }
 
@@ -93,6 +107,16 @@ pub fn decode_public_games_load_result(
   bytes: BitArray,
 ) -> Result(
   #(Int, Result(public_games_wire.LoadResult, List(ApiLoadError))),
+  Nil,
+) {
+  decode_result_envelope(bytes)
+}
+
+@target(javascript)
+pub fn decode_public_game_detail_load_result(
+  bytes: BitArray,
+) -> Result(
+  #(Int, Result(public_game_detail_wire.LoadResult, List(ApiLoadError))),
   Nil,
 ) {
   decode_result_envelope(bytes)

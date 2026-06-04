@@ -133,6 +133,27 @@ try {
     );
   });
 
+  await step("load hydrated /games/1", async () => {
+    sentFrames.length = 0;
+    receivedFrames.length = 0;
+
+    await page.goto(url("/games/1"), { waitUntil: "domcontentloaded" });
+    await page.getByRole("heading", { name: "Game detail" }).waitFor();
+    await page.getByText("Toronto Towers").first().waitFor();
+    await page.waitForTimeout(500);
+
+    assert.equal(
+      await page.locator("#app").getAttribute("data-hydration"),
+      null,
+      "game detail hydration data should be consumed after browser boot",
+    );
+    assert.equal(
+      sentFrames.length,
+      0,
+      "hydrated direct /games/1 load should not send an initial websocket load request",
+    );
+  });
+
   await step("navigate to game detail", async () => {
     await page.getByRole("link", { name: "Games" }).click();
     await page.waitForURL("**/games");

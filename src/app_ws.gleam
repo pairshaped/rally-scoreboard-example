@@ -32,6 +32,10 @@ import app_topics
 @target(erlang)
 import public/pages/games as public_games_page
 @target(erlang)
+import public/pages/games/id_ as public_game_detail_page
+@target(erlang)
+import public/pages/games/id_/wire as public_game_detail_wire
+@target(erlang)
 import public/pages/games/wire as public_games_wire
 @target(erlang)
 import public/pages/standings as public_standings_page
@@ -112,14 +116,34 @@ fn handle_client_frame(
       message: public_games_wire.PublicGamesLoad,
     )) -> handle_public_games_load(state: state, conn: conn, request_id:)
     _ ->
-      case generated_server.decode_public_standings_request(data) {
-        Ok(generated_server.PublicStandingsClientRequest(
+      case generated_server.decode_public_game_detail_request(data) {
+        Ok(generated_server.PublicGameDetailClientRequest(
           request_id: request_id,
-          module: "public/pages/standings",
-          message: public_standings_wire.PublicStandingsLoad,
+          module: "public/pages/games/id_",
+          message: public_game_detail_wire.PublicGameDetailLoad(
+            game_id: game_id,
+          ),
         )) ->
-          handle_public_standings_load(state: state, conn: conn, request_id:)
-        _ -> handle_root_client_frame(state: state, conn: conn, data: data)
+          handle_public_game_detail_load(
+            state: state,
+            conn: conn,
+            request_id:,
+            game_id:,
+          )
+        _ ->
+          case generated_server.decode_public_standings_request(data) {
+            Ok(generated_server.PublicStandingsClientRequest(
+              request_id: request_id,
+              module: "public/pages/standings",
+              message: public_standings_wire.PublicStandingsLoad,
+            )) ->
+              handle_public_standings_load(
+                state: state,
+                conn: conn,
+                request_id:,
+              )
+            _ -> handle_root_client_frame(state: state, conn: conn, data: data)
+          }
       }
   }
 }
@@ -146,6 +170,35 @@ fn handle_public_games_load(
     mist.send_binary_frame(
       conn,
       generated_server.encode_public_games_load_result(
+        request_id: request_id,
+        result: result,
+      ),
+    )
+  Nil
+}
+
+@target(erlang)
+fn handle_public_game_detail_load(
+  state state: State,
+  conn conn: WebsocketConnection,
+  request_id request_id: Int,
+  game_id game_id: Int,
+) -> Nil {
+  let result = case public_game_detail_page.load(state.db, game_id) {
+    Ok(game) ->
+      Ok(
+        public_game_detail_wire.PublicGameDetailLoaded(
+          public_game_detail_page.to_wire_detail(game),
+        ),
+      )
+    Error(public_game_detail_page.LoadError(message: message)) ->
+      Error([wire_result.ApiLoadError(message:)])
+  }
+
+  let _sent =
+    mist.send_binary_frame(
+      conn,
+      generated_server.encode_public_game_detail_load_result(
         request_id: request_id,
         result: result,
       ),

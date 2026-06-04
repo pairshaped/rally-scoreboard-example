@@ -9,6 +9,8 @@ import generated/libero/result.{type ApiLoadError, type ApiSaveError}
 @target(javascript)
 import lustre/effect.{type Effect}
 @target(javascript)
+import public/pages/games/id_/wire as public_game_detail_wire
+@target(javascript)
 import public/pages/games/wire as public_games_wire
 @target(javascript)
 import public/pages/standings/wire as public_standings_wire
@@ -55,6 +57,21 @@ pub fn send_public_games_load(
     let request_id = next_request_id()
     let frame = generated_client.encode_public_games_request(request_id)
     send_public_games_load_frame(request_id, frame, on_result, dispatch)
+  })
+}
+
+@target(javascript)
+pub fn send_public_game_detail_load(
+  game_id game_id: Int,
+  on_result on_result: fn(
+    Result(public_game_detail_wire.LoadResult, List(ApiLoadError)),
+  ) -> msg,
+) -> Effect(msg) {
+  effect.from(fn(dispatch) {
+    let request_id = next_request_id()
+    let frame =
+      generated_client.encode_public_game_detail_request(request_id, game_id)
+    send_public_game_detail_load_frame(request_id, frame, on_result, dispatch)
   })
 }
 
@@ -113,6 +130,18 @@ fn send_public_games_load_frame(
   _request_id: Int,
   _frame: BitArray,
   _on_result: fn(Result(public_games_wire.LoadResult, List(ApiLoadError))) ->
+    msg,
+  _dispatch: fn(msg) -> Nil,
+) -> Nil {
+  Nil
+}
+
+@target(javascript)
+@external(javascript, "./client_transport_ffi.mjs", "send_load_frame")
+fn send_public_game_detail_load_frame(
+  _request_id: Int,
+  _frame: BitArray,
+  _on_result: fn(Result(public_game_detail_wire.LoadResult, List(ApiLoadError))) ->
     msg,
   _dispatch: fn(msg) -> Nil,
 ) -> Nil {

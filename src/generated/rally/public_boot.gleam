@@ -10,6 +10,7 @@ import generated/proute/public/pages
 import generated/proute/public/routes
 @target(javascript)
 import generated/rally/client_transport
+@target(javascript)
 import gleam/int
 import gleam/list
 import lustre/effect.{type Effect}
@@ -17,6 +18,8 @@ import lustre/effect.{type Effect}
 import page_context.{type PageContext}
 import public/pages/games as games_page
 import public/pages/games/id_ as games_id_page
+@target(javascript)
+import public/pages/games/id_/wire as public_game_detail_wire
 @target(javascript)
 import public/pages/games/wire as public_games_wire
 import public/pages/standings as standings_page
@@ -27,11 +30,7 @@ import public/pages/teams/slug_ as teams_slug_page
 pub fn requests(route: routes.Route) -> List(ToServer) {
   case route {
     routes.Home | routes.Games -> []
-    routes.GamesId(id) ->
-      case int.parse(id) {
-        Ok(game_id) -> [to_server.LoadGame(game_id:)]
-        Error(Nil) -> []
-      }
+    routes.GamesId(_) -> []
     routes.Standings -> []
     routes.TeamsSlug(slug) -> [to_server.LoadTeam(slug:)]
     routes.SignIn | routes.NotFound -> []
@@ -54,6 +53,17 @@ fn request_effect(route: routes.Route) -> Effect(pages.Message) {
       client_transport.send_public_games_load(on_result: fn(result) {
         public_games_load_result_message(route, result)
       })
+    routes.GamesId(id) ->
+      case int.parse(id) {
+        Ok(game_id) ->
+          client_transport.send_public_game_detail_load(
+            game_id:,
+            on_result: fn(result) {
+              public_game_detail_load_result_message(route, result)
+            },
+          )
+        Error(Nil) -> effect.none()
+      }
     routes.Standings ->
       client_transport.send_public_standings_load(on_result: fn(result) {
         public_standings_load_result_message(route, result)
@@ -102,6 +112,25 @@ pub fn public_games_load_result_message(
 }
 
 @target(javascript)
+pub fn public_game_detail_load_result_message(
+  route: routes.Route,
+  result: Result(
+    public_game_detail_wire.LoadResult,
+    List(wire_result.ApiLoadError),
+  ),
+) -> pages.Message {
+  case route, result {
+    routes.GamesId(_), Ok(public_game_detail_wire.PublicGameDetailLoaded(game))
+    ->
+      pages.GamesIdMsg(
+        games_id_page.Loaded(Ok(games_id_page.from_wire_detail(game))),
+      )
+    _, Error(errors) -> load_error_message(route, api_load_error(errors))
+    _, Ok(_) -> load_error_message(route, "Unexpected game response.")
+  }
+}
+
+@target(javascript)
 pub fn public_standings_load_result_message(
   route: routes.Route,
   result: Result(
@@ -127,8 +156,6 @@ fn load_result_message(
   result: Result(ToClient, List(wire_result.ApiLoadError)),
 ) -> pages.Message {
   case route, result {
-    routes.GamesId(_), Ok(to_client.GameLoaded(game)) ->
-      pages.GamesIdMsg(games_id_page.Loaded(Ok(detail_game(game))))
     routes.TeamsSlug(_), Ok(to_client.TeamLoaded(team)) ->
       pages.TeamsSlugMsg(teams_slug_page.Loaded(Ok(team_detail(team))))
     _, Error(errors) -> load_error_message(route, api_load_error(errors))
@@ -183,11 +210,6 @@ pub fn apply_message(
         games_page.game_updated(model, public_game_update(game))
       #(pages.GamesPage(model), effect.map(page_effect, pages.GamesMsg))
     }
-    pages.GamesIdPage(model), to_client.GameLoaded(game) -> {
-      let #(model, page_effect) =
-        games_id_page.game_loaded(model, detail_game(game))
-      #(pages.GamesIdPage(model), effect.map(page_effect, pages.GamesIdMsg))
-    }
     pages.GamesIdPage(model), to_client.GameUpdated(game) -> {
       let #(model, page_effect) =
         games_id_page.game_updated(model, detail_game_update(game))
@@ -239,17 +261,6 @@ fn public_game_status(status: api_game.GameStatus) -> games_page.GameStatus {
   }
 }
 
-fn detail_game(game: api_game.GameDetail) -> games_id_page.GameDetail {
-  games_id_page.GameDetail(
-    id: game.id,
-    home: detail_team(game.home),
-    away: detail_team(game.away),
-    home_score: game.home_score,
-    away_score: game.away_score,
-    status: detail_game_status(game.status),
-  )
-}
-
 fn detail_game_update(game: api_game.GameSnapshot) -> games_id_page.GameUpdate {
   games_id_page.GameUpdate(
     id: game.id,
@@ -257,10 +268,6 @@ fn detail_game_update(game: api_game.GameSnapshot) -> games_id_page.GameUpdate {
     away_score: game.away_score,
     status: detail_game_status(game.status),
   )
-}
-
-fn detail_team(team: api_game.Team) -> games_id_page.Team {
-  games_id_page.Team(code: team.code, name: team.name, slug: team.slug)
 }
 
 fn detail_game_status(status: api_game.GameStatus) -> games_id_page.GameStatus {

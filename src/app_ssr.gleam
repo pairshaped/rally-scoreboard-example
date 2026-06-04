@@ -26,6 +26,8 @@ import gleam/bit_array
 @target(erlang)
 import gleam/http/request.{type Request}
 @target(erlang)
+import gleam/int
+@target(erlang)
 import gleam/list
 @target(erlang)
 import gleam/option.{type Option, None, Some}
@@ -57,6 +59,10 @@ import authentication_context.{type AuthenticationContext}
 import page_context.{PageContext}
 @target(erlang)
 import public/pages/games as public_games_page
+@target(erlang)
+import public/pages/games/id_ as public_game_detail_page
+@target(erlang)
+import public/pages/games/id_/wire as public_game_detail_wire
 @target(erlang)
 import public/pages/games/wire as public_games_wire
 @target(erlang)
@@ -182,6 +188,12 @@ fn public_boot_page(
         public_games_hydration_payload(result),
       ])
     }
+    public_routes.GamesId(id) -> {
+      let result = public_game_detail_load(db, id)
+      #(apply_public_game_detail_load_result(page, result), [
+        public_game_detail_hydration_payload(result),
+      ])
+    }
     public_routes.Standings -> {
       let result = public_standings_page.load(db)
       #(apply_public_standings_load_result(page, result), [
@@ -196,6 +208,34 @@ fn public_boot_page(
       )
     }
   }
+}
+
+@target(erlang)
+fn public_game_detail_load(
+  db: sqlight.Connection,
+  id: String,
+) -> Result(
+  public_game_detail_page.GameDetail,
+  public_game_detail_page.LoadError,
+) {
+  case int.parse(id) {
+    Ok(game_id) -> public_game_detail_page.load(db, game_id)
+    Error(Nil) ->
+      Error(public_game_detail_page.LoadError(message: "Game not found."))
+  }
+}
+
+@target(erlang)
+fn apply_public_game_detail_load_result(
+  page page: public_pages.Page,
+  result result: Result(
+    public_game_detail_page.GameDetail,
+    public_game_detail_page.LoadError,
+  ),
+) -> public_pages.Page {
+  let message = public_pages.GamesIdMsg(public_game_detail_page.Loaded(result))
+  let #(page, _) = public_pages.update(page, message)
+  page
 }
 
 @target(erlang)
@@ -244,6 +284,20 @@ fn apply_public_games_load_result(
 }
 
 @target(erlang)
+fn public_game_detail_hydration_payload(
+  result result: Result(
+    public_game_detail_page.GameDetail,
+    public_game_detail_page.LoadError,
+  ),
+) -> String {
+  generated_server.ensure()
+  result
+  |> public_game_detail_wire_result
+  |> generated_server.encode_public_game_detail_load_result(request_id: 0)
+  |> bit_array.base64_url_encode(False)
+}
+
+@target(erlang)
 fn public_standings_hydration_payload(
   result result: Result(
     List(public_standings_page.GameSummary),
@@ -269,6 +323,25 @@ fn public_games_hydration_payload(
   |> public_games_wire_result
   |> generated_server.encode_public_games_load_result(request_id: 0)
   |> bit_array.base64_url_encode(False)
+}
+
+@target(erlang)
+fn public_game_detail_wire_result(
+  result result: Result(
+    public_game_detail_page.GameDetail,
+    public_game_detail_page.LoadError,
+  ),
+) -> Result(public_game_detail_wire.LoadResult, List(ApiLoadError)) {
+  case result {
+    Ok(game) ->
+      Ok(
+        public_game_detail_wire.PublicGameDetailLoaded(
+          public_game_detail_page.to_wire_detail(game),
+        ),
+      )
+    Error(public_game_detail_page.LoadError(message: message)) ->
+      Error([ApiLoadError(message:)])
+  }
 }
 
 @target(erlang)

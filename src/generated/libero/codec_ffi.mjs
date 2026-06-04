@@ -38,6 +38,15 @@ import {
   PublicGamesGameSummary,
 } from "../../public/pages/games/wire.mjs";
 import {
+  PublicGameDetailLoad,
+  PublicGameDetailLoaded,
+  PublicGameDetailScheduled,
+  PublicGameDetailLive,
+  PublicGameDetailFinal,
+  PublicGameDetailTeam,
+  PublicGameDetailGameDetail,
+} from "../../public/pages/games/id_/wire.mjs";
+import {
   PublicStandingsLoad,
   PublicStandingsLoaded,
   PublicStandingsScheduled,
@@ -506,6 +515,20 @@ export function ensure() {
   registerConstructor("public_games_team", PublicGamesTeam, 3, ["string", "string", "string"]);
   PublicGamesGameSummary.__wireAtom = "public_games_game_summary";
   registerConstructor("public_games_game_summary", PublicGamesGameSummary, 6, ["int", undefined, undefined, "int", "int", undefined]);
+  PublicGameDetailLoad.__wireAtom = "public_game_detail_load";
+  registerConstructor("public_game_detail_load", PublicGameDetailLoad, 1, ["int"]);
+  PublicGameDetailLoaded.__wireAtom = "public_game_detail_loaded";
+  registerConstructor("public_game_detail_loaded", PublicGameDetailLoaded, 1, [undefined]);
+  PublicGameDetailScheduled.__wireAtom = "public_game_detail_scheduled";
+  registerConstructor("public_game_detail_scheduled", PublicGameDetailScheduled, 0, []);
+  PublicGameDetailLive.__wireAtom = "public_game_detail_live";
+  registerConstructor("public_game_detail_live", PublicGameDetailLive, 1, ["string"]);
+  PublicGameDetailFinal.__wireAtom = "public_game_detail_final";
+  registerConstructor("public_game_detail_final", PublicGameDetailFinal, 0, []);
+  PublicGameDetailTeam.__wireAtom = "public_game_detail_team";
+  registerConstructor("public_game_detail_team", PublicGameDetailTeam, 3, ["string", "string", "string"]);
+  PublicGameDetailGameDetail.__wireAtom = "public_game_detail_game_detail";
+  registerConstructor("public_game_detail_game_detail", PublicGameDetailGameDetail, 6, ["int", undefined, undefined, "int", "int", undefined]);
   PublicStandingsLoad.__wireAtom = "public_standings_load";
   registerConstructor("public_standings_load", PublicStandingsLoad, 0, []);
   PublicStandingsLoaded.__wireAtom = "public_standings_loaded";

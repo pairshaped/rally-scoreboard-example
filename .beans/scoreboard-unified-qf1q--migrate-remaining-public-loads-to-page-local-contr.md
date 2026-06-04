@@ -8,7 +8,7 @@ tags:
     - rally
     - chase
 created_at: 2026-06-04T03:38:31Z
-updated_at: 2026-06-04T04:02:33Z
+updated_at: 2026-06-04T04:08:06Z
 parent: scoreboard-unified-wm8p
 blocked_by:
     - scoreboard-unified-adc2
@@ -31,7 +31,7 @@ Each page should own its own domain model, even when the shapes look similar. A 
 
 ## Acceptance criteria
 
-- [ ] Game detail loads through a page-local contract and does not expose stale root `GameDetail` shapes.
+- [x] Game detail loads through a page-local contract and does not expose stale root `GameDetail` shapes.
 - [x] Standings loads through a page-local contract and owns its own game/standing model shapes.
 - [ ] Team detail loads through a page-local contract and owns its own team/game shapes.
 - [ ] Public browser navigation receives one correlated load result frame per page load.
@@ -54,3 +54,13 @@ Validated with:
 - `gleam test`
 - `node test/ws_result_smoke.mjs`
 - `SCOREBOARD_BASE_URL=http://localhost:8099 node test/browser_smoke.mjs`
+
+Migrated game detail as the third page-local public load slice. `public/pages/games/id_.gleam` now loads through `public/pages/games/id_/wire.gleam`, direct SSR/hydration emits a page-local game-detail result frame, and SPA navigation sends a correlated page-local load request.
+
+Validated with:
+
+- `gleam build --target javascript`
+- `gleam build --target erlang`
+- `gleam test`
+- `node test/ws_result_smoke.mjs`
+- `SCOREBOARD_BASE_URL=http://localhost:8100 node test/browser_smoke.mjs`
