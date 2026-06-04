@@ -118,7 +118,7 @@ fn handle_client_frame(
   case server_protocol.decode_admin_games_request(data) {
     Ok(server_protocol.AdminGamesClientRequest(
       request_id: request_id,
-      module: "admin/games",
+      module: "admin/pages/games",
       message: message,
     )) ->
       handle_admin_games_request(

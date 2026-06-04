@@ -1,3 +1,4 @@
+@target(javascript)
 import api/to_client.{type ToClient}
 @target(javascript)
 import api/to_server.{type ToServer}

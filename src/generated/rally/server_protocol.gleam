@@ -1,11 +1,9 @@
 @target(erlang)
-import admin/pages/games as admin_games_page
+import admin/pages/games as admin_games_wire
 @target(erlang)
 import api/to_client.{type ToClient}
 @target(erlang)
 import api/to_server.{type ToServer}
-@target(erlang)
-import broadcasts
 @target(erlang)
 import generated/libero/result.{type ApiLoadError, type ApiSaveError}
 @target(erlang)
@@ -22,6 +20,9 @@ import public/pages/standings/wire as public_standings_wire
 import public/pages/teams/slug_/wire as public_team_detail_wire
 
 @target(erlang)
+import broadcasts
+
+@target(erlang)
 pub type ClientRequest {
   ClientRequest(request_id: Int, module: String, message: ToServer)
 }
@@ -31,7 +32,7 @@ pub type AdminGamesClientRequest {
   AdminGamesClientRequest(
     request_id: Int,
     module: String,
-    message: admin_games_page.ServerMsg,
+    message: admin_games_wire.ServerMsg,
   )
 }
 
@@ -168,7 +169,7 @@ pub fn encode_load_result(
 @target(erlang)
 pub fn encode_admin_games_load_result(
   request_id request_id: Int,
-  result result: Result(admin_games_page.LoadResult, List(ApiLoadError)),
+  result result: Result(admin_games_wire.LoadResult, List(ApiLoadError)),
 ) -> BitArray {
   encode_result_frame(request_id, result)
 }
@@ -216,7 +217,7 @@ pub fn encode_save_result(
 @target(erlang)
 pub fn encode_admin_games_save_result(
   request_id request_id: Int,
-  result result: Result(admin_games_page.GameUpdate, List(ApiSaveError)),
+  result result: Result(admin_games_wire.GameUpdate, List(ApiSaveError)),
 ) -> BitArray {
   encode_result_frame(request_id, result)
 }
