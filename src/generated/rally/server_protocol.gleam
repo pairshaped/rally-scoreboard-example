@@ -23,20 +23,20 @@ pub type ClientRequest {
 }
 
 @target(erlang)
-pub type PublicGamesClientRequest {
-  PublicGamesClientRequest(
-    request_id: Int,
-    module: String,
-    message: public_games_wire.ServerMsg,
-  )
-}
-
-@target(erlang)
 pub type PublicGameDetailClientRequest {
   PublicGameDetailClientRequest(
     request_id: Int,
     module: String,
     message: public_game_detail_wire.ServerMsg,
+  )
+}
+
+@target(erlang)
+pub type PublicGamesClientRequest {
+  PublicGamesClientRequest(
+    request_id: Int,
+    module: String,
+    message: public_games_wire.ServerMsg,
   )
 }
 
@@ -79,23 +79,23 @@ pub fn decode_request(bytes: BitArray) -> Result(ClientRequest, Nil) {
 }
 
 @target(erlang)
-pub fn decode_public_games_request(
-  bytes: BitArray,
-) -> Result(PublicGamesClientRequest, Nil) {
-  case decode_any(bytes) {
-    Ok(#(request_id, module, message)) ->
-      Ok(PublicGamesClientRequest(request_id:, module:, message:))
-    _ -> Error(Nil)
-  }
-}
-
-@target(erlang)
 pub fn decode_public_game_detail_request(
   bytes: BitArray,
 ) -> Result(PublicGameDetailClientRequest, Nil) {
   case decode_any(bytes) {
     Ok(#(request_id, module, message)) ->
       Ok(PublicGameDetailClientRequest(request_id:, module:, message:))
+    _ -> Error(Nil)
+  }
+}
+
+@target(erlang)
+pub fn decode_public_games_request(
+  bytes: BitArray,
+) -> Result(PublicGamesClientRequest, Nil) {
+  case decode_any(bytes) {
+    Ok(#(request_id, module, message)) ->
+      Ok(PublicGamesClientRequest(request_id:, module:, message:))
     _ -> Error(Nil)
   }
 }
@@ -142,17 +142,17 @@ pub fn encode_load_result(
 }
 
 @target(erlang)
-pub fn encode_public_games_load_result(
+pub fn encode_public_game_detail_load_result(
   request_id request_id: Int,
-  result result: Result(public_games_wire.LoadResult, List(ApiLoadError)),
+  result result: Result(public_game_detail_wire.LoadResult, List(ApiLoadError)),
 ) -> BitArray {
   encode_result_frame(request_id, result)
 }
 
 @target(erlang)
-pub fn encode_public_game_detail_load_result(
+pub fn encode_public_games_load_result(
   request_id request_id: Int,
-  result result: Result(public_game_detail_wire.LoadResult, List(ApiLoadError)),
+  result result: Result(public_games_wire.LoadResult, List(ApiLoadError)),
 ) -> BitArray {
   encode_result_frame(request_id, result)
 }
@@ -199,11 +199,11 @@ pub fn encode_push(
 @target(erlang)
 @external(erlang, "to_server_codec_ffi", "decode")
 fn decode_any(_bytes: BitArray) -> Result(a, Nil) {
-  panic as "generated/libero/server.decode_any external missing"
+  panic as "generated/rally/server_protocol.decode_any external missing"
 }
 
 @target(erlang)
 @external(erlang, "to_client_codec_ffi", "encode")
 fn encode_any(_value: a) -> BitArray {
-  panic as "generated/libero/server.encode_any external missing"
+  panic as "generated/rally/server_protocol.encode_any external missing"
 }

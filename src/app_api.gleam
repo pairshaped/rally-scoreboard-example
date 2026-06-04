@@ -3,7 +3,7 @@ import generated/libero/result.{
   type ApiLoadError, type ApiSaveError, ApiLoadError, ApiSaveError,
 }
 @target(erlang)
-import generated/libero/server as generated_server
+import generated/rally/server_protocol
 @target(erlang)
 import generated/sql/admin/pages/games_sql as admin_games_sql
 @target(erlang)
@@ -133,15 +133,15 @@ pub fn reply_result(
 ) -> BitArray {
   case reply {
     LoadReply(result) ->
-      generated_server.encode_load_result(request_id: request_id, result:)
+      server_protocol.encode_load_result(request_id: request_id, result:)
     SaveReply(result, ..) ->
-      generated_server.encode_save_result(request_id: request_id, result:)
+      server_protocol.encode_save_result(request_id: request_id, result:)
   }
 }
 
 @target(erlang)
 pub fn push(module module: String, message message: ToClient) -> BitArray {
-  generated_server.encode_push(module, message)
+  server_protocol.encode_push(module, message)
 }
 
 // LOADERS

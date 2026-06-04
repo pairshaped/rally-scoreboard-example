@@ -4,7 +4,7 @@ import { spawn } from "node:child_process";
 import {
   decode_result_envelope,
   encode_public_games_request,
-} from "../build/dev/javascript/scoreboard_unified/generated/libero/client.mjs";
+} from "../build/dev/javascript/scoreboard_unified/generated/rally/client_protocol.mjs";
 import { PublicGamesLoaded } from "../build/dev/javascript/scoreboard_unified/public/pages/games/wire.mjs";
 import { BitArray, Ok } from "../build/dev/javascript/scoreboard_unified/gleam.mjs";
 

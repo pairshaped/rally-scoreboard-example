@@ -18,3 +18,4 @@ The ADRs describe the intended design.
 - [0006: Colocate Authored SQL](0006-colocate-authored-sql.md)
 - [0007: Preserve Authoring Style](0007-preserve-authoring-style.md)
 - [0008: Use API RPC Effects](0008-use-api-rpc-effects.md)
+- [0009: Separate Libero Proute And Rally Roles](0009-separate-libero-proute-and-rally-roles.md)

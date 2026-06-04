@@ -1,8 +1,6 @@
 @target(erlang)
 import generated/libero/result.{type ApiLoadError, ApiLoadError}
 @target(erlang)
-import generated/libero/server as generated_server
-@target(erlang)
 import generated/libero/to_client_codec
 @target(erlang)
 import generated/proute/admin/page_input as admin_page_input
@@ -18,6 +16,8 @@ import generated/proute/public/pages as public_pages
 import generated/proute/public/routes as public_routes
 @target(erlang)
 import generated/rally/admin_boot
+@target(erlang)
+import generated/rally/server_protocol
 
 @target(erlang)
 import gleam/bit_array
@@ -308,10 +308,10 @@ fn public_team_detail_hydration_payload(
     public_team_detail_page.LoadError,
   ),
 ) -> String {
-  generated_server.ensure()
+  server_protocol.ensure()
   result
   |> public_team_detail_wire_result
-  |> generated_server.encode_public_team_detail_load_result(request_id: 0)
+  |> server_protocol.encode_public_team_detail_load_result(request_id: 0)
   |> bit_array.base64_url_encode(False)
 }
 
@@ -322,10 +322,10 @@ fn public_game_detail_hydration_payload(
     public_game_detail_page.LoadError,
   ),
 ) -> String {
-  generated_server.ensure()
+  server_protocol.ensure()
   result
   |> public_game_detail_wire_result
-  |> generated_server.encode_public_game_detail_load_result(request_id: 0)
+  |> server_protocol.encode_public_game_detail_load_result(request_id: 0)
   |> bit_array.base64_url_encode(False)
 }
 
@@ -336,10 +336,10 @@ fn public_standings_hydration_payload(
     public_standings_page.LoadError,
   ),
 ) -> String {
-  generated_server.ensure()
+  server_protocol.ensure()
   result
   |> public_standings_wire_result
-  |> generated_server.encode_public_standings_load_result(request_id: 0)
+  |> server_protocol.encode_public_standings_load_result(request_id: 0)
   |> bit_array.base64_url_encode(False)
 }
 
@@ -350,10 +350,10 @@ fn public_games_hydration_payload(
     public_games_page.LoadError,
   ),
 ) -> String {
-  generated_server.ensure()
+  server_protocol.ensure()
   result
   |> public_games_wire_result
-  |> generated_server.encode_public_games_load_result(request_id: 0)
+  |> server_protocol.encode_public_games_load_result(request_id: 0)
   |> bit_array.base64_url_encode(False)
 }
 

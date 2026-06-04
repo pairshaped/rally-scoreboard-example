@@ -44,15 +44,6 @@ pub fn encode_request(
 }
 
 @target(javascript)
-pub fn encode_public_games_request(request_id request_id: Int) -> BitArray {
-  encode_any(#(
-    request_id,
-    "public/pages/games",
-    public_games_wire.PublicGamesLoad,
-  ))
-}
-
-@target(javascript)
 pub fn encode_public_game_detail_request(
   request_id request_id: Int,
   game_id game_id: Int,
@@ -61,6 +52,15 @@ pub fn encode_public_game_detail_request(
     request_id,
     "public/pages/games/id_",
     public_game_detail_wire.PublicGameDetailLoad(game_id:),
+  ))
+}
+
+@target(javascript)
+pub fn encode_public_games_request(request_id request_id: Int) -> BitArray {
+  encode_any(#(
+    request_id,
+    "public/pages/games",
+    public_games_wire.PublicGamesLoad,
   ))
 }
 
@@ -117,20 +117,20 @@ pub fn decode_load_result(
 }
 
 @target(javascript)
-pub fn decode_public_games_load_result(
+pub fn decode_public_game_detail_load_result(
   bytes: BitArray,
 ) -> Result(
-  #(Int, Result(public_games_wire.LoadResult, List(ApiLoadError))),
+  #(Int, Result(public_game_detail_wire.LoadResult, List(ApiLoadError))),
   Nil,
 ) {
   decode_result_envelope(bytes)
 }
 
 @target(javascript)
-pub fn decode_public_game_detail_load_result(
+pub fn decode_public_games_load_result(
   bytes: BitArray,
 ) -> Result(
-  #(Int, Result(public_game_detail_wire.LoadResult, List(ApiLoadError))),
+  #(Int, Result(public_games_wire.LoadResult, List(ApiLoadError))),
   Nil,
 ) {
   decode_result_envelope(bytes)
@@ -172,13 +172,13 @@ pub fn decode_result_envelope(bytes: BitArray) -> Result(#(Int, a), Nil) {
 }
 
 @target(javascript)
-@external(javascript, "./codec_ffi.mjs", "encode_value")
+@external(javascript, "../libero/codec_ffi.mjs", "encode_value")
 fn encode_any(_value: a) -> BitArray {
-  panic as "generated/libero/client.encode_any external missing"
+  panic as "generated/rally/client_protocol.encode_any external missing"
 }
 
 @target(javascript)
-@external(javascript, "./codec_ffi.mjs", "decode_result")
+@external(javascript, "../libero/codec_ffi.mjs", "decode_result")
 fn decode_any(_bytes: BitArray) -> Result(a, Nil) {
-  panic as "generated/libero/client.decode_any external missing"
+  panic as "generated/rally/client_protocol.decode_any external missing"
 }

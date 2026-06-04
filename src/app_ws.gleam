@@ -1,7 +1,7 @@
 @target(erlang)
 import generated/libero/result as wire_result
 @target(erlang)
-import generated/libero/server as generated_server
+import generated/rally/server_protocol
 
 @target(erlang)
 import gleam/dynamic/decode
@@ -113,15 +113,15 @@ fn handle_client_frame(
   conn conn: WebsocketConnection,
   data data: BitArray,
 ) -> Nil {
-  case generated_server.decode_public_games_request(data) {
-    Ok(generated_server.PublicGamesClientRequest(
+  case server_protocol.decode_public_games_request(data) {
+    Ok(server_protocol.PublicGamesClientRequest(
       request_id: request_id,
       module: "public/pages/games",
       message: public_games_wire.PublicGamesLoad,
     )) -> handle_public_games_load(state: state, conn: conn, request_id:)
     _ ->
-      case generated_server.decode_public_game_detail_request(data) {
-        Ok(generated_server.PublicGameDetailClientRequest(
+      case server_protocol.decode_public_game_detail_request(data) {
+        Ok(server_protocol.PublicGameDetailClientRequest(
           request_id: request_id,
           module: "public/pages/games/id_",
           message: public_game_detail_wire.PublicGameDetailLoad(
@@ -135,8 +135,8 @@ fn handle_client_frame(
             game_id:,
           )
         _ ->
-          case generated_server.decode_public_standings_request(data) {
-            Ok(generated_server.PublicStandingsClientRequest(
+          case server_protocol.decode_public_standings_request(data) {
+            Ok(server_protocol.PublicStandingsClientRequest(
               request_id: request_id,
               module: "public/pages/standings",
               message: public_standings_wire.PublicStandingsLoad,
@@ -147,8 +147,8 @@ fn handle_client_frame(
                 request_id:,
               )
             _ ->
-              case generated_server.decode_public_team_detail_request(data) {
-                Ok(generated_server.PublicTeamDetailClientRequest(
+              case server_protocol.decode_public_team_detail_request(data) {
+                Ok(server_protocol.PublicTeamDetailClientRequest(
                   request_id: request_id,
                   module: "public/pages/teams/slug_",
                   message: public_team_detail_wire.PublicTeamDetailLoad(
@@ -190,7 +190,7 @@ fn handle_public_games_load(
   let _sent =
     mist.send_binary_frame(
       conn,
-      generated_server.encode_public_games_load_result(
+      server_protocol.encode_public_games_load_result(
         request_id: request_id,
         result: result,
       ),
@@ -219,7 +219,7 @@ fn handle_public_game_detail_load(
   let _sent =
     mist.send_binary_frame(
       conn,
-      generated_server.encode_public_game_detail_load_result(
+      server_protocol.encode_public_game_detail_load_result(
         request_id: request_id,
         result: result,
       ),
@@ -248,7 +248,7 @@ fn handle_public_standings_load(
   let _sent =
     mist.send_binary_frame(
       conn,
-      generated_server.encode_public_standings_load_result(
+      server_protocol.encode_public_standings_load_result(
         request_id: request_id,
         result: result,
       ),
@@ -277,7 +277,7 @@ fn handle_public_team_detail_load(
   let _sent =
     mist.send_binary_frame(
       conn,
-      generated_server.encode_public_team_detail_load_result(
+      server_protocol.encode_public_team_detail_load_result(
         request_id: request_id,
         result: result,
       ),
@@ -291,8 +291,8 @@ fn handle_root_client_frame(
   conn conn: WebsocketConnection,
   data data: BitArray,
 ) -> Nil {
-  case generated_server.decode_request(data) {
-    Ok(generated_server.ClientRequest(
+  case server_protocol.decode_request(data) {
+    Ok(server_protocol.ClientRequest(
       request_id: request_id,
       message: request_message,
       ..,

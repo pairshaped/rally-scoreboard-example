@@ -18,6 +18,7 @@ birdie = ">= 2.0.0 and < 3.0.0"
 glinter = ">= 2.19.0 and < 3.0.0"
 marmot = { path = "../marmot" }
 proute = { path = "../proute" }
+rally = { path = "../rally-gleam" }
 
 [tools.glinter]
 stats = true
