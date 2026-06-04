@@ -45,7 +45,7 @@ pub fn normalize_display_name_test() {
 }
 
 @target(erlang)
-pub fn mark_final_returns_save_ack_and_game_update_test() {
+pub fn mark_final_returns_save_ack_payload_and_game_update_test() {
   let db = live_game_db()
 
   let reply =
@@ -57,9 +57,9 @@ pub fn mark_final_returns_save_ack_and_game_update_test() {
 
   case reply {
     app_api.SaveReply(
-      result: Ok(Nil),
+      result: Ok(to_client.GameUpdated(result)),
       messages: [to_client.GameUpdated(updated)],
-    ) -> updated.status == game.Final
+    ) -> result.status == game.Final && updated.status == game.Final
     _ -> False
   }
   |> should.equal(True)
@@ -68,7 +68,7 @@ pub fn mark_final_returns_save_ack_and_game_update_test() {
 }
 
 @target(erlang)
-pub fn update_score_returns_save_ack_and_game_update_test() {
+pub fn update_score_returns_save_ack_payload_and_game_update_test() {
   let db = final_game_db()
 
   let reply =
@@ -80,9 +80,10 @@ pub fn update_score_returns_save_ack_and_game_update_test() {
 
   case reply {
     app_api.SaveReply(
-      result: Ok(Nil),
+      result: Ok(to_client.GameUpdated(result)),
       messages: [to_client.GameUpdated(updated)],
-    ) -> updated.status == game.Live("Live")
+    ) ->
+      result.status == game.Live("Live") && updated.status == game.Live("Live")
     _ -> False
   }
   |> should.equal(True)
@@ -150,6 +151,31 @@ pub fn app_topics_broadcasts_to_self_test() {
 
   process.selector_receive(selector, within: 1000)
   |> should.equal(Ok(frame))
+}
+
+@target(erlang)
+pub fn app_topics_can_exclude_self_test() {
+  process.flush_messages()
+  app_topics.start()
+  app_topics.join("self-excluded-test")
+
+  let frame = <<"hello">>
+  let selector =
+    process.new_selector()
+    |> process.select_record(
+      tag: atom.create("scoreboard_frame"),
+      fields: 1,
+      mapping: fn(msg) {
+        msg
+        |> decode.run(decode.at([1], decode.bit_array))
+        |> result.unwrap(<<>>)
+      },
+    )
+
+  app_topics.broadcast_except_self("self-excluded-test", frame)
+
+  process.selector_receive(selector, within: 100)
+  |> should.equal(Error(Nil))
 }
 
 @target(erlang)

@@ -8,7 +8,7 @@ let reconnectAttempts = 0;
 let requestId = 0;
 
 import { BitArray, Ok } from "../../gleam.mjs";
-import { decode_result_envelope } from "../libero/client.mjs";
+import { decode_result_envelope } from "./client_protocol.mjs";
 
 export function next_request_id() {
   requestId += 1;

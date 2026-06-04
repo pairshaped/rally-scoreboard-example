@@ -84,7 +84,6 @@ pub type Message {
   Loaded(Result(List(AdminGameSummary), LoadError))
   MarkFinal(id: Int)
   Saved(Result(GameUpdate, SaveError))
-  SaveFinished(id: Int, result: Result(Nil, SaveError))
 }
 
 // INIT
@@ -118,8 +117,6 @@ pub fn update(
       effect.none(),
     )
     Saved(Error(_)) -> #(model, effect.none())
-    SaveFinished(_, Ok(Nil)) -> #(model, effect.none())
-    SaveFinished(_, Error(_)) -> #(model, effect.none())
     AdjustAway(..) | AdjustHome(..) | MarkFinal(..) -> #(
       model,
       message_effect(msg),
@@ -329,6 +326,18 @@ fn wire_game_status(status: api_game.GameStatus) -> GameStatus {
 }
 
 @target(javascript)
+fn wire_game_update(game: api_game.GameSnapshot) -> GameUpdate {
+  GameUpdate(
+    id: game.id,
+    home_code: game.home.code,
+    away_code: game.away.code,
+    home_score: game.home_score,
+    away_score: game.away_score,
+    status: wire_game_status(game.status),
+  )
+}
+
+@target(javascript)
 fn message_effect(msg: Message) -> Effect(Message) {
   case msg {
     AdjustAway(id, home_score, away_score, delta) ->
@@ -340,7 +349,7 @@ fn message_effect(msg: Message) -> Effect(Message) {
           away_score: clamp_score(away_score + delta),
           period: "Live",
         ),
-        on_result: fn(result) { SaveFinished(id, map_save_result(result)) },
+        on_result: fn(result) { Saved(map_save_result(result)) },
       )
     AdjustHome(id, home_score, away_score, delta) ->
       api_client.send_save(
@@ -351,15 +360,15 @@ fn message_effect(msg: Message) -> Effect(Message) {
           away_score: away_score,
           period: "Live",
         ),
-        on_result: fn(result) { SaveFinished(id, map_save_result(result)) },
+        on_result: fn(result) { Saved(map_save_result(result)) },
       )
     MarkFinal(id) ->
       api_client.send_save(
         module: "admin/games",
         message: to_server.MarkFinal(id),
-        on_result: fn(result) { SaveFinished(id, map_save_result(result)) },
+        on_result: fn(result) { Saved(map_save_result(result)) },
       )
-    Loaded(_) | Saved(_) | SaveFinished(..) -> effect.none()
+    Loaded(_) | Saved(_) -> effect.none()
   }
 }
 
@@ -379,10 +388,11 @@ fn clamp_score(score: Int) -> Int {
 
 @target(javascript)
 fn map_save_result(
-  result: Result(Nil, List(wire_result.ApiSaveError)),
-) -> Result(Nil, SaveError) {
+  result: Result(to_client.ToClient, List(wire_result.ApiSaveError)),
+) -> Result(GameUpdate, SaveError) {
   case result {
-    Ok(Nil) -> Ok(Nil)
+    Ok(to_client.GameUpdated(game)) -> Ok(wire_game_update(game))
+    Ok(_) -> Error(SaveError(message: "Unexpected save response."))
     Error([wire_result.ApiSaveError(message: message, ..), ..]) ->
       Error(SaveError(message: message))
     Error([]) -> Error(SaveError(message: "Could not save game."))

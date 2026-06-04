@@ -45,7 +45,10 @@ import api/to_server.{type ToServer}
 @target(erlang)
 pub type DispatchReply {
   LoadReply(result: Result(ToClient, List(ApiLoadError)))
-  SaveReply(result: Result(Nil, List(ApiSaveError)), messages: List(ToClient))
+  SaveReply(
+    result: Result(ToClient, List(ApiSaveError)),
+    messages: List(ToClient),
+  )
 }
 
 // DISPATCH
@@ -287,8 +290,11 @@ fn correct_result(
 @target(erlang)
 fn saved_game_reply(db: sqlight.Connection, game_id: Int) -> DispatchReply {
   case game_snapshot(db, game_id) {
-    Ok(snapshot) -> save_succeeded([to_client.GameUpdated(snapshot)])
-    Error(Nil) -> save_succeeded([])
+    Ok(snapshot) -> {
+      let message = to_client.GameUpdated(snapshot)
+      save_succeeded(result: message, messages: [message])
+    }
+    Error(Nil) -> save_failed("Could not load saved game.")
   }
 }
 
@@ -303,8 +309,11 @@ fn load_failed(message: String) -> DispatchReply {
 }
 
 @target(erlang)
-fn save_succeeded(messages: List(ToClient)) -> DispatchReply {
-  SaveReply(result: Ok(Nil), messages:)
+fn save_succeeded(
+  result result: ToClient,
+  messages messages: List(ToClient),
+) -> DispatchReply {
+  SaveReply(result: Ok(result), messages:)
 }
 
 @target(erlang)

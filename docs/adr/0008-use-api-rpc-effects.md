@@ -39,6 +39,6 @@ server.send(
 
 Rally owns request id generation, pending callback registration, wire encoding, result decoding, and dispatching the selected local `Msg`. Request ids are transport bookkeeping. Page code should not need to inspect request ids for normal form saves or score updates.
 
-Server-originated state events are separate from request results. Mutation broadcasts should be delivered to every subscribed client, including the client that initiated the mutation. Request results manage lifecycle, pending state, and errors. Broadcast events carry server-authoritative state.
+Server-originated state events are separate from request results. Request results manage lifecycle, pending state, errors, and the initiating page's command-specific success payload. Mutation broadcasts carry state events for other subscribed connections. The connection that initiated a mutation should not receive its own broadcast for that mutation.
 
 Scoreboard's current `send_load` and `send_save` bridge functions are not the target Rally API. They exist because the current global app protocol still has separate app-level load and save result error types. Once page-local generation owns result types, the public API should collapse to `server.send(ServerMsg, on_result: ...)`.

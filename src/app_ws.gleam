@@ -324,7 +324,10 @@ fn broadcast_if_live_update(
 ) -> Nil {
   case should_broadcast_live_update(request: request, reply: reply) {
     True ->
-      app_topics.broadcast("app", app_api.push(module: "app", message: reply))
+      app_topics.broadcast_except_self(
+        "app",
+        app_api.push(module: "app", message: reply),
+      )
     False -> Nil
   }
 }

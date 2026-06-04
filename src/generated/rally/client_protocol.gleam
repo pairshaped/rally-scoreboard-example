@@ -159,7 +159,7 @@ pub fn decode_public_team_detail_load_result(
 @target(javascript)
 pub fn decode_save_result(
   bytes: BitArray,
-) -> Result(#(Int, Result(Nil, List(ApiSaveError))), Nil) {
+) -> Result(#(Int, Result(ToClient, List(ApiSaveError))), Nil) {
   decode_result_envelope(bytes)
 }
 

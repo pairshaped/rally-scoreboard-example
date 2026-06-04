@@ -1,5 +1,5 @@
 -module(app_topics_ffi).
--export([start/0, join/1, broadcast/2]).
+-export([start/0, join/1, broadcast/2, broadcast_except_self/2]).
 
 start() ->
     case pg:start_link(scoreboard_topics) of
@@ -15,5 +15,16 @@ broadcast(Topic, Frame) ->
     Members = pg:get_members(scoreboard_topics, Topic),
     lists:foreach(fun(Pid) ->
         Pid ! {scoreboard_frame, Frame}
+    end, Members),
+    nil.
+
+broadcast_except_self(Topic, Frame) ->
+    Self = self(),
+    Members = pg:get_members(scoreboard_topics, Topic),
+    lists:foreach(fun(Pid) ->
+        case Pid =:= Self of
+            true -> ok;
+            false -> Pid ! {scoreboard_frame, Frame}
+        end
     end, Members),
     nil.

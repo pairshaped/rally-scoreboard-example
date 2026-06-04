@@ -4,6 +4,10 @@ import { createRequire } from "node:module";
 import { execFileSync, spawn } from "node:child_process";
 import path from "node:path";
 
+import { GameUpdated } from "../build/dev/javascript/scoreboard_unified/api/to_client.mjs";
+import { decode_result_envelope } from "../build/dev/javascript/scoreboard_unified/generated/rally/client_protocol.mjs";
+import { BitArray, Ok } from "../build/dev/javascript/scoreboard_unified/gleam.mjs";
+
 const baseUrl = process.env.SCOREBOARD_BASE_URL ?? "http://localhost:8081";
 
 const { chromium } = loadPlaywright();
@@ -209,16 +213,34 @@ try {
     await page.getByText("Finalize").first().waitFor();
   });
 
-  await step("admin score save receives result and self broadcast", async () => {
+  await step("admin score save acks origin and broadcasts to peer", async () => {
     sentFrames.length = 0;
     receivedFrames.length = 0;
 
+    const peerPage = await context.newPage();
+    const peerReceivedFrames = [];
+    peerPage.on("websocket", socket => {
+      socket.on("framereceived", frame => {
+        peerReceivedFrames.push(frame.payload);
+      });
+    });
+    await peerPage.goto(url("/admin/games"), { waitUntil: "domcontentloaded" });
+    await peerPage.getByText("Admin score desk").waitFor();
+    await peerPage.getByText("Finalize").first().waitFor();
+    peerReceivedFrames.length = 0;
+
     const firstCard = page.locator(".game-card").first();
     const awayScore = firstCard.locator(".score").first();
+    const peerAwayScore = peerPage
+      .locator(".game-card")
+      .first()
+      .locator(".score")
+      .first();
     const before = Number(await awayScore.textContent());
 
     await firstCard.locator(".score-control").nth(1).click();
     await expectText(awayScore, String(before + 1));
+    await expectText(peerAwayScore, String(before + 1));
     await page.waitForTimeout(500);
 
     assert.equal(
@@ -226,16 +248,28 @@ try {
       1,
       "admin score click should send one websocket save request",
     );
-    assert.ok(
-      receivedFrames.some(frame => frameKind(frame) === "result"),
+    const resultFrames = receivedFrames.filter(frame =>
+      frameKind(frame) === "result"
+    );
+    assert.equal(
+      resultFrames.length,
+      1,
       "admin score click should receive a correlated save result: "
         + receivedFrames.map(frameSummary).join(", "),
     );
-    assert.ok(
+    assertSaveResultCarriesGameUpdated(resultFrames[0]);
+    assert.equal(
       receivedFrames.some(frame => frameKind(frame) === "push"),
-      "admin score click should receive its own GameUpdated broadcast: "
+      false,
+      "admin score click should not receive its own GameUpdated broadcast: "
         + receivedFrames.map(frameSummary).join(", "),
     );
+    assert.ok(
+      peerReceivedFrames.some(frame => frameKind(frame) === "push"),
+      "peer admin page should receive GameUpdated broadcast: "
+        + peerReceivedFrames.map(frameSummary).join(", "),
+    );
+    await peerPage.close();
   });
 
 } finally {
@@ -386,6 +420,18 @@ function frameBytes(payload) {
     ? Buffer.from(payload)
     : Buffer.from(String(payload));
   return bytes;
+}
+
+function assertSaveResultCarriesGameUpdated(payload) {
+  const frame = new BitArray(new Uint8Array(frameBytes(payload)));
+  const decoded = decode_result_envelope(frame);
+  assert.ok(decoded instanceof Ok, "save result frame should decode");
+  const [, result] = decoded[0];
+  assert.ok(result instanceof Ok, "save result should be Ok");
+  assert.ok(
+    result[0] instanceof GameUpdated,
+    "save result should carry the saved game update",
+  );
 }
 
 async function expectText(locator, text) {

@@ -109,7 +109,7 @@ pub fn send_public_team_detail_load(
 pub fn send_save(
   module module: String,
   message message: ToServer,
-  on_result on_result: fn(Result(Nil, List(ApiSaveError))) -> msg,
+  on_result on_result: fn(Result(ToClient, List(ApiSaveError))) -> msg,
 ) -> Effect(msg) {
   effect.from(fn(dispatch) {
     let request_id = next_request_id()
@@ -194,7 +194,7 @@ fn send_public_team_detail_load_frame(
 fn send_save_frame(
   _request_id: Int,
   _frame: BitArray,
-  _on_result: fn(Result(Nil, List(ApiSaveError))) -> msg,
+  _on_result: fn(Result(ToClient, List(ApiSaveError))) -> msg,
   _dispatch: fn(msg) -> Nil,
 ) -> Nil {
   Nil
