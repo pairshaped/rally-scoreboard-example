@@ -4,10 +4,11 @@ Wire-visible page protocols may reference only:
 
 - types defined in the owning page module
 - types defined under `src/wire/**`
+- cross-page broadcast event types defined in `src/broadcasts.gleam`
 - primitives
 - standard containers such as `List`, `Result`, `Option`, tuples, and records that contain approved wire-visible types
 
-The approved root wire namespace is `src/wire/**`.
+The approved root wire homes are `src/wire/**` and `src/broadcasts.gleam`.
 
 Wire-visible page protocols must not reference helper, service, query, business, formatting, or display types. This rule is transitive: a type that contains an unapproved owned type is not wire-visible.
 

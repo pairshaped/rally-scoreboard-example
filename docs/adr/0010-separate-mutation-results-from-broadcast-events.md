@@ -4,8 +4,8 @@ Mutations have two outputs with different audiences.
 
 The correlated request result goes back to the connection that sent the command. It carries the success or error payload that the initiating page needs to finish its local workflow. That payload can be page-local and command-specific.
 
-Broadcast events go to other subscribed connections. They carry the state event those other connections need to converge on the new server state. The payload can differ from the correlated result payload.
+Broadcast events go to other subscribed connections. They carry the state event those other connections need to converge on the new server state. Broadcast event types that are consumed across pages live in `src/broadcasts.gleam`. The payload can differ from the correlated result payload.
 
 The origin connection is excluded from the broadcast caused by its own mutation. Other connections on the same page, including other browser tabs for the same user, still receive the broadcast when they are subscribed.
 
-This keeps command replies separate from pubsub events. The initiating page updates from its ack payload. Other clients update from broadcasts. Rally owns request correlation and transport mechanics; application code owns the command result shape, broadcast event shape, and subscription policy.
+This keeps command replies separate from pubsub events. The initiating page updates from its ack payload. Other clients update from broadcasts. Rally owns request correlation and transport mechanics; application code owns the page-local command result shape, root broadcast event shape, and subscription policy.

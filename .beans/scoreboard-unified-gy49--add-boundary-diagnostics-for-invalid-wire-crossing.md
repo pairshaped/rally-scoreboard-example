@@ -25,7 +25,7 @@ This should enforce the chase rule: wire-crossing types may reference page-local
 - Implement boundary checks for page-local load/save request and response contracts.
 - Walk transitive type references used by wire payloads.
 - Distinguish allowed page-local types from helper/service/query/business/display types.
-- Add the approved shared/root wire namespace to the rule, currently `src/wire/**` unless the docs change.
+- Add the approved shared/root wire homes to the rule: `src/wire/**` and `src/broadcasts.gleam`.
 - Emit diagnostics that include contract name, offending symbol, and reference path.
 - Add negative tests for shared helper shapes, query row types, imported display types, and target-specific imports crossing the wrong side.
 
