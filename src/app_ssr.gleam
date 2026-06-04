@@ -11,12 +11,8 @@ import generated/proute/public/pages as public_pages
 @target(erlang)
 import generated/proute/public/routes as public_routes
 @target(erlang)
-import generated/rally/result.{type ApiLoadError, ApiLoadError}
-@target(erlang)
-import generated/rally/server_protocol
+import generated/rally/server_ssr
 
-@target(erlang)
-import gleam/bit_array
 @target(erlang)
 import gleam/http/request.{type Request}
 @target(erlang)
@@ -176,25 +172,33 @@ fn public_boot_page(
     public_routes.Home | public_routes.Games -> {
       let result = public_games_page.load(db)
       #(apply_public_games_load_result(page, route, result), [
-        public_games_hydration_payload(result),
+        server_ssr.public_games_hydration_payload(public_games_wire_result(
+          result,
+        )),
       ])
     }
     public_routes.GamesId(id) -> {
       let result = public_game_detail_load(db, id)
       #(apply_public_game_detail_load_result(page, result), [
-        public_game_detail_hydration_payload(result),
+        server_ssr.public_game_detail_hydration_payload(
+          public_game_detail_wire_result(result),
+        ),
       ])
     }
     public_routes.Standings -> {
       let result = public_standings_page.load(db)
       #(apply_public_standings_load_result(page, result), [
-        public_standings_hydration_payload(result),
+        server_ssr.public_standings_hydration_payload(
+          public_standings_wire_result(result),
+        ),
       ])
     }
     public_routes.TeamsSlug(slug) -> {
       let result = public_team_detail_page.load(db, slug)
       #(apply_public_team_detail_load_result(page, result), [
-        public_team_detail_hydration_payload(result),
+        server_ssr.public_team_detail_hydration_payload(
+          public_team_detail_wire_result(result),
+        ),
       ])
     }
     _ -> {
@@ -215,7 +219,7 @@ fn admin_boot_page(
     admin_routes.AdminHome | admin_routes.AdminGames -> {
       let result = admin_games_page.load(db)
       #(apply_admin_games_load_result(page, route, result), [
-        admin_games_hydration_payload(result),
+        server_ssr.admin_games_hydration_payload(admin_games_wire_result(result)),
       ])
     }
     admin_routes.NotFound -> #(page, [])
@@ -336,82 +340,12 @@ fn apply_public_games_load_result(
 }
 
 @target(erlang)
-fn public_team_detail_hydration_payload(
-  result result: Result(
-    public_team_detail_page.TeamDetail,
-    public_team_detail_page.LoadError,
-  ),
-) -> String {
-  server_protocol.ensure()
-  result
-  |> public_team_detail_wire_result
-  |> server_protocol.encode_public_team_detail_load_result(request_id: 0)
-  |> bit_array.base64_url_encode(False)
-}
-
-@target(erlang)
-fn public_game_detail_hydration_payload(
-  result result: Result(
-    public_game_detail_page.GameDetail,
-    public_game_detail_page.LoadError,
-  ),
-) -> String {
-  server_protocol.ensure()
-  result
-  |> public_game_detail_wire_result
-  |> server_protocol.encode_public_game_detail_load_result(request_id: 0)
-  |> bit_array.base64_url_encode(False)
-}
-
-@target(erlang)
-fn public_standings_hydration_payload(
-  result result: Result(
-    List(public_standings_page.GameSummary),
-    public_standings_page.LoadError,
-  ),
-) -> String {
-  server_protocol.ensure()
-  result
-  |> public_standings_wire_result
-  |> server_protocol.encode_public_standings_load_result(request_id: 0)
-  |> bit_array.base64_url_encode(False)
-}
-
-@target(erlang)
-fn public_games_hydration_payload(
-  result result: Result(
-    List(public_games_page.GameSummary),
-    public_games_page.LoadError,
-  ),
-) -> String {
-  server_protocol.ensure()
-  result
-  |> public_games_wire_result
-  |> server_protocol.encode_public_games_load_result(request_id: 0)
-  |> bit_array.base64_url_encode(False)
-}
-
-@target(erlang)
-fn admin_games_hydration_payload(
-  result result: Result(
-    List(admin_games_page.AdminGameSummary),
-    admin_games_page.LoadError,
-  ),
-) -> String {
-  server_protocol.ensure()
-  result
-  |> admin_games_wire_result
-  |> server_protocol.encode_admin_games_load_result(request_id: 0)
-  |> bit_array.base64_url_encode(False)
-}
-
-@target(erlang)
 fn public_team_detail_wire_result(
   result result: Result(
     public_team_detail_page.TeamDetail,
     public_team_detail_page.LoadError,
   ),
-) -> Result(public_team_detail_wire.LoadResult, List(ApiLoadError)) {
+) -> Result(public_team_detail_wire.LoadResult, List(server_ssr.LoadError)) {
   case result {
     Ok(team) ->
       Ok(
@@ -420,7 +354,7 @@ fn public_team_detail_wire_result(
         ),
       )
     Error(public_team_detail_page.LoadError(message: message)) ->
-      Error([ApiLoadError(message:)])
+      Error([server_ssr.LoadError(message:)])
   }
 }
 
@@ -430,7 +364,7 @@ fn public_game_detail_wire_result(
     public_game_detail_page.GameDetail,
     public_game_detail_page.LoadError,
   ),
-) -> Result(public_game_detail_wire.LoadResult, List(ApiLoadError)) {
+) -> Result(public_game_detail_wire.LoadResult, List(server_ssr.LoadError)) {
   case result {
     Ok(game) ->
       Ok(
@@ -439,7 +373,7 @@ fn public_game_detail_wire_result(
         ),
       )
     Error(public_game_detail_page.LoadError(message: message)) ->
-      Error([ApiLoadError(message:)])
+      Error([server_ssr.LoadError(message:)])
   }
 }
 
@@ -449,7 +383,7 @@ fn public_standings_wire_result(
     List(public_standings_page.GameSummary),
     public_standings_page.LoadError,
   ),
-) -> Result(public_standings_wire.LoadResult, List(ApiLoadError)) {
+) -> Result(public_standings_wire.LoadResult, List(server_ssr.LoadError)) {
   case result {
     Ok(games) ->
       Ok(
@@ -459,7 +393,7 @@ fn public_standings_wire_result(
         )),
       )
     Error(public_standings_page.LoadError(message: message)) ->
-      Error([ApiLoadError(message:)])
+      Error([server_ssr.LoadError(message:)])
   }
 }
 
@@ -469,7 +403,7 @@ fn public_games_wire_result(
     List(public_games_page.GameSummary),
     public_games_page.LoadError,
   ),
-) -> Result(public_games_wire.LoadResult, List(ApiLoadError)) {
+) -> Result(public_games_wire.LoadResult, List(server_ssr.LoadError)) {
   case result {
     Ok(games) ->
       Ok(
@@ -479,7 +413,7 @@ fn public_games_wire_result(
         )),
       )
     Error(public_games_page.LoadError(message: message)) ->
-      Error([ApiLoadError(message:)])
+      Error([server_ssr.LoadError(message:)])
   }
 }
 
@@ -489,11 +423,11 @@ fn admin_games_wire_result(
     List(admin_games_page.AdminGameSummary),
     admin_games_page.LoadError,
   ),
-) -> Result(admin_games_page.LoadResult, List(ApiLoadError)) {
+) -> Result(admin_games_page.LoadResult, List(server_ssr.LoadError)) {
   case result {
     Ok(games) -> Ok(admin_games_page.AdminGamesLoadResult(games: games))
     Error(admin_games_page.LoadError(message: message)) ->
-      Error([ApiLoadError(message:)])
+      Error([server_ssr.LoadError(message:)])
   }
 }
 
