@@ -16,8 +16,6 @@ import generated/rally/server_ssr
 @target(erlang)
 import gleam/http/request.{type Request}
 @target(erlang)
-import gleam/int
-@target(erlang)
 import gleam/option.{type Option, None, Some}
 
 @target(erlang)
@@ -217,27 +215,7 @@ fn public_load_route(route: public_routes.Route) -> server_ssr.PublicLoadRoute {
 fn public_load_handlers(
   db: sqlight.Connection,
 ) -> server_ssr.PublicLoadHandlers {
-  server_ssr.PublicLoadHandlers(
-    public_games_load: fn(_route) { public_games_page.load_wire(db) },
-    public_game_detail_load: fn(route) {
-      case route {
-        public_routes.GamesId(id) ->
-          case int.parse(id) {
-            Ok(game_id) -> public_game_detail_page.load_wire(db, game_id)
-            Error(Nil) -> Error(["Game not found."])
-          }
-        _ -> Error(["Unexpected game route."])
-      }
-    },
-    public_standings_load: fn(_route) { public_standings_page.load_wire(db) },
-    public_team_detail_load: fn(route) {
-      case route {
-        public_routes.TeamsSlug(slug) ->
-          public_team_detail_page.load_wire(db, slug)
-        _ -> Error(["Unexpected team route."])
-      }
-    },
-  )
+  server_ssr.PublicLoadHandlers(load_context: fn() { db })
 }
 
 @target(erlang)

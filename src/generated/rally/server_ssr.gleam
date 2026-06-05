@@ -1,4 +1,11 @@
 @target(erlang)
+import generated/rally/result as transport_result
+@target(erlang)
+import generated/rally/server_protocol
+@target(erlang)
+import gleam/bit_array
+
+@target(erlang)
 import generated/proute/admin/page_input as admin_page_input
 @target(erlang)
 import generated/proute/admin/pages as admin_pages
@@ -11,11 +18,7 @@ import generated/proute/public/pages as public_pages
 @target(erlang)
 import generated/proute/public/routes as public_routes
 @target(erlang)
-import generated/rally/result as transport_result
-@target(erlang)
-import generated/rally/server_protocol
-@target(erlang)
-import gleam/bit_array
+import gleam/int
 @target(erlang)
 import gleam/list
 @target(erlang)
@@ -33,6 +36,18 @@ import public/pages/games/wire as public_games_wire
 import public/pages/standings/wire as public_standings_wire
 @target(erlang)
 import public/pages/teams/slug_/wire as public_team_detail_wire
+
+@target(erlang)
+import public/pages/games as public_games_page
+@target(erlang)
+import public/pages/games/id_ as public_game_detail_page
+@target(erlang)
+import public/pages/standings as public_standings_page
+@target(erlang)
+import public/pages/teams/slug_ as public_team_detail_page
+
+@target(erlang)
+import sqlight as load_context
 
 @target(erlang)
 pub type AdminLoadRoute {
@@ -74,16 +89,7 @@ pub type AdminLoadHandlers {
 
 @target(erlang)
 pub type PublicLoadHandlers {
-  PublicLoadHandlers(
-    public_game_detail_load: fn(public_routes.Route) ->
-      Result(public_game_detail_wire.LoadResult, List(String)),
-    public_games_load: fn(public_routes.Route) ->
-      Result(public_games_wire.LoadResult, List(String)),
-    public_standings_load: fn(public_routes.Route) ->
-      Result(public_standings_wire.LoadResult, List(String)),
-    public_team_detail_load: fn(public_routes.Route) ->
-      Result(public_team_detail_wire.LoadResult, List(String)),
-  )
+  PublicLoadHandlers(load_context: fn() -> load_context.Connection)
 }
 
 @target(erlang)
@@ -128,7 +134,18 @@ pub fn public_boot_page(
   case select_load(route) {
     PublicNoLoad -> #(page, [])
     PublicGameDetailLoad(to_message:) -> {
-      let result = handlers.public_game_detail_load(route)
+      let result = case route {
+        public_routes.GamesId(id:) ->
+          case int.parse(id) {
+            Ok(game_id) ->
+              public_game_detail_page.load_wire(
+                handlers.load_context(),
+                game_id,
+              )
+            Error(Nil) -> Error(["Invalid route parameter."])
+          }
+        _ -> Error(["Unexpected route."])
+      }
       boot_loaded_page(
         page: page,
         result: result,
@@ -138,7 +155,7 @@ pub fn public_boot_page(
       )
     }
     PublicGamesLoad(to_message:) -> {
-      let result = handlers.public_games_load(route)
+      let result = public_games_page.load_wire(handlers.load_context())
       boot_loaded_page(
         page: page,
         result: result,
@@ -148,7 +165,7 @@ pub fn public_boot_page(
       )
     }
     PublicStandingsLoad(to_message:) -> {
-      let result = handlers.public_standings_load(route)
+      let result = public_standings_page.load_wire(handlers.load_context())
       boot_loaded_page(
         page: page,
         result: result,
@@ -158,7 +175,11 @@ pub fn public_boot_page(
       )
     }
     PublicTeamDetailLoad(to_message:) -> {
-      let result = handlers.public_team_detail_load(route)
+      let result = case route {
+        public_routes.TeamsSlug(slug:) ->
+          public_team_detail_page.load_wire(handlers.load_context(), slug)
+        _ -> Error(["Unexpected route."])
+      }
       boot_loaded_page(
         page: page,
         result: result,

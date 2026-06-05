@@ -120,6 +120,10 @@ assertNoPatterns("src/app_ssr.gleam", [
     pattern: /fn\s+\w+_hydration_payload\b/,
     reason: "hydration payload helper functions should be generated",
   },
+  {
+    pattern: /public_[a-z_]+_load:\s*fn/,
+    reason: "public SSR page load adapters belong in generated server_ssr",
+  },
 ]);
 
 for (const browserApp of ["src/admin_app.gleam", "src/public_app.gleam"]) {

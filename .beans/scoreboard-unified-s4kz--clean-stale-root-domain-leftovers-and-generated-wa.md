@@ -8,7 +8,7 @@ tags:
     - rally
     - chase
 created_at: 2026-06-04T03:38:31Z
-updated_at: 2026-06-05T03:50:51Z
+updated_at: 2026-06-05T03:59:27Z
 parent: scoreboard-unified-wm8p
 blocked_by:
     - scoreboard-unified-qf1q
@@ -92,6 +92,19 @@ Validated with:
 
 
 Fifth cleanup pass removed public websocket load wrappers from app_ws.gleam. Scoreboard now configures Rally's load RPC context as sqlight.Connection, and generated/rally/server_ws.gleam calls page-owned public load_wire functions directly while admin load/save authorization remains app-owned.
+
+Validated with:
+
+• Clean regeneration after deleting src/generated/rally and src/generated/libero
+• gleam build --target erlang
+• gleam build --target javascript
+• gleam test --target erlang
+• node test/boundary_guard_test.mjs
+• node test/ws_result_smoke.mjs
+
+
+
+Sixth cleanup pass removed public SSR load handler callbacks from app_ssr.gleam. Scoreboard now passes only load_context into generated/rally/server_ssr.gleam for public SSR loads; generated SSR glue calls page-owned load_wire functions directly for String/Int route args. Route-to-message selection remains app-owned for now.
 
 Validated with:
 
