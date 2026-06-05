@@ -127,12 +127,7 @@ fn load_admin_games(
 ) -> Result(admin_games_page.LoadResult, List(server_ws.LoadError)) {
   case state.admin_authorized {
     False -> Error([server_ws.LoadError(message: "Unauthorized.")])
-    True ->
-      case admin_games_page.load(state.db) {
-        Ok(games) -> Ok(admin_games_page.AdminGamesLoadResult(games: games))
-        Error(admin_games_page.LoadError(message: message)) ->
-          Error([server_ws.LoadError(message:)])
-      }
+    True -> admin_games_page.load_wire(state.db) |> map_load_wire_result
   }
 }
 
@@ -195,17 +190,7 @@ fn admin_games_request_game_id(
 fn load_public_games(
   state: State,
 ) -> Result(public_games_wire.LoadResult, List(server_ws.LoadError)) {
-  case public_games_page.load(state.db) {
-    Ok(games) ->
-      Ok(
-        public_games_wire.PublicGamesLoaded(list.map(
-          games,
-          public_games_page.to_wire_summary,
-        )),
-      )
-    Error(public_games_page.LoadError(message: message)) ->
-      Error([server_ws.LoadError(message:)])
-  }
+  public_games_page.load_wire(state.db) |> map_load_wire_result
 }
 
 @target(erlang)
@@ -213,33 +198,15 @@ fn load_public_game_detail(
   state: State,
   game_id: Int,
 ) -> Result(public_game_detail_wire.LoadResult, List(server_ws.LoadError)) {
-  case public_game_detail_page.load(state.db, game_id) {
-    Ok(game) ->
-      Ok(
-        public_game_detail_wire.PublicGameDetailLoaded(
-          public_game_detail_page.to_wire_detail(game),
-        ),
-      )
-    Error(public_game_detail_page.LoadError(message: message)) ->
-      Error([server_ws.LoadError(message:)])
-  }
+  public_game_detail_page.load_wire(state.db, game_id)
+  |> map_load_wire_result
 }
 
 @target(erlang)
 fn load_public_standings(
   state: State,
 ) -> Result(public_standings_wire.LoadResult, List(server_ws.LoadError)) {
-  case public_standings_page.load(state.db) {
-    Ok(games) ->
-      Ok(
-        public_standings_wire.PublicStandingsLoaded(list.map(
-          games,
-          public_standings_page.to_wire_summary,
-        )),
-      )
-    Error(public_standings_page.LoadError(message: message)) ->
-      Error([server_ws.LoadError(message:)])
-  }
+  public_standings_page.load_wire(state.db) |> map_load_wire_result
 }
 
 @target(erlang)
@@ -247,14 +214,16 @@ fn load_public_team_detail(
   state: State,
   slug: String,
 ) -> Result(public_team_detail_wire.LoadResult, List(server_ws.LoadError)) {
-  case public_team_detail_page.load(state.db, slug) {
-    Ok(team) ->
-      Ok(
-        public_team_detail_wire.PublicTeamDetailLoaded(
-          public_team_detail_page.to_wire_detail(team),
-        ),
-      )
-    Error(public_team_detail_page.LoadError(message: message)) ->
-      Error([server_ws.LoadError(message:)])
+  public_team_detail_page.load_wire(state.db, slug) |> map_load_wire_result
+}
+
+@target(erlang)
+fn map_load_wire_result(
+  result: Result(a, List(String)),
+) -> Result(a, List(server_ws.LoadError)) {
+  case result {
+    Ok(value) -> Ok(value)
+    Error(errors) ->
+      Error(list.map(errors, fn(message) { server_ws.LoadError(message:) }))
   }
 }

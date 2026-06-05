@@ -34,7 +34,7 @@ export function send_frame(frame) {
   ensure_socket();
 
   globalThis.dispatchEvent(
-    new CustomEvent("scoreboard:to-server", {
+    new CustomEvent("rally:to-server", {
       detail: { bytes, frame },
     }),
   );
@@ -64,7 +64,7 @@ function ensure_socket() {
     return;
   }
 
-  globalThis.__scoreboardSocket = socket;
+  globalThis.__rallySocket = socket;
   socket.binaryType = "arraybuffer";
 
   socket.addEventListener("open", () => {

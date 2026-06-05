@@ -1,15 +1,15 @@
 @target(javascript)
+import admin_boot
+@target(javascript)
 import generated/proute/admin/pages as admin_pages
 @target(javascript)
 import generated/proute/public/pages as public_pages
 @target(javascript)
-import generated/rally/admin_boot
-@target(javascript)
 import generated/rally/client_protocol
 @target(javascript)
-import generated/rally/public_boot
-@target(javascript)
 import lustre/effect
+@target(javascript)
+import public_boot
 
 @target(javascript)
 fn apply_public_frame(

@@ -1,6 +1,6 @@
 -- Update a live game's score.
 --
--- Clears final state and returns the admin row used for ToClient updates.
+-- Clears final state and returns the admin row used for score update results.
 
 UPDATE games
 SET

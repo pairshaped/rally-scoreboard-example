@@ -59,7 +59,7 @@ export function listen_spa_navigation(dispatch) {
     if (event.defaultPrevented || event.button !== 0) return;
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
 
-    const link = event.target?.closest?.("a[data-scoreboard-spa-nav]");
+    const link = event.target?.closest?.("a[data-rally-spa-nav]");
     if (!link) return;
 
     const location = globalThis.location;
@@ -105,9 +105,13 @@ export function persist_dark_mode(cookieName, darkMode) {
 function getCookie(name) {
   const document = globalThis.document;
   if (!document?.cookie) return null;
-  const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const match = document.cookie.match(new RegExp("(?:^|; )" + escapedName + "=([^;]*)"));
-  return match ? decodeURIComponent(match[1]) : null;
+
+  const prefix = name + "=";
+  const pair = document.cookie
+    .split("; ")
+    .find(cookie => cookie.startsWith(prefix));
+
+  return pair ? decodeURIComponent(pair.slice(prefix.length)) : null;
 }
 
 function setCookie(name, value, days) {

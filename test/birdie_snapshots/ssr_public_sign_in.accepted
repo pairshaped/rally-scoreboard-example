@@ -16,8 +16,8 @@ hydration_count: 0
 </div>
 </div>
 <nav class="nav">
-<a data-scoreboard-spa-nav="1" href="/games">Games</a>
-<a data-scoreboard-spa-nav="1" href="/standings">Standings</a>
+<a data-rally-spa-nav="1" href="/games">Games</a>
+<a data-rally-spa-nav="1" href="/standings">Standings</a>
 <a class="active" href="/sign_in">Sign In</a>
 <label class="theme-switch">
 <svg xmlns="http://www.w3.org/2000/svg" aria-label="Light mode" class="theme-icon" fill="none" height="16" role="img" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="16">

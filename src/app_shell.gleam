@@ -162,7 +162,7 @@ fn nav_link(
   html.a(
     [
       attribute.href(href),
-      attribute.attribute("data-scoreboard-spa-nav", "1"),
+      attribute.attribute("data-rally-spa-nav", "1"),
       active_class(active),
     ],
     [html.text(label)],

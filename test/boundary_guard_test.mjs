@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -124,6 +124,41 @@ for (const browserApp of ["src/admin_app.gleam", "src/public_app.gleam"]) {
     {
       pattern: /\bbrowser_mount\.push_path\b/,
       reason: "navigation effect wiring belongs in browser_app",
+    },
+  ]);
+}
+
+for (const staleGeneratedFile of [
+  "src/generated/rally/admin_boot.gleam",
+  "src/generated/rally/public_boot.gleam",
+  "src/generated/rally/to_client_application.gleam",
+]) {
+  assert.equal(
+    existsSync(path.join(root, staleGeneratedFile)),
+    false,
+    `${staleGeneratedFile} contains app-owned behavior and must not live in generated/rally`,
+  );
+}
+
+assertNoPatterns("src/generated/rally/browser_mount.gleam", [
+  {
+    pattern: /authentication_context/,
+    reason: "app authentication context parsing belongs in app code",
+  },
+  {
+    pattern: /_scoreboard_device/,
+    reason: "app cookie names belong in app code",
+  },
+]);
+
+for (const generatedBrowserFile of [
+  "src/generated/rally/browser_ffi.mjs",
+  "src/generated/rally/client_transport_ffi.mjs",
+]) {
+  assertNoPatterns(generatedBrowserFile, [
+    {
+      pattern: /scoreboard/i,
+      reason: "generated Rally browser plumbing must not carry app names",
     },
   ]);
 }

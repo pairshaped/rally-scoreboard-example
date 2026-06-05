@@ -5,17 +5,11 @@ import generated/proute/admin/pages
 @target(javascript)
 import generated/proute/admin/routes
 @target(javascript)
-import generated/rally/admin_boot
-@target(javascript)
 import generated/rally/browser
 @target(javascript)
 import generated/rally/browser_app
 @target(javascript)
-import generated/rally/browser_mount
-@target(javascript)
 import generated/rally/hydration
-@target(javascript)
-import generated/rally/to_client_application
 
 @target(javascript)
 import gleam/option.{None}
@@ -30,9 +24,15 @@ import admin/client_shared_state.{
   type AdminClientSharedState, AdminClientSharedState,
 }
 @target(javascript)
+import admin_boot
+@target(javascript)
 import app_shell
 @target(javascript)
+import browser_mount
+@target(javascript)
 import page_context.{PageContext}
+@target(javascript)
+import to_client_application
 
 // TYPES
 

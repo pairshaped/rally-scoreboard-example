@@ -9,14 +9,7 @@ import generated/rally/browser
 @target(javascript)
 import generated/rally/browser_app
 @target(javascript)
-import generated/rally/browser_mount
-@target(javascript)
 import generated/rally/hydration
-@target(javascript)
-import generated/rally/public_boot
-@target(javascript)
-import generated/rally/to_client_application
-
 @target(javascript)
 import gleam/int
 @target(javascript)
@@ -29,6 +22,8 @@ import lustre/element.{type Element}
 
 @target(javascript)
 import app_shell
+@target(javascript)
+import browser_mount
 @target(javascript)
 import page_context.{PageContext}
 @target(javascript)
@@ -43,6 +38,10 @@ import public/pages/games/id_ as games_id_page
 import public/pages/standings as standings_page
 @target(javascript)
 import public/pages/teams/slug_ as teams_slug_page
+@target(javascript)
+import public_boot
+@target(javascript)
+import to_client_application
 
 // TYPES
 
