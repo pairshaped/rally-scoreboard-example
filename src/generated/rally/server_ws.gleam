@@ -16,6 +16,8 @@ import gleam/list
 @target(erlang)
 import gleam/option.{type Option}
 @target(erlang)
+import gleam/string
+@target(erlang)
 import mist.{type WebsocketConnection}
 @target(erlang)
 import public/pages/games as public_games_wire
@@ -25,6 +27,8 @@ import public/pages/games/id_ as public_game_detail_wire
 import public/pages/standings as public_standings_wire
 @target(erlang)
 import public/pages/teams/slug_ as public_team_detail_wire
+@target(erlang)
+import rally/runtime/topics
 @target(erlang)
 import sqlight as load_context
 
@@ -116,6 +120,32 @@ pub fn handle_client_frame(
               }
           }
       }
+  }
+}
+
+@target(erlang)
+pub fn sync_topic_frame(
+  current current: List(String),
+  frame frame: String,
+) -> Result(List(String), Nil) {
+  let prefix = "rally:topics:"
+  case string.starts_with(frame, prefix) {
+    False -> Error(Nil)
+    True -> {
+      let next =
+        frame
+        |> string.drop_start(string.length(prefix))
+        |> string.split(",")
+        |> list.filter(fn(topic) { topic != "" })
+
+      current
+      |> list.filter(fn(topic) { !list.contains(next, topic) })
+      |> list.each(topics.leave)
+      next
+      |> list.filter(fn(topic) { !list.contains(current, topic) })
+      |> list.each(topics.join)
+      Ok(next)
+    }
   }
 }
 

@@ -41,6 +41,19 @@ export function send_frame(frame) {
   return undefined;
 }
 
+export function send_topic_frame(topics) {
+  const text = "rally:topics:" + Array.from(topics).join(",");
+
+  if (socket && socket.readyState === WebSocket.OPEN) {
+    socket.send(text);
+    return undefined;
+  }
+
+  pending.push(text);
+  ensure_socket();
+  return undefined;
+}
+
 export function send_load_frame(requestId, frame, onResult, dispatch) {
   pendingResults.set(requestId, { onResult, dispatch });
   send_frame(frame);
@@ -71,7 +84,7 @@ function ensure_socket() {
     reconnectAttempts = 0;
     const queued = pending;
     pending = [];
-    for (const bytes of queued) socket.send(bytes);
+    for (const frame of queued) socket.send(frame);
   });
 
   socket.addEventListener("message", event => {

@@ -55,9 +55,13 @@ try {
     "hydration data should be consumed after browser boot",
   );
   assert.equal(
-    sentFrames.length,
+    binaryFrames(sentFrames).length,
     0,
     "hydrated direct /games load should not send an initial websocket load request",
+  );
+  assert.ok(
+    topicFrames(sentFrames).includes("rally:topics:games"),
+    "hydrated direct /games should sync the games topic",
   );
 
   await step("load hydrated /standings", async () => {
@@ -75,9 +79,13 @@ try {
       "standings hydration data should be consumed after browser boot",
     );
     assert.equal(
-      sentFrames.length,
+      binaryFrames(sentFrames).length,
       0,
       "hydrated direct /standings load should not send an initial websocket load request",
+    );
+    assert.ok(
+      topicFrames(sentFrames).includes("rally:topics:games"),
+      "hydrated direct /standings should sync the games topic",
     );
   });
 
@@ -92,7 +100,7 @@ try {
     await page.waitForTimeout(500);
 
     assert.equal(
-      sentFrames.length,
+      binaryFrames(sentFrames).length,
       1,
       "SPA games navigation should send one websocket load request",
     );
@@ -120,7 +128,7 @@ try {
     await page.waitForTimeout(500);
 
     assert.equal(
-      sentFrames.length,
+      binaryFrames(sentFrames).length,
       1,
       "SPA standings navigation should send one websocket load request",
     );
@@ -152,9 +160,13 @@ try {
       "game detail hydration data should be consumed after browser boot",
     );
     assert.equal(
-      sentFrames.length,
+      binaryFrames(sentFrames).length,
       0,
       "hydrated direct /games/1 load should not send an initial websocket load request",
+    );
+    assert.ok(
+      topicFrames(sentFrames).includes("rally:topics:game:1"),
+      "hydrated direct /games/1 should sync the game detail topic",
     );
   });
 
@@ -167,7 +179,7 @@ try {
     await page.getByText("Toronto Towers").first().waitFor();
   });
   assert.ok(
-    sentFrames.length > 0,
+    binaryFrames(sentFrames).length > 0,
     "SPA navigation should send a websocket load request for the destination page",
   );
 
@@ -196,9 +208,13 @@ try {
       "team detail hydration data should be consumed after browser boot",
     );
     assert.equal(
-      sentFrames.length,
+      binaryFrames(sentFrames).length,
       0,
       "hydrated direct /teams/toronto-towers load should not send an initial websocket load request",
+    );
+    assert.ok(
+      topicFrames(sentFrames).includes("rally:topics:team:toronto-towers"),
+      "hydrated direct team detail should sync the team topic",
     );
   });
 
@@ -244,7 +260,7 @@ try {
     await page.waitForTimeout(500);
 
     assert.equal(
-      sentFrames.length,
+      binaryFrames(sentFrames).length,
       1,
       "admin score click should send one websocket save request",
     );
@@ -400,6 +416,16 @@ function sleep(ms) {
 function frameSummary(payload) {
   const bytes = frameBytes(payload);
   return `${frameKind(payload)}:${bytes.length}`;
+}
+
+function binaryFrames(frames) {
+  return frames.filter(frame => typeof frame !== "string");
+}
+
+function topicFrames(frames) {
+  return frames.filter(frame =>
+    typeof frame === "string" && frame.startsWith("rally:topics:")
+  );
 }
 
 function frameKind(payload) {

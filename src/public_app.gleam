@@ -22,8 +22,6 @@ import page_context.{PageContext}
 import public/client_shared_state.{
   type PublicClientSharedState, PublicClientSharedState,
 }
-@target(javascript)
-import public_boot
 
 // TYPES
 
@@ -81,14 +79,17 @@ fn init(_flags: Nil) -> #(Model, Effect(Msg)) {
 
   #(
     Model(page: page, shared_state:),
-    browser_app.startup_effects(
-      page_effect: page_effect,
-      dark_mode: dark_mode,
-      on_page: PageMsg,
-      on_frame: ServerFrame,
-      on_shell_navigation: ShellNavigate,
-      on_browser_navigation: BrowserPathChanged,
-    ),
+    effect.batch([
+      browser_app.startup_effects(
+        page_effect: page_effect,
+        dark_mode: dark_mode,
+        on_page: PageMsg,
+        on_frame: ServerFrame,
+        on_shell_navigation: ShellNavigate,
+        on_browser_navigation: BrowserPathChanged,
+      ),
+      browser_app.sync_topics(browser_app.public_page_topics(page)),
+    ]),
   )
 }
 
@@ -106,7 +107,13 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
               pages.update(model.page, inner),
               PageMsg,
             )
-          #(Model(..model, page: page), page_effect)
+          #(
+            Model(..model, page: page),
+            effect.batch([
+              page_effect,
+              browser_app.sync_topics(browser_app.public_page_topics(page)),
+            ]),
+          )
         }
       }
     }
@@ -115,10 +122,16 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
         browser_app.server_frame_effect(
           page: model.page,
           bytes: bytes,
-          apply_push: public_boot.apply_push,
+          apply_push: browser_app.public_apply_push,
           on_page: PageMsg,
         )
-      #(Model(..model, page: page), page_effect)
+      #(
+        Model(..model, page: page),
+        effect.batch([
+          page_effect,
+          browser_app.sync_topics(browser_app.public_page_topics(page)),
+        ]),
+      )
     }
     DarkModeChanged(dark_mode) -> {
       let shared_state =
@@ -173,12 +186,15 @@ fn navigate(
 
   #(
     Model(page: page, shared_state:),
-    browser_app.navigation_effects(
-      path: canonical_path,
-      push_history: push_history,
-      page_effect: page_effect,
-      on_page: PageMsg,
-    ),
+    effect.batch([
+      browser_app.navigation_effects(
+        path: canonical_path,
+        push_history: push_history,
+        page_effect: page_effect,
+        on_page: PageMsg,
+      ),
+      browser_app.sync_topics(browser_app.public_page_topics(page)),
+    ]),
   )
 }
 

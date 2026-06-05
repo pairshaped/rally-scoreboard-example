@@ -153,9 +153,8 @@ fn map_load_result(
 
 @target(erlang)
 /// SSR load adapter.
-/// public_boot.ssr_load_route calls this after generated Rally SSR load code
-/// runs the page load adapter, turning wire errors/results back into this page's
-/// Message type.
+/// Generated Rally SSR load code calls this after the page load adapter runs,
+/// turning wire errors/results back into this page's Message type.
 pub fn loaded_from_wire(result: Result(LoadResult, List(String))) -> Message {
   case result {
     Ok(PublicGameDetailLoaded(game)) -> Loaded(Ok(game))
@@ -185,8 +184,24 @@ pub fn update(
 }
 
 /// Page-owned broadcast hook.
-/// public_boot.apply_broadcast calls this after a BroadcastGameUpdated push frame
-/// is decoded, then wraps the returned effect back into pages.Message.
+/// Generated Rally browser push dispatch calls this after a game update frame
+/// is decoded for this page's loaded game topic.
+pub fn apply_push(
+  model model: Model,
+  message message: broadcasts.Event,
+) -> #(Model, Effect(Message)) {
+  case message {
+    broadcasts.BroadcastGameUpdated(game) -> game_updated(model, game)
+  }
+}
+
+pub fn topics(model: Model) -> List(String) {
+  case model.game {
+    Some(game) -> [broadcasts.game_topic(game.id)]
+    None -> []
+  }
+}
+
 pub fn game_updated(
   model model: Model,
   game game: broadcasts.GameSnapshot,

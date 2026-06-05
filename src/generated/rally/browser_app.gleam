@@ -6,6 +6,8 @@ pub fn ensure() -> Nil {
 @target(javascript)
 import admin/pages/games as admin_games_wire
 @target(javascript)
+import admin/pages/home_ as admin_pages_home__page
+@target(javascript)
 import broadcasts as push_payload
 @target(javascript)
 import generated/proute/admin/page_input as admin_page_input
@@ -45,6 +47,8 @@ import page_context.{type PageContext}
 import public/pages/games as public_games_wire
 @target(javascript)
 import public/pages/games/id_ as public_game_detail_wire
+@target(javascript)
+import public/pages/home_ as public_pages_home__page
 @target(javascript)
 import public/pages/standings as public_standings_wire
 @target(javascript)
@@ -288,6 +292,103 @@ pub fn public_message_path(
 }
 
 @target(javascript)
+pub fn admin_page_topics(page page: admin_pages.Page) -> List(String) {
+  case page {
+    admin_pages.AdminGamesPage(model) -> admin_games_wire.topics(model)
+    admin_pages.AdminHomePage(model) -> admin_pages_home__page.topics(model)
+    _ -> []
+  }
+}
+
+@target(javascript)
+pub fn admin_apply_push(
+  page page: admin_pages.Page,
+  module _module: String,
+  message message: push_payload.Event,
+) -> #(admin_pages.Page, Effect(admin_pages.Message)) {
+  case page {
+    admin_pages.AdminGamesPage(model) -> {
+      let #(model, page_effect) = admin_games_wire.apply_push(model, message)
+      #(
+        admin_pages.AdminGamesPage(model),
+        effect.map(page_effect, admin_pages.AdminGamesMsg),
+      )
+    }
+    admin_pages.AdminHomePage(model) -> {
+      let #(model, page_effect) =
+        admin_pages_home__page.apply_push(model, message)
+      #(
+        admin_pages.AdminHomePage(model),
+        effect.map(page_effect, admin_pages.AdminHomeMsg),
+      )
+    }
+    _ -> #(page, effect.none())
+  }
+}
+
+@target(javascript)
+pub fn public_page_topics(page page: public_pages.Page) -> List(String) {
+  case page {
+    public_pages.GamesIdPage(model) -> public_game_detail_wire.topics(model)
+    public_pages.GamesPage(model) -> public_games_wire.topics(model)
+    public_pages.HomePage(model) -> public_pages_home__page.topics(model)
+    public_pages.StandingsPage(model) -> public_standings_wire.topics(model)
+    public_pages.TeamsSlugPage(model) -> public_team_detail_wire.topics(model)
+    _ -> []
+  }
+}
+
+@target(javascript)
+pub fn public_apply_push(
+  page page: public_pages.Page,
+  module _module: String,
+  message message: push_payload.Event,
+) -> #(public_pages.Page, Effect(public_pages.Message)) {
+  case page {
+    public_pages.GamesIdPage(model) -> {
+      let #(model, page_effect) =
+        public_game_detail_wire.apply_push(model, message)
+      #(
+        public_pages.GamesIdPage(model),
+        effect.map(page_effect, public_pages.GamesIdMsg),
+      )
+    }
+    public_pages.GamesPage(model) -> {
+      let #(model, page_effect) = public_games_wire.apply_push(model, message)
+      #(
+        public_pages.GamesPage(model),
+        effect.map(page_effect, public_pages.GamesMsg),
+      )
+    }
+    public_pages.HomePage(model) -> {
+      let #(model, page_effect) =
+        public_pages_home__page.apply_push(model, message)
+      #(
+        public_pages.HomePage(model),
+        effect.map(page_effect, public_pages.HomeMsg),
+      )
+    }
+    public_pages.StandingsPage(model) -> {
+      let #(model, page_effect) =
+        public_standings_wire.apply_push(model, message)
+      #(
+        public_pages.StandingsPage(model),
+        effect.map(page_effect, public_pages.StandingsMsg),
+      )
+    }
+    public_pages.TeamsSlugPage(model) -> {
+      let #(model, page_effect) =
+        public_team_detail_wire.apply_push(model, message)
+      #(
+        public_pages.TeamsSlugPage(model),
+        effect.map(page_effect, public_pages.TeamsSlugMsg),
+      )
+    }
+    _ -> #(page, effect.none())
+  }
+}
+
+@target(javascript)
 pub fn admin_load_client(
   page_context page_context: PageContext,
   query_params query_params: admin_page_input.QueryParams,
@@ -526,6 +627,11 @@ pub fn startup_effects(
       on_browser_navigation: on_browser_navigation,
     ),
   ])
+}
+
+@target(javascript)
+pub fn sync_topics(topics topics: List(String)) -> Effect(msg) {
+  client_transport.sync_topics(topics)
 }
 
 @target(javascript)

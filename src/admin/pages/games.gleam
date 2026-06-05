@@ -1,3 +1,4 @@
+import broadcasts
 import generated/proute/admin/page_input
 import gleam/int
 import gleam/list
@@ -42,8 +43,8 @@ pub type AdminGameSummary {
 }
 
 /// Rally save response payload and page-local broadcast projection.
-/// generated/rally encodes this as the admin save result, and admin_boot uses it
-/// when applying BroadcastGameUpdated frames to the page model.
+/// generated/rally encodes this as the admin save result, and browser push
+/// handling converts BroadcastGameUpdated frames into this shape.
 pub type GameUpdate {
   AdminGamesUpdate(
     id: Int,
@@ -179,8 +180,8 @@ pub fn load_wire(db: sqlight.Connection) -> Result(LoadResult, List(String)) {
 
 @target(erlang)
 /// SSR load adapter.
-/// admin_boot.ssr_load_route calls this after Rally SSR load code runs
-/// load_wire, turning wire errors/results back into this page's Message type.
+/// Generated Rally SSR load code calls this after load_wire runs, turning wire
+/// errors/results back into this page's Message type.
 pub fn loaded_from_wire(result: Result(LoadResult, List(String))) -> Message {
   case result {
     Ok(AdminGamesLoadResult(games)) -> Loaded(Ok(games))
@@ -220,8 +221,22 @@ pub fn update(
 }
 
 /// Page-owned broadcast hook.
-/// admin_boot.apply_broadcast calls this after a BroadcastGameUpdated push frame
-/// is decoded, then wraps the returned effect back into pages.Message.
+/// Generated Rally browser push dispatch calls this after a game update frame
+/// is decoded for the admin games topic.
+pub fn apply_push(
+  model model: Model,
+  message message: broadcasts.Event,
+) -> #(Model, Effect(Message)) {
+  case message {
+    broadcasts.BroadcastGameUpdated(game) ->
+      game_updated(model, admin_game_update(game))
+  }
+}
+
+pub fn topics(_model: Model) -> List(String) {
+  [broadcasts.admin_games_topic()]
+}
+
 pub fn game_updated(
   model model: Model,
   game game: GameUpdate,
@@ -354,6 +369,34 @@ fn game_update_summary(game: GameUpdate) -> AdminGameSummary {
     status: game.status,
     needs_attention: False,
   )
+}
+
+fn admin_game_update(game: broadcasts.GameSnapshot) -> GameUpdate {
+  let broadcasts.BroadcastGameSnapshot(
+    id:,
+    home: broadcasts.BroadcastTeam(code: home_code, ..),
+    away: broadcasts.BroadcastTeam(code: away_code, ..),
+    home_score:,
+    away_score:,
+    status:,
+  ) = game
+
+  AdminGamesUpdate(
+    id:,
+    home_code:,
+    away_code:,
+    home_score:,
+    away_score:,
+    status: admin_game_status(status),
+  )
+}
+
+fn admin_game_status(status: broadcasts.GameStatus) -> GameStatus {
+  case status {
+    broadcasts.BroadcastScheduled -> AdminGamesScheduled
+    broadcasts.BroadcastLive(period) -> AdminGamesLive(period)
+    broadcasts.BroadcastFinal -> AdminGamesFinal
+  }
 }
 
 fn status_badge(status: GameStatus) -> Element(msg) {

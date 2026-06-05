@@ -13,7 +13,11 @@ import gleam/option.{None, Some}
 import gleeunit
 import gleeunit/should
 @target(erlang)
+import public/pages/games/id_ as public_game_detail_page
+@target(erlang)
 import public/pages/standings as public_standings_page
+@target(erlang)
+import public/pages/teams/slug_ as public_team_detail_page
 @target(erlang)
 import rally/runtime/topics
 @target(erlang)
@@ -49,7 +53,16 @@ pub fn mark_final_returns_save_ack_payload_and_game_update_test() {
       status: admin_games_page.AdminGamesFinal,
       ..,
     )),
-      Ok(broadcasts.BroadcastGameUpdated(updated))
+      Ok(broadcasts.TargetedEvent(
+        topics: [
+          "games",
+          "admin:games",
+          "game:1",
+          "team:toronto-towers",
+          "team:montreal-meteors",
+        ],
+        event: broadcasts.BroadcastGameUpdated(updated),
+      ))
     -> updated.status == broadcasts.BroadcastFinal
     _, _ -> False
   }
@@ -74,7 +87,16 @@ pub fn update_score_returns_save_ack_payload_and_game_update_test() {
       status: admin_games_page.AdminGamesLive("Live"),
       ..,
     )),
-      Ok(broadcasts.BroadcastGameUpdated(updated))
+      Ok(broadcasts.TargetedEvent(
+        topics: [
+          "games",
+          "admin:games",
+          "game:1",
+          "team:toronto-towers",
+          "team:montreal-meteors",
+        ],
+        event: broadcasts.BroadcastGameUpdated(updated),
+      ))
     -> updated.status == broadcasts.BroadcastLive("Live")
     _, _ -> False
   }
@@ -123,6 +145,51 @@ pub fn rally_topics_deliver_to_peer_connection_test() {
 
   process.receive(result_subject, 1000)
   |> should.equal(Ok(frame))
+}
+
+@target(erlang)
+pub fn page_topics_follow_loaded_page_state_test() {
+  public_game_detail_page.Model(game: None)
+  |> public_game_detail_page.topics
+  |> should.equal([])
+
+  public_game_detail_page.Model(
+    game: Some(public_game_detail_page.GameDetail(
+      id: 1,
+      home: public_game_detail_page.Team(
+        code: "TOR",
+        name: "Toronto Towers",
+        slug: "toronto-towers",
+      ),
+      away: public_game_detail_page.Team(
+        code: "MTL",
+        name: "Montreal Meteors",
+        slug: "montreal-meteors",
+      ),
+      home_score: 4,
+      away_score: 2,
+      status: public_game_detail_page.Live("3rd"),
+    )),
+  )
+  |> public_game_detail_page.topics
+  |> should.equal(["game:1"])
+
+  public_team_detail_page.Model(
+    team: Some(
+      public_team_detail_page.TeamDetail(
+        code: "TOR",
+        name: "Toronto Towers",
+        slug: "toronto-towers",
+        wins: 0,
+        losses: 0,
+        points_for: 0,
+        points_against: 0,
+        recent_games: [],
+      ),
+    ),
+  )
+  |> public_team_detail_page.topics
+  |> should.equal(["team:toronto-towers"])
 }
 
 @target(erlang)

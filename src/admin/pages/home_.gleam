@@ -1,4 +1,5 @@
 import admin/pages/games as games_page
+import broadcasts
 import generated/proute/admin/page_input
 import lustre/effect.{type Effect}
 import lustre/element.{type Element}
@@ -43,6 +44,17 @@ pub fn update(
   msg msg: Message,
 ) -> #(Model, Effect(Message)) {
   games_page.update(page_context, model, msg)
+}
+
+pub fn apply_push(
+  model model: Model,
+  message message: broadcasts.Event,
+) -> #(Model, Effect(Message)) {
+  games_page.apply_push(model:, message:)
+}
+
+pub fn topics(model: Model) -> List(String) {
+  games_page.topics(model)
 }
 
 /// Proute page view function for the admin root route.

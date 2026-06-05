@@ -12,16 +12,22 @@ import sqlight
 pub fn game_updated_broadcast(
   db: sqlight.Connection,
   game_id: Int,
-) -> Result(broadcasts.Event, Nil) {
+) -> Result(broadcasts.TargetedEvent, Nil) {
   case game_detail_sql.get_game(db: db, game_id: game_id) {
-    Ok([row, ..]) -> Ok(game_updated_event(row))
+    Ok([row, ..]) ->
+      row
+      |> game_updated_snapshot
+      |> broadcasts.game_updated_targeted_event
+      |> Ok
     _ -> Error(Nil)
   }
 }
 
 @target(erlang)
-fn game_updated_event(row: game_detail_sql.GetGameRow) -> broadcasts.Event {
-  broadcasts.BroadcastGameUpdated(broadcasts.BroadcastGameSnapshot(
+fn game_updated_snapshot(
+  row: game_detail_sql.GetGameRow,
+) -> broadcasts.GameSnapshot {
+  broadcasts.BroadcastGameSnapshot(
     id: row.id,
     home: broadcasts.BroadcastTeam(
       code: row.home_code,
@@ -36,7 +42,7 @@ fn game_updated_event(row: game_detail_sql.GetGameRow) -> broadcasts.Event {
     home_score: row.home_score,
     away_score: row.away_score,
     status: game_status(row.period, row.final),
-  ))
+  )
 }
 
 @target(erlang)
