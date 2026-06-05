@@ -197,8 +197,8 @@ assertNoPatterns("src/app_ws.gleam", [
     reason: "websocket after-save broadcast plumbing belongs in generated server_ws",
   },
   {
-    pattern: /admin_authorized:\s*Bool/,
-    reason: "app websocket state should keep request auth context, not collapse auth to a root-owned Bool",
+    pattern: /admin_authorized|_authorized:\s*fn\(state\)\s*->\s*Bool/,
+    reason: "websocket auth should pass typed request auth context, not collapse auth to a root-owned Bool adapter",
   },
 ]);
 
@@ -331,6 +331,10 @@ assertNoPatterns("src/scoreboard_unified.gleam", [
   {
     pattern: /import\s+gleam\/http(?:\s|$)|http\.(?:Get|Post)|"\/sign_in"|"\/sign_out"|sign_in_redirect/,
     reason: "standard auth route dispatch and protected redirects belong in Rally runtime auth HTTP helpers",
+  },
+  {
+    pattern: /StandardAuthRoutes|sign_in_with_code|auth_http\.sign_out/,
+    reason: "standard code auth route composition belongs in Rally runtime auth HTTP helpers",
   },
 ]);
 

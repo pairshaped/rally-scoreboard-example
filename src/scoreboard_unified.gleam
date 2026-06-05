@@ -105,25 +105,18 @@ fn handle_auth_path(
   req req: Request(Connection),
   context context: AppContext,
 ) -> Result(Response(ResponseData), Nil) {
-  auth_http.route_standard(
+  auth_http.route_code_auth(
     req: req,
     context: context,
-    routes: auth_http.StandardAuthRoutes(
-      sign_in_post: fn(req, context: AppContext) {
-        auth_http.sign_in_with_code(
-          req: req,
-          session: context.session,
-          verify_code: fn(code) {
-            app_auth.verify_sign_in_code(db: context.db, code: code)
-          },
-          default_return_to: "/admin/games",
-          return_to: app_auth_http.admin_return_to,
-          secure: False,
-        )
+    routes: auth_http.CodeAuthRoutes(
+      session: fn(context: AppContext) { context.session },
+      verify_code: fn(code, context: AppContext) {
+        app_auth.verify_sign_in_code(db: context.db, code: code)
       },
-      sign_out: fn(req, _context) {
-        auth_http.sign_out(req, default_return_to: "/games", secure: False)
-      },
+      sign_in_default_return_to: "/admin/games",
+      sign_in_return_to: app_auth_http.admin_return_to,
+      sign_out_default_return_to: "/games",
+      secure: False,
     ),
   )
 }

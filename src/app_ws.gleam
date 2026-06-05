@@ -7,7 +7,7 @@ import gleam/erlang/process.{type Selector}
 @target(erlang)
 import gleam/list
 @target(erlang)
-import gleam/option.{type Option, None, Some}
+import gleam/option.{type Option, Some}
 @target(erlang)
 import mist.{type Next, type WebsocketConnection, type WebsocketMessage}
 @target(erlang)
@@ -99,14 +99,9 @@ pub fn handler(
 // HELPERS
 
 @target(erlang)
-fn handlers() -> server_ws.Handlers(State) {
+fn handlers() -> server_ws.Handlers(State, app_auth.AuthenticatedUser) {
   server_ws.Handlers(
     load_context: fn(state: State) { state.db },
-    admin_authorized: fn(state: State) {
-      case state.admin_user {
-        Some(_) -> True
-        None -> False
-      }
-    },
+    admin_auth: fn(state: State) { state.admin_user },
   )
 }
