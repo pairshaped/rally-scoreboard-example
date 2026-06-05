@@ -1,15 +1,11 @@
 @target(erlang)
 import authentication_context.{type AuthenticationContext, AuthenticationContext}
 @target(erlang)
-import gleam/bit_array
-@target(erlang)
-import gleam/crypto
-@target(erlang)
 import gleam/dynamic/decode
 @target(erlang)
 import gleam/option.{type Option, None, Some}
 @target(erlang)
-import gleam/string
+import rally/runtime/auth as runtime_auth
 @target(erlang)
 import sqlight.{type Connection}
 
@@ -23,15 +19,15 @@ const sign_in_code_secret = "scoreboard-demo-secret"
 
 @target(erlang)
 /// Authenticated server-side user record.
-/// app_auth_http checks this for admin access, and app_ssr projects its context
-/// into AuthenticationContext for shell rendering and hydration.
+/// Rally request auth helpers use this for access policy, and app_ssr projects
+/// its context into AuthenticationContext for shell rendering and hydration.
 pub type AuthenticatedUser {
   AuthenticatedUser(context: AuthenticationContext, role: String)
 }
 
 @target(erlang)
 /// Verifies the demo sign-in code and returns the admin user id.
-/// app_auth_http calls this while processing POST /sign_in.
+/// The sign-in route calls this while processing POST /sign_in.
 pub fn verify_sign_in_code(
   db db: Connection,
   code code: String,
@@ -50,7 +46,14 @@ pub fn verify_sign_in_code(
     )
   {
     Ok([#(user_id, email, stored_hash)]) ->
-      case verify_hash(stored_hash:, scope: email, code:) {
+      case
+        runtime_auth.verify_login_code(
+          stored: stored_hash,
+          scope: email,
+          code:,
+          secret_key: sign_in_code_secret,
+        )
+      {
         True -> Ok(user_id)
         False -> Error(Nil)
       }
@@ -60,7 +63,7 @@ pub fn verify_sign_in_code(
 
 @target(erlang)
 /// Loads the authenticated user record after a session cookie decodes.
-/// app_auth_http uses this to build the request identity for auth checks.
+/// Rally request auth callbacks use this to build request identity.
 pub fn user_by_id(
   db db: Connection,
   user_id user_id: Int,
@@ -80,7 +83,7 @@ pub fn user_by_id(
 
 @target(erlang)
 /// Admin authorization policy for authenticated users.
-/// app_auth_http.check_admin_session calls this before allowing admin routes.
+/// Rally RequestAuth uses this as the admin access predicate.
 pub fn can_access_admin(user: AuthenticatedUser) -> Bool {
   user.role == "admin"
 }
@@ -106,40 +109,5 @@ fn normalize_display_name(name: Option(String)) -> Option(String) {
   case name {
     Some(value) -> authentication_context.normalize_display_name(value)
     None -> None
-  }
-}
-
-@target(erlang)
-fn verify_hash(
-  stored_hash stored_hash: String,
-  scope scope: String,
-  code code: String,
-) -> Bool {
-  case parse_hash(stored_hash) {
-    Ok(expected) -> {
-      let input = normalize(scope) <> ":" <> normalize(code)
-      let actual =
-        crypto.hmac(
-          bit_array.from_string(input),
-          crypto.Sha256,
-          bit_array.from_string(sign_in_code_secret),
-        )
-      crypto.secure_compare(actual, expected)
-    }
-    Error(Nil) -> False
-  }
-}
-
-@target(erlang)
-fn normalize(value: String) -> String {
-  value |> string.trim |> string.uppercase
-}
-
-@target(erlang)
-fn parse_hash(stored: String) -> Result(BitArray, Nil) {
-  case string.split(stored, "$") {
-    ["", "runtime-sign-in-code-hmac-sha256", "v=1", hash] ->
-      bit_array.base64_url_decode(hash)
-    _ -> Error(Nil)
   }
 }

@@ -287,6 +287,10 @@ assertNoPatterns("src/app_auth.gleam", [
     pattern: /app_session|session_cookie|find_session|_scoreboard_session/,
     reason: "generic session-cookie lookup and codec details belong in Rally runtime session helpers",
   },
+  {
+    pattern: /gleam\/crypto|crypto\.hmac|secure_compare|runtime-sign-in-code-hmac-sha256|parse_hash|base64_url_decode/,
+    reason: "generic login-code HMAC verification belongs in Rally runtime auth helpers",
+  },
 ]);
 
 assertNoPatterns("src/app_auth_http.gleam", [
