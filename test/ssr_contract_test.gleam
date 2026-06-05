@@ -104,6 +104,7 @@ pub fn admin_games_ssr_loads_score_desk_and_hydration_test() -> Nil {
         email: "admin@example.com",
         display_name: None,
       )),
+      can_access_admin: True,
     )
 
   list.length(app.hydration)

@@ -7,9 +7,7 @@ import app_document
 @target(erlang)
 import app_ws
 @target(erlang)
-import gleam/http
-@target(erlang)
-import gleam/http/request.{type Request, Request}
+import gleam/http/request.{type Request}
 @target(erlang)
 import gleam/http/response.{type Response}
 @target(erlang)
@@ -20,6 +18,8 @@ import gleam/result
 import gleam/string
 @target(erlang)
 import mist.{type Connection, type ResponseData}
+@target(erlang)
+import rally/runtime/auth_http
 @target(erlang)
 import rally/runtime/http_server
 @target(erlang)
@@ -84,22 +84,18 @@ fn handle_admin_path(
   req req: Request(Connection),
   context context: AppContext,
 ) -> Response(ResponseData) {
-  case
-    app_auth_http.check_admin_session(
-      req: req,
-      db: context.db,
-      session: context.session,
-    )
-  {
-    Ok(_) ->
+  auth_http.protect(
+    req: req,
+    auth: app_auth_http.request_auth(db: context.db, session: context.session),
+    render: fn(_user) {
       app_document.response(
         req: req,
         path: req.path,
         db: context.db,
         session: context.session,
       )
-    Error(Nil) -> app_auth_http.sign_in_redirect(req.path)
-  }
+    },
+  )
 }
 
 @target(erlang)
@@ -107,19 +103,22 @@ fn handle_auth_path(
   req req: Request(Connection),
   context context: AppContext,
 ) -> Result(Response(ResponseData), Nil) {
-  let Request(path: path, method: method, ..) = req
-  case method, path {
-    http.Post, "/sign_in" ->
-      app_auth_http.handle_sign_in_post(
-        req: req,
-        db: context.db,
-        session: context.session,
-      )
-      |> Ok
-    http.Get, "/sign_out" -> app_auth_http.handle_sign_out(req) |> Ok
-    http.Post, "/sign_out" -> app_auth_http.handle_sign_out(req) |> Ok
-    _, _ -> Error(Nil)
-  }
+  auth_http.route_standard(
+    req: req,
+    context: context,
+    routes: auth_http.StandardAuthRoutes(
+      sign_in_post: fn(req, context: AppContext) {
+        app_auth_http.handle_sign_in_post(
+          req: req,
+          db: context.db,
+          session: context.session,
+        )
+      },
+      sign_out: fn(req, _context) {
+        auth_http.sign_out(req, default_return_to: "/games", secure: False)
+      },
+    ),
+  )
 }
 
 @target(erlang)
@@ -128,10 +127,9 @@ fn handle_websocket_path(
   context context: AppContext,
 ) -> Response(ResponseData) {
   let admin_authorized =
-    app_auth_http.check_admin_session(
+    auth_http.authorized_user(
       req: req,
-      db: context.db,
-      session: context.session,
+      auth: app_auth_http.request_auth(db: context.db, session: context.session),
     )
     |> result.is_ok
   mist.websocket(

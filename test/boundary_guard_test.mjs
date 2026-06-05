@@ -291,7 +291,7 @@ assertNoPatterns("src/app_auth_http.gleam", [
     reason: "generic auth session cookie attributes belong in Rally runtime session helpers",
   },
   {
-    pattern: /app_session|app_session_crypto_ffi/,
+    pattern: /app_session|app_session_crypto_ffi|find_auth_cookie|decode_user_id|get_cookies/,
     reason: "session cookie crypto belongs in Rally runtime session helpers",
   },
   {
@@ -315,6 +315,10 @@ assertNoPatterns("src/scoreboard_unified.gleam", [
   {
     pattern: /new_auth_session|strong_random_bytes|base64_url_decode|SecretKeyError|secret_key_error/,
     reason: "server startup should ask Rally for auth session configuration instead of owning session-key mechanics",
+  },
+  {
+    pattern: /import\s+gleam\/http(?:\s|$)|http\.(?:Get|Post)|"\/sign_in"|"\/sign_out"|sign_in_redirect/,
+    reason: "standard auth route dispatch and protected redirects belong in Rally runtime auth HTTP helpers",
   },
 ]);
 

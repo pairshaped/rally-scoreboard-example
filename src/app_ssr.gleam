@@ -23,6 +23,8 @@ import mist.{type Connection}
 @target(erlang)
 import page_context.{PageContext}
 @target(erlang)
+import rally/runtime/auth_http
+@target(erlang)
 import rally/runtime/session
 @target(erlang)
 import sqlight
@@ -41,7 +43,12 @@ pub fn ensure() -> Nil {
 /// app_document sends html as the response body and embeds hydration into the
 /// browser boot payload.
 pub type SsrApp {
-  SsrApp(html: String, hydration: List(String))
+  SsrApp(
+    html: String,
+    hydration: List(String),
+    authentication_context: Option(AuthenticationContext),
+    can_access_admin: Bool,
+  )
 }
 
 // PUBLIC
@@ -101,6 +108,8 @@ pub fn public_render(
     )
       |> element.to_string,
     hydration: page.hydration,
+    authentication_context: authentication_context,
+    can_access_admin: can_access_admin,
   )
 }
 
@@ -117,10 +126,17 @@ pub fn admin(
   dark_mode dark_mode: Bool,
   session session: session.AuthSession,
 ) -> SsrApp {
-  let #(authentication_context, _) =
+  let #(authentication_context, can_access_admin) =
     boot_identity(req: req, db: db, session: session)
 
-  admin_render(path:, db:, query_params:, dark_mode:, authentication_context:)
+  admin_render(
+    path:,
+    db:,
+    query_params:,
+    dark_mode:,
+    authentication_context:,
+    can_access_admin:,
+  )
 }
 
 @target(erlang)
@@ -133,6 +149,7 @@ pub fn admin_render(
   query_params query_params: admin_page_input.QueryParams,
   dark_mode dark_mode: Bool,
   authentication_context authentication_context: Option(AuthenticationContext),
+  can_access_admin can_access_admin: Bool,
 ) -> SsrApp {
   let page =
     server_ssr.admin_render_path(
@@ -152,6 +169,8 @@ pub fn admin_render(
     )
       |> element.to_string,
     hydration: page.hydration,
+    authentication_context: authentication_context,
+    can_access_admin: can_access_admin,
   )
 }
 
@@ -175,7 +194,12 @@ fn boot_identity(
   db db: sqlight.Connection,
   session session: session.AuthSession,
 ) -> #(Option(AuthenticationContext), Bool) {
-  case app_auth_http.authenticated_user(req: req, db: db, session: session) {
+  case
+    auth_http.authenticated_user(
+      req: req,
+      auth: app_auth_http.request_auth(db: db, session: session),
+    )
+  {
     Ok(user) -> #(Some(user.context), app_auth.can_access_admin(user))
     Error(Nil) -> #(None, False)
   }

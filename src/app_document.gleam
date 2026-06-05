@@ -1,9 +1,7 @@
 @target(erlang)
-import app_auth
-@target(erlang)
-import app_auth_http
-@target(erlang)
 import app_ssr
+@target(erlang)
+import authentication_context.{type AuthenticationContext}
 @target(erlang)
 import generated/proute/admin/page_input as admin_page_input
 @target(erlang)
@@ -19,7 +17,7 @@ import gleam/http/response.{type Response}
 @target(erlang)
 import gleam/int
 @target(erlang)
-import gleam/option.{None, Some}
+import gleam/option.{type Option, None, Some}
 @target(erlang)
 import gleam/string
 @target(erlang)
@@ -90,7 +88,10 @@ fn html(
       )
   }
   let app_attrs =
-    app_boot_attrs(req: req, db: db, session: session)
+    app_boot_attrs(
+      authentication_context: ssr_app.authentication_context,
+      can_access_admin: ssr_app.can_access_admin,
+    )
     <> hydration_attr(ssr_app.hydration)
 
   "<!doctype html>
@@ -145,13 +146,11 @@ fn hydration_attr(payloads: List(String)) -> String {
 
 @target(erlang)
 fn app_boot_attrs(
-  req req: Request(Connection),
-  db db: sqlight.Connection,
-  session session: session.AuthSession,
+  authentication_context authentication_context: Option(AuthenticationContext),
+  can_access_admin can_access_admin: Bool,
 ) -> String {
-  case app_auth_http.authenticated_user(req: req, db: db, session: session) {
-    Ok(user) -> {
-      let context = user.context
+  case authentication_context {
+    Some(context) -> {
       let display_name = case context.display_name {
         Some(value) -> value
         None -> ""
@@ -163,10 +162,10 @@ fn app_boot_attrs(
       <> "\" data-auth-display-name=\""
       <> html_attr_escape(display_name)
       <> "\" data-can-access-admin=\""
-      <> bool_attr(app_auth.can_access_admin(user))
+      <> bool_attr(can_access_admin)
       <> "\""
     }
-    Error(Nil) -> " data-can-access-admin=\"0\""
+    None -> " data-can-access-admin=\"" <> bool_attr(can_access_admin) <> "\""
   }
 }
 

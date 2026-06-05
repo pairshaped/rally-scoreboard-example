@@ -5,8 +5,6 @@ import gleam/http/request.{type Request}
 @target(erlang)
 import gleam/http/response
 @target(erlang)
-import gleam/result
-@target(erlang)
 import mist.{type Connection, type ResponseData}
 @target(erlang)
 import rally/runtime/auth_http
@@ -35,54 +33,18 @@ pub fn handle_sign_in_post(
 }
 
 @target(erlang)
-/// HTTP handler for sign-out routes.
-/// scoreboard_unified routes GET/POST /sign_out here so the session cookie can
-/// be expired before redirecting.
-pub fn handle_sign_out(
-  req: Request(Connection),
-) -> response.Response(ResponseData) {
-  auth_http.sign_out(req, default_return_to: "/games", secure: False)
-}
-
-@target(erlang)
-/// Redirect helper used by admin route protection.
-/// scoreboard_unified calls this when an unauthenticated request targets /admin.
-pub fn sign_in_redirect(return_to: String) -> response.Response(ResponseData) {
-  auth_http.sign_in_redirect(return_to)
-}
-
-@target(erlang)
-/// Admin session guard.
-/// scoreboard_unified uses this for admin HTTP and websocket entrypoints, and
-/// app_ssr uses it when deciding shell identity.
-pub fn check_admin_session(
-  req req: Request(Connection),
+/// App-owned auth callbacks for Rally request auth.
+/// Rally owns cookie/session extraction; Scoreboard owns user lookup and admin
+/// authorization policy.
+pub fn request_auth(
   db db: sqlight.Connection,
   session session: session.AuthSession,
-) -> Result(app_auth.AuthenticatedUser, Nil) {
-  use user <- result.try(authenticated_user(req: req, db: db, session: session))
-  case app_auth.can_access_admin(user) {
-    True -> Ok(user)
-    False -> Error(Nil)
-  }
-}
-
-@target(erlang)
-/// Request identity loader.
-/// app_ssr and check_admin_session use this to turn cookies into an
-/// AuthenticatedUser.
-pub fn authenticated_user(
-  req req: Request(Connection),
-  db db: sqlight.Connection,
-  session session: session.AuthSession,
-) -> Result(app_auth.AuthenticatedUser, Nil) {
-  let cookies = request.get_cookies(req)
-  use cookie_value <- result.try(session.find_auth_cookie(cookies))
-  use user_id <- result.try(session.decode_user_id(
-    encoded: cookie_value,
+) -> auth_http.RequestAuth(app_auth.AuthenticatedUser) {
+  auth_http.RequestAuth(
     session: session,
-  ))
-  app_auth.user_by_id(db: db, user_id: user_id)
+    load_user: fn(user_id) { app_auth.user_by_id(db: db, user_id: user_id) },
+    can_access: app_auth.can_access_admin,
+  )
 }
 
 @target(erlang)

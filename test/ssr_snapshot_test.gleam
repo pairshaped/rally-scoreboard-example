@@ -160,6 +160,7 @@ pub fn ssr_admin_home_snapshot_test() -> Nil {
     query_params: admin_page_input.empty_query_params(),
     dark_mode: False,
     authentication_context: Some(admin_context()),
+    can_access_admin: True,
   )
   |> to_snapshot
   |> birdie.snap(title: "ssr admin home")
@@ -177,6 +178,7 @@ pub fn ssr_admin_games_snapshot_test() -> Nil {
     query_params: admin_page_input.empty_query_params(),
     dark_mode: False,
     authentication_context: Some(admin_context()),
+    can_access_admin: True,
   )
   |> to_snapshot
   |> birdie.snap(title: "ssr admin games")
@@ -194,6 +196,7 @@ pub fn ssr_admin_not_found_snapshot_test() -> Nil {
     query_params: admin_page_input.empty_query_params(),
     dark_mode: False,
     authentication_context: Some(admin_context()),
+    can_access_admin: True,
   )
   |> to_snapshot
   |> birdie.snap(title: "ssr admin not found")
