@@ -294,6 +294,14 @@ assertNoPatterns("src/app_auth_http.gleam", [
     pattern: /app_session|app_session_crypto_ffi/,
     reason: "session cookie crypto belongs in Rally runtime session helpers",
   },
+  {
+    pattern: /mist\.read_body|bit_array\.to_string|uri\.parse_query/,
+    reason: "generic sign-in form parsing belongs in Rally runtime auth HTTP helpers",
+  },
+  {
+    pattern: /response\.(?:new|set_header|set_body|set_cookie|expire_cookie)/,
+    reason: "standard auth redirect and session-cookie responses belong in Rally runtime auth HTTP helpers",
+  },
 ]);
 
 assertNoPatterns("src/browser_mount.gleam", [
