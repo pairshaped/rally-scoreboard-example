@@ -102,6 +102,9 @@ pub fn init(
   )
 }
 
+// Pure starting state for the team detail page.
+// init adds the route-specific load effect on top; generated page and SSR glue
+// can call this when they need the empty page model without starting a load.
 pub fn initial_model(
   _page_context: PageContext,
   _route_params: page_input.TeamsSlugRouteParams,
@@ -123,6 +126,9 @@ pub fn update(
   }
 }
 
+// Page-owned load hook for Rally/Proute route glue.
+// Generated dispatch can call this after PublicTeamDetailLoaded arrives,
+// keeping the state transition here instead of in app-level boot code.
 pub fn team_loaded(
   model _model: Model,
   team team: TeamDetail,
@@ -130,6 +136,9 @@ pub fn team_loaded(
   update(model: Model(team: None), msg: Loaded(Ok(team)))
 }
 
+// Page-owned broadcast hook.
+// public_boot.apply_broadcast calls this after a BroadcastGameUpdated push frame
+// is decoded, then wraps the returned effect back into pages.Message.
 pub fn game_updated(
   model model: Model,
   game game: GameUpdate,
@@ -384,6 +393,9 @@ fn map_load_result(
   }
 }
 
+// Wire-facing server load.
+// Generated Rally SSR and WS helpers call this with the app load context, then
+// pass the result through the Libero codec boundary.
 @target(erlang)
 pub fn load_wire(
   db: sqlight.Connection,
@@ -395,6 +407,9 @@ pub fn load_wire(
   }
 }
 
+// SSR load adapter.
+// public_boot.ssr_load_route calls this after Rally SSR load code runs
+// load_wire, turning wire errors/results back into this page's Message type.
 @target(erlang)
 pub fn loaded_from_wire(result: Result(LoadResult, List(String))) -> Message {
   case result {

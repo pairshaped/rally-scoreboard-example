@@ -12,6 +12,9 @@ import generated/rally/browser_app
 @target(javascript)
 import generated/rally/result as wire_result
 
+// Browser load selector passed to generated Rally browser_app.
+// The admin app calls this for initial loads and navigation; it maps Proute
+// routes to page ServerMsg values and browser-side result adapters.
 @target(javascript)
 pub fn load_route(route: routes.Route) -> browser_app.AdminLoadRoute {
   case route {
@@ -24,6 +27,9 @@ pub fn load_route(route: routes.Route) -> browser_app.AdminLoadRoute {
   }
 }
 
+// SSR load selector passed to generated Rally server_ssr.
+// app_ssr calls this during document rendering so the server can load data and
+// map the result into the generated Proute page message.
 @target(erlang)
 pub fn ssr_load_route(route: routes.Route) -> server_ssr.AdminLoadRoute {
   case route {
@@ -39,6 +45,9 @@ pub fn ssr_load_route(route: routes.Route) -> server_ssr.AdminLoadRoute {
   }
 }
 
+// Browser load result adapter for the admin games routes.
+// load_route installs this as the callback Rally invokes when the websocket
+// replies to an AdminGamesLoad request.
 @target(javascript)
 pub fn load_result_message(
   route: routes.Route,
@@ -80,6 +89,9 @@ fn api_load_error(errors: List(wire_result.ApiLoadError)) -> String {
   }
 }
 
+// Page broadcast reducer used by browser push handling.
+// apply_push delegates app-channel broadcasts here after generated Rally decodes
+// the push frame.
 pub fn apply_broadcast(
   page page: pages.Page,
   message message: broadcasts.Event,
@@ -102,6 +114,9 @@ pub fn apply_broadcast(
   }
 }
 
+// Push dispatcher passed to generated Rally browser_app.
+// It receives decoded push frames by module name and chooses which app-level
+// broadcast reducer should update the current Proute page.
 pub fn apply_push(
   page page: pages.Page,
   module module: String,

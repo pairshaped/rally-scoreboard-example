@@ -5,6 +5,9 @@ import generated/sql/public/pages/games/id__sql as game_detail_sql
 @target(erlang)
 import sqlight
 
+// Builds the broadcast payload sent after an admin score mutation.
+// app_ws calls this after saving a game so subscribers receive a fresh snapshot
+// from the database, not just the submitted mutation fields.
 @target(erlang)
 pub fn game_updated_broadcast(
   db: sqlight.Connection,

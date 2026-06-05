@@ -17,6 +17,9 @@ pub fn init(
   games_page.init(page_context, query_params)
 }
 
+// Pure starting state for the admin root page.
+// The root route is a real Proute page, but it reuses the games page model so
+// SSR, hydration, and browser init all start from the same shape.
 pub fn initial_model(
   page_context page_context: PageContext,
   query_params query_params: page_input.QueryParams,

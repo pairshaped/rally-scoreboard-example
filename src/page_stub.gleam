@@ -21,6 +21,9 @@ pub fn init(title title: String) -> #(Model, Effect(Message)) {
   #(initial_model(title:), effect.none())
 }
 
+// Pure starting state for placeholder pages.
+// Keeping it separate from init lets adapter pages and generated page glue build
+// the same model without also creating effects.
 pub fn initial_model(title title: String) -> Model {
   Model(title:)
 }

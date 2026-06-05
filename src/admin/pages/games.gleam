@@ -91,6 +91,9 @@ pub fn init(
   #(initial_model(page_context, query_params), init_effect())
 }
 
+// Pure starting state for the admin games page.
+// init adds the load effect on top; generated page and SSR glue can call this
+// when they need the empty page model without starting a load.
 pub fn initial_model(
   _page_context: PageContext,
   _query_params: page_input.QueryParams,
@@ -120,6 +123,9 @@ pub fn update(
   }
 }
 
+// Page-owned load hook for Rally/Proute route glue.
+// Generated dispatch can call this after AdminGamesLoadResult arrives, keeping
+// the state transition here instead of in app-level boot code.
 pub fn admin_games_loaded(
   model _model: Model,
   games games: List(AdminGameSummary),
@@ -127,6 +133,9 @@ pub fn admin_games_loaded(
   #(Model(games: games), effect.none())
 }
 
+// Page-owned broadcast hook.
+// admin_boot.apply_broadcast calls this after a BroadcastGameUpdated push frame
+// is decoded, then wraps the returned effect back into pages.Message.
 pub fn game_updated(
   model model: Model,
   game game: GameUpdate,
@@ -295,6 +304,9 @@ fn map_load_result(
   }
 }
 
+// Wire-facing server load.
+// Generated SSR code and the admin WS handler call this with the app load
+// context, then pass the result through the Libero codec boundary.
 @target(erlang)
 pub fn load_wire(db: sqlight.Connection) -> Result(LoadResult, List(String)) {
   case load(db) {
@@ -303,6 +315,9 @@ pub fn load_wire(db: sqlight.Connection) -> Result(LoadResult, List(String)) {
   }
 }
 
+// SSR load adapter.
+// admin_boot.ssr_load_route calls this after Rally SSR load code runs
+// load_wire, turning wire errors/results back into this page's Message type.
 @target(erlang)
 pub fn loaded_from_wire(result: Result(LoadResult, List(String))) -> Message {
   case result {
@@ -384,6 +399,9 @@ pub fn load(
   }
 }
 
+// Server mutation handler for this page's ServerMsg values.
+// app_ws calls this after generated Rally websocket code decodes an admin save
+// request and verifies the connection is authorized.
 @target(erlang)
 pub fn handle(
   db: sqlight.Connection,

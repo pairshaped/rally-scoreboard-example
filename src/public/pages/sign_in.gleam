@@ -22,6 +22,9 @@ pub fn init(
   #(initial_model(page_context, query_params), effect.none())
 }
 
+// Pure starting state for the sign-in page.
+// It keeps the return target and error flag in the model so SSR and browser
+// hydration render the same form without needing any init effects.
 pub fn initial_model(
   _page_context: PageContext,
   query_params: page_input.QueryParams,

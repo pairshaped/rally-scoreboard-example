@@ -17,6 +17,9 @@ pub fn init(
   page_stub.init(title: "Not found")
 }
 
+// Pure starting state for the admin not-found page.
+// This delegates to page_stub so generated page glue can create the page model
+// without also running init effects.
 pub fn initial_model(
   _page_context: PageContext,
   _query_params: page_input.QueryParams,

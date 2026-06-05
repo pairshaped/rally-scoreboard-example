@@ -31,6 +31,9 @@ pub type State {
 
 // INIT
 
+// Mist websocket init callback.
+// scoreboard_unified passes this to mist.websocket so each connection can join
+// the app push topic and keep its database/authorization context.
 @target(erlang)
 pub fn on_init(
   _conn: WebsocketConnection,
@@ -42,6 +45,9 @@ pub fn on_init(
   #(State(db: db, admin_authorized:), Some(topics.frame_selector()))
 }
 
+// Mist websocket close callback.
+// scoreboard_unified passes this to mist.websocket; the topic process is shared
+// by the runtime, so this connection has no page-local cleanup to do.
 @target(erlang)
 pub fn on_close(_state: State) -> Nil {
   Nil
@@ -49,6 +55,9 @@ pub fn on_close(_state: State) -> Nil {
 
 // HANDLER
 
+// Mist websocket message callback.
+// scoreboard_unified passes this to mist.websocket; it forwards client frames to
+// generated Rally server_ws code and relays topic broadcasts back to the client.
 @target(erlang)
 pub fn handler(
   state state: State,
