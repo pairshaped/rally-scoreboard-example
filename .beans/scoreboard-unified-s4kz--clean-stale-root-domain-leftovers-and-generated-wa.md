@@ -8,7 +8,7 @@ tags:
     - rally
     - chase
 created_at: 2026-06-04T03:38:31Z
-updated_at: 2026-06-05T03:59:27Z
+updated_at: 2026-06-05T04:02:37Z
 parent: scoreboard-unified-wm8p
 blocked_by:
     - scoreboard-unified-qf1q
@@ -109,6 +109,18 @@ Sixth cleanup pass removed public SSR load handler callbacks from app_ssr.gleam.
 Validated with:
 
 • Clean regeneration after deleting src/generated/rally and src/generated/libero
+• gleam build --target erlang
+• gleam build --target javascript
+• gleam test --target erlang
+• node test/boundary_guard_test.mjs
+• node test/ws_result_smoke.mjs
+
+
+
+Seventh cleanup pass deleted unused root src/server_context.gleam and added a boundary guard to keep that dead framework scaffolding from returning.
+
+Validated with:
+
 • gleam build --target erlang
 • gleam build --target javascript
 • gleam test --target erlang
