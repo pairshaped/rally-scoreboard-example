@@ -109,7 +109,7 @@ server.send(
 )
 ```
 
-Server-originated state events should be delivered to every subscribed client, including the client that initiated the mutation. Request results manage request lifecycle. Broadcast events carry server-authoritative state.
+Server-originated state events should be delivered to other subscribed clients, excluding the connection that initiated the mutation. Request results manage request lifecycle for the initiating page. Broadcast events carry server-authoritative state for subscribed peers.
 
 Any split helper such as `send_load` or `send_save` is bridge code for the current global app protocol. The target Rally API is `server.send(ServerMsg, on_result: ...)`.
 
