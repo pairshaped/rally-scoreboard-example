@@ -13,13 +13,11 @@ import generated/proute/admin/page_input
 @target(javascript)
 import generated/proute/admin/pages
 @target(javascript)
-import generated/proute/admin/routes
-@target(javascript)
 import generated/rally/browser
 @target(javascript)
 import generated/rally/browser_app
 @target(javascript)
-import gleam/option.{None}
+import gleam/option.{None, Some}
 @target(javascript)
 import lustre/effect.{type Effect}
 @target(javascript)
@@ -63,9 +61,16 @@ pub fn ensure() -> Nil {
 @target(javascript)
 fn init(_flags: Nil) -> #(Model, Effect(Msg)) {
   let current_path = browser.path()
-  let route = routes.parse_path(current_path)
   let dark_mode = browser_mount.device_dark_mode()
-  let #(page, page_effect) = initial_page(route: route)
+  let #(page, page_effect) =
+    browser_app.admin_initial_page_from_path(
+      page_context: PageContext,
+      query_params: page_input.empty_query_params(),
+      path: current_path,
+      update_page: fn(page, message) {
+        pages.update(PageContext, page, message)
+      },
+    )
   let shared_state =
     AdminClientSharedState(
       authentication_context: browser_mount.boot_authentication_context(),
@@ -88,32 +93,23 @@ fn init(_flags: Nil) -> #(Model, Effect(Msg)) {
   )
 }
 
-@target(javascript)
-fn initial_page(
-  route route: routes.Route,
-) -> #(pages.Page, Effect(pages.Message)) {
-  let query_params = page_input.empty_query_params()
-
-  browser_app.admin_initial_page(
-    page_context: PageContext,
-    query_params:,
-    route:,
-    update_page: fn(page, message) { pages.update(PageContext, page, message) },
-  )
-}
-
 // UPDATE
 
 @target(javascript)
 fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
   case msg {
     PageMsg(inner) -> {
-      let #(page, page_effect) =
-        browser_app.map_page_effect(
-          pages.update(PageContext, model.page, inner),
-          PageMsg,
-        )
-      #(Model(..model, page: page), page_effect)
+      case browser_app.admin_message_path(inner) {
+        Some(path) -> navigate(model: model, path: path, push_history: True)
+        None -> {
+          let #(page, page_effect) =
+            browser_app.map_page_effect(
+              pages.update(PageContext, model.page, inner),
+              PageMsg,
+            )
+          #(Model(..model, page: page), page_effect)
+        }
+      }
     }
     ServerFrame(bytes) -> {
       let #(page, page_effect) =
@@ -134,12 +130,10 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
       )
     }
     ShellNavigate(path) -> {
-      let route = routes.parse_path(path)
-      navigate(model: model, route: route, push_history: True)
+      navigate(model: model, path: path, push_history: True)
     }
     BrowserPathChanged(path) -> {
-      let route = routes.parse_path(path)
-      navigate(model: model, route: route, push_history: False)
+      navigate(model: model, path: path, push_history: False)
     }
   }
 }
@@ -162,23 +156,22 @@ fn view(model: Model) -> Element(Msg) {
 @target(javascript)
 fn navigate(
   model model: Model,
-  route route: routes.Route,
+  path path: String,
   push_history push_history: Bool,
 ) -> #(Model, Effect(Msg)) {
-  let path = routes.route_to_path(route)
-  let #(page, page_effect) =
-    browser_app.admin_load_client(
+  let #(canonical_path, page, page_effect) =
+    browser_app.admin_load_path(
       page_context: PageContext,
       query_params: page_input.empty_query_params(),
-      route:,
+      path:,
     )
   let shared_state =
-    AdminClientSharedState(..model.shared_state, active_section: path)
+    AdminClientSharedState(..model.shared_state, active_section: canonical_path)
 
   #(
     Model(page: page, shared_state:),
     browser_app.navigation_effects(
-      path: path,
+      path: canonical_path,
       push_history: push_history,
       page_effect: page_effect,
       on_page: PageMsg,

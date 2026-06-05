@@ -7,15 +7,11 @@ import generated/proute/public/page_input
 @target(javascript)
 import generated/proute/public/pages
 @target(javascript)
-import generated/proute/public/routes
-@target(javascript)
 import generated/rally/browser
 @target(javascript)
 import generated/rally/browser_app
 @target(javascript)
-import gleam/int
-@target(javascript)
-import gleam/option.{type Option, None, Some}
+import gleam/option.{None, Some}
 @target(javascript)
 import lustre/effect.{type Effect}
 @target(javascript)
@@ -26,14 +22,6 @@ import page_context.{PageContext}
 import public/client_shared_state.{
   type PublicClientSharedState, PublicClientSharedState,
 }
-@target(javascript)
-import public/pages/games as games_page
-@target(javascript)
-import public/pages/games/id_ as games_id_page
-@target(javascript)
-import public/pages/standings as standings_page
-@target(javascript)
-import public/pages/teams/slug_ as teams_slug_page
 @target(javascript)
 import public_boot
 
@@ -73,11 +61,15 @@ pub fn ensure() -> Nil {
 @target(javascript)
 fn init(_flags: Nil) -> #(Model, Effect(Msg)) {
   let current_path = browser.path()
-  let route = routes.parse_path(current_path)
   let query_params = query_params_from_browser()
   let dark_mode = browser_mount.device_dark_mode()
   let #(page, page_effect) =
-    initial_page(route: route, query_params: query_params)
+    browser_app.public_initial_page_from_path(
+      page_context: PageContext,
+      query_params:,
+      path: current_path,
+      update_page: pages.update,
+    )
   let shared_state =
     PublicClientSharedState(
       league_name: "Scoreboard",
@@ -100,27 +92,14 @@ fn init(_flags: Nil) -> #(Model, Effect(Msg)) {
   )
 }
 
-@target(javascript)
-fn initial_page(
-  route route: routes.Route,
-  query_params query_params: page_input.QueryParams,
-) -> #(pages.Page, Effect(pages.Message)) {
-  browser_app.public_initial_page(
-    page_context: PageContext,
-    query_params:,
-    route:,
-    update_page: pages.update,
-  )
-}
-
 // UPDATE
 
 @target(javascript)
 fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
   case msg {
     PageMsg(inner) -> {
-      case page_navigation(inner) {
-        Some(route) -> navigate(model: model, route: route, push_history: True)
+      case browser_app.public_message_path(inner) {
+        Some(path) -> navigate(model: model, path: path, push_history: True)
         None -> {
           let #(page, page_effect) =
             browser_app.map_page_effect(
@@ -150,12 +129,10 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
       )
     }
     ShellNavigate(path) -> {
-      let route = routes.parse_path(path)
-      navigate(model: model, route: route, push_history: True)
+      navigate(model: model, path: path, push_history: True)
     }
     BrowserPathChanged(path) -> {
-      let route = routes.parse_path(path)
-      navigate(model: model, route: route, push_history: False)
+      navigate(model: model, path: path, push_history: False)
     }
   }
 }
@@ -177,44 +154,27 @@ fn view(model: Model) -> Element(Msg) {
 // HELPERS
 
 @target(javascript)
-fn page_navigation(message: pages.Message) -> Option(routes.Route) {
-  case message {
-    pages.GamesMsg(games_page.NavigateTeam(slug)) ->
-      Some(routes.TeamsSlug(slug:))
-    pages.GamesMsg(games_page.NavigateGame(id)) ->
-      Some(routes.GamesId(id: int.to_string(id)))
-    pages.GamesIdMsg(games_id_page.NavigateTeam(slug)) ->
-      Some(routes.TeamsSlug(slug:))
-    pages.StandingsMsg(standings_page.NavigateTeam(slug)) ->
-      Some(routes.TeamsSlug(slug:))
-    pages.TeamsSlugMsg(teams_slug_page.NavigateTeam(slug)) ->
-      Some(routes.TeamsSlug(slug:))
-    pages.TeamsSlugMsg(teams_slug_page.NavigateGame(id)) ->
-      Some(routes.GamesId(id: int.to_string(id)))
-    _ -> None
-  }
-}
-
-@target(javascript)
 fn navigate(
   model model: Model,
-  route route: routes.Route,
+  path path: String,
   push_history push_history: Bool,
 ) -> #(Model, Effect(Msg)) {
-  let path = routes.route_to_path(route)
-  let #(page, page_effect) =
-    browser_app.public_load_client(
+  let #(canonical_path, page, page_effect) =
+    browser_app.public_load_path(
       page_context: PageContext,
       query_params: page_input.empty_query_params(),
-      route:,
+      path:,
     )
   let shared_state =
-    PublicClientSharedState(..model.shared_state, active_section: path)
+    PublicClientSharedState(
+      ..model.shared_state,
+      active_section: canonical_path,
+    )
 
   #(
     Model(page: page, shared_state:),
     browser_app.navigation_effects(
-      path: path,
+      path: canonical_path,
       push_history: push_history,
       page_effect: page_effect,
       on_page: PageMsg,

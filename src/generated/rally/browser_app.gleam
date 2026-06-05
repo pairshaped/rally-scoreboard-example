@@ -32,6 +32,8 @@ import generated/rally/result.{type ApiLoadError, ApiLoadError}
 @target(javascript)
 import gleam/int
 @target(javascript)
+import gleam/option.{type Option, None, Some}
+@target(javascript)
 import lustre
 @target(javascript)
 import lustre/effect.{type Effect}
@@ -240,6 +242,52 @@ pub fn public_load_route(route route: public_routes.Route) -> PublicLoadRoute {
 }
 
 @target(javascript)
+pub fn admin_message_path(
+  message message: admin_pages.Message,
+) -> Option(String) {
+  case message {
+    _ -> None
+  }
+}
+
+@target(javascript)
+pub fn public_message_path(
+  message message: public_pages.Message,
+) -> Option(String) {
+  case message {
+    public_pages.GamesMsg(public_games_wire.NavigateGame(id:)) ->
+      Some(
+        public_routes.route_to_path(
+          public_routes.GamesId(id: int.to_string(id)),
+        ),
+      )
+    public_pages.HomeMsg(public_games_wire.NavigateGame(id:)) ->
+      Some(
+        public_routes.route_to_path(
+          public_routes.GamesId(id: int.to_string(id)),
+        ),
+      )
+    public_pages.TeamsSlugMsg(public_team_detail_wire.NavigateGame(id:)) ->
+      Some(
+        public_routes.route_to_path(
+          public_routes.GamesId(id: int.to_string(id)),
+        ),
+      )
+    public_pages.GamesIdMsg(public_game_detail_wire.NavigateTeam(slug:)) ->
+      Some(public_routes.route_to_path(public_routes.TeamsSlug(slug: slug)))
+    public_pages.GamesMsg(public_games_wire.NavigateTeam(slug:)) ->
+      Some(public_routes.route_to_path(public_routes.TeamsSlug(slug: slug)))
+    public_pages.HomeMsg(public_games_wire.NavigateTeam(slug:)) ->
+      Some(public_routes.route_to_path(public_routes.TeamsSlug(slug: slug)))
+    public_pages.StandingsMsg(public_standings_wire.NavigateTeam(slug:)) ->
+      Some(public_routes.route_to_path(public_routes.TeamsSlug(slug: slug)))
+    public_pages.TeamsSlugMsg(public_team_detail_wire.NavigateTeam(slug:)) ->
+      Some(public_routes.route_to_path(public_routes.TeamsSlug(slug: slug)))
+    _ -> None
+  }
+}
+
+@target(javascript)
 pub fn admin_load_client(
   page_context page_context: PageContext,
   query_params query_params: admin_page_input.QueryParams,
@@ -247,6 +295,19 @@ pub fn admin_load_client(
 ) -> #(admin_pages.Page, Effect(admin_pages.Message)) {
   let page = admin_pages.load_sync(page_context, query_params, route)
   #(page, admin_request_effect(route, admin_load_route(route)))
+}
+
+@target(javascript)
+pub fn admin_load_path(
+  page_context page_context: PageContext,
+  query_params query_params: admin_page_input.QueryParams,
+  path path: String,
+) -> #(String, admin_pages.Page, Effect(admin_pages.Message)) {
+  let route = admin_routes.parse_path(path)
+  let canonical_path = admin_routes.route_to_path(route)
+  let #(page, page_effect) =
+    admin_load_client(page_context:, query_params:, route:)
+  #(canonical_path, page, page_effect)
 }
 
 @target(javascript)
@@ -276,6 +337,22 @@ pub fn admin_initial_page(
 }
 
 @target(javascript)
+pub fn admin_initial_page_from_path(
+  page_context page_context: PageContext,
+  query_params query_params: admin_page_input.QueryParams,
+  path path: String,
+  update_page update_page: fn(admin_pages.Page, admin_pages.Message) ->
+    #(admin_pages.Page, Effect(admin_pages.Message)),
+) -> #(admin_pages.Page, Effect(admin_pages.Message)) {
+  admin_initial_page(
+    page_context:,
+    query_params:,
+    route: admin_routes.parse_path(path),
+    update_page:,
+  )
+}
+
+@target(javascript)
 fn admin_request_effect(
   route _route: admin_routes.Route,
   selected selected: AdminLoadRoute,
@@ -295,6 +372,19 @@ pub fn public_load_client(
 ) -> #(public_pages.Page, Effect(public_pages.Message)) {
   let page = public_pages.load_sync(page_context, query_params, route)
   #(page, public_request_effect(route, public_load_route(route)))
+}
+
+@target(javascript)
+pub fn public_load_path(
+  page_context page_context: PageContext,
+  query_params query_params: public_page_input.QueryParams,
+  path path: String,
+) -> #(String, public_pages.Page, Effect(public_pages.Message)) {
+  let route = public_routes.parse_path(path)
+  let canonical_path = public_routes.route_to_path(route)
+  let #(page, page_effect) =
+    public_load_client(page_context:, query_params:, route:)
+  #(canonical_path, page, page_effect)
 }
 
 @target(javascript)
@@ -354,6 +444,22 @@ pub fn public_initial_page(
       )
     }
   }
+}
+
+@target(javascript)
+pub fn public_initial_page_from_path(
+  page_context page_context: PageContext,
+  query_params query_params: public_page_input.QueryParams,
+  path path: String,
+  update_page update_page: fn(public_pages.Page, public_pages.Message) ->
+    #(public_pages.Page, Effect(public_pages.Message)),
+) -> #(public_pages.Page, Effect(public_pages.Message)) {
+  public_initial_page(
+    page_context:,
+    query_params:,
+    route: public_routes.parse_path(path),
+    update_page:,
+  )
 }
 
 @target(javascript)
