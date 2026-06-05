@@ -1,7 +1,7 @@
 ---
 # scoreboard-unified-gy49
 title: Add boundary diagnostics for invalid wire crossings
-status: in-progress
+status: completed
 type: feature
 priority: normal
 tags:
@@ -30,7 +30,7 @@ This should enforce the chase rule: wire-crossing types may reference page-local
 ## Acceptance criteria
 
 - [x] Invalid wire type references fail with a clear diagnostic.
-- [ ] Invalid imports across client/server boundaries fail with a clear diagnostic.
+- [x] Invalid imports across client/server boundaries fail with a clear diagnostic.
 - [x] Diagnostics identify the contract, offending type/import, and how Rally reached it.
 - [x] Valid page-local types, primitives, containers, and approved shared wire types pass.
 - [x] Tests cover at least one transitive violation.
@@ -41,8 +41,5 @@ This should enforce the chase rule: wire-crossing types may reference page-local
 - The diagnostic reports the contract, field path, and offending type reference.
 - Valid page-local types, primitives, containers, `src/wire/**`, and `src/broadcasts.gleam` references are allowed.
 - Extended the check to walk referenced page-local and shared wire type definitions transitively, with the reference path included in the diagnostic.
-
-Still open:
-
-- Diagnose invalid imports that cross client/server boundaries.
-- Add negative tests for query row and target-specific import leaks.
+- Added Rally diagnostics for target-gated imports used by shared wire contracts, including the target-gated import and field path in the error.
+- Added negative Rally tests for generated SQL row leaks and target-specific shared wire imports.
