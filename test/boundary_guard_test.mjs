@@ -200,6 +200,21 @@ assertNoPatterns("src/app_ws.gleam", [
     pattern: /admin_authorized|_authorized:\s*fn\(state\)\s*->\s*Bool/,
     reason: "websocket auth should pass typed request auth context, not collapse auth to a root-owned Bool adapter",
   },
+  {
+    pattern:
+      /\btopics\.(?:start|frame_selector|leave)\b|\bsync_topic_frame\b/,
+    reason:
+      "websocket topic selector setup, subscription sync, and cleanup belong in server_ws",
+  },
+  {
+    pattern:
+      /\bmist\.(?:Binary|Custom|Text|Closed|Shutdown|send_binary_frame|continue|stop)\b/,
+    reason: "websocket transport message dispatch belongs in server_ws",
+  },
+  {
+    pattern: /\bhandle_client_frame\b/,
+    reason: "websocket client-frame routing belongs in server_ws",
+  },
 ]);
 
 assertNoPatterns("src/app_ssr.gleam", [
