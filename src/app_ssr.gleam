@@ -94,7 +94,7 @@ pub fn public_render(
       page_context: PageContext,
       query_params:,
       path:,
-      handlers: public_load_handlers(db),
+      load_context: db,
     )
 
   SsrApp(
@@ -156,7 +156,7 @@ pub fn admin_render(
       page_context: PageContext,
       query_params:,
       path:,
-      handlers: admin_load_handlers(db),
+      load_context: db,
     )
 
   SsrApp(
@@ -175,18 +175,6 @@ pub fn admin_render(
 }
 
 // HELPERS
-
-@target(erlang)
-fn public_load_handlers(
-  db: sqlight.Connection,
-) -> server_ssr.PublicLoadHandlers {
-  server_ssr.PublicLoadHandlers(load_context: fn() { db })
-}
-
-@target(erlang)
-fn admin_load_handlers(db: sqlight.Connection) -> server_ssr.AdminLoadHandlers {
-  server_ssr.AdminLoadHandlers(load_context: fn() { db })
-}
 
 @target(erlang)
 fn boot_identity(

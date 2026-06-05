@@ -703,7 +703,10 @@ fn admin_mount_update(
             map_page_effect(config.update_page(model.page, inner), AdminPageMsg)
           #(
             AdminMountModel(..model, page: page),
-            effect.batch([page_effect, sync_topics(admin_page_topics(page))]),
+            effect.batch([
+              page_effect,
+              sync_topics(admin_page_topics(page)),
+            ]),
           )
         }
       }
@@ -718,7 +721,10 @@ fn admin_mount_update(
         )
       #(
         AdminMountModel(..model, page: page),
-        effect.batch([page_effect, sync_topics(admin_page_topics(page))]),
+        effect.batch([
+          page_effect,
+          sync_topics(admin_page_topics(page)),
+        ]),
       )
     }
     AdminDarkModeChanged(dark_mode) -> {
@@ -883,7 +889,10 @@ fn public_mount_update(
             )
           #(
             PublicMountModel(..model, page: page),
-            effect.batch([page_effect, sync_topics(public_page_topics(page))]),
+            effect.batch([
+              page_effect,
+              sync_topics(public_page_topics(page)),
+            ]),
           )
         }
       }
@@ -898,7 +907,10 @@ fn public_mount_update(
         )
       #(
         PublicMountModel(..model, page: page),
-        effect.batch([page_effect, sync_topics(public_page_topics(page))]),
+        effect.batch([
+          page_effect,
+          sync_topics(public_page_topics(page)),
+        ]),
       )
     }
     PublicDarkModeChanged(dark_mode) -> {

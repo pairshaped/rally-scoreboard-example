@@ -246,7 +246,21 @@ assertNoPatterns("src/app_ssr.gleam", [
     pattern: /(?:admin|public)_[a-z_]+_load:\s*fn/,
     reason: "SSR page load adapters belong in generated server_ssr",
   },
+  {
+    pattern: /\b(?:Admin|Public)LoadHandlers\b|\b(?:admin|public)_load_handlers\b/,
+    reason:
+      "SSR load-context wrapper records belong in generated server_ssr or should disappear",
+  },
+  {
+    pattern: /\bhandlers:\s*server_ssr\./,
+    reason: "app_ssr should pass load context directly to generated SSR glue",
+  },
 ]);
+
+assert.ok(
+  !existsSync(path.join(root, "src/page_stub.gleam")),
+  "src/page_stub.gleam should not return as root-level placeholder page glue",
+);
 
 for (const browserApp of ["src/admin_app.gleam", "src/public_app.gleam"]) {
   assertNoPatterns(browserApp, [

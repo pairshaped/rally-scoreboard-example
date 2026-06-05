@@ -32,7 +32,7 @@ pub fn generated_public_render_path_returns_shell_inputs_test() -> Nil {
       page_context: PageContext,
       query_params: public_page_input.empty_query_params(),
       path: "/games/",
-      handlers: server_ssr.PublicLoadHandlers(load_context: fn() { db }),
+      load_context: db,
     )
 
   output.current_path
@@ -56,7 +56,7 @@ pub fn generated_admin_render_path_returns_shell_inputs_test() -> Nil {
       page_context: PageContext,
       query_params: admin_page_input.empty_query_params(),
       path: "/admin/games/",
-      handlers: server_ssr.AdminLoadHandlers(load_context: fn() { db }),
+      load_context: db,
     )
 
   output.current_path
