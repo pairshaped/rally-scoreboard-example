@@ -1,3 +1,8 @@
+@target(erlang)
+pub fn ensure() -> Nil {
+  Nil
+}
+
 @target(javascript)
 @external(javascript, "./browser_ffi.mjs", "path")
 pub fn path() -> String {
@@ -60,7 +65,7 @@ pub fn listen_spa_navigation(_dispatch: fn(String) -> Nil) -> Nil {
 
 @target(javascript)
 @external(javascript, "./browser_ffi.mjs", "device_dark_mode")
-pub fn device_dark_mode(_cookie_name: String) -> Bool {
+pub fn device_dark_mode() -> Bool {
   False
 }
 
@@ -72,6 +77,6 @@ pub fn apply_dark_mode(_dark_mode: Bool) -> Nil {
 
 @target(javascript)
 @external(javascript, "./browser_ffi.mjs", "persist_dark_mode")
-pub fn persist_dark_mode(_cookie_name: String, _dark_mode: Bool) -> Nil {
+pub fn persist_dark_mode(_dark_mode: Bool) -> Nil {
   Nil
 }

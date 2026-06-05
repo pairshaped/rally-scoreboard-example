@@ -26,7 +26,7 @@ try {
   await step("assert app stylesheet asset", assertAppStylesheet);
 
   browser = await step("launch browser", () => chromium.launch());
-  const context = await browser.newContext();
+  const context = await browser.newContext({ colorScheme: "light" });
   const page = await context.newPage();
   page.setDefaultTimeout(8_000);
   page.setDefaultNavigationTimeout(12_000);
@@ -65,6 +65,35 @@ try {
     topicFrames(sentFrames).includes("rally:topics:games"),
     "hydrated direct /games should sync the games topic",
   );
+
+  await step("dark mode toggle persists through reload", async () => {
+    assert.equal(
+      await page.locator("html").getAttribute("data-theme"),
+      "light",
+      "fresh context should start from the light fallback",
+    );
+
+    await page.getByRole("switch").click();
+    await page.waitForFunction(() =>
+      document.documentElement.dataset.theme === "dark"
+    );
+
+    const cookies = await context.cookies(url("/games"));
+    assert.equal(
+      cookies.find(cookie => cookie.name === "__rally_dark_mode")?.value,
+      "1",
+      "dark-mode toggle should persist through the Rally cookie",
+    );
+
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await page.waitForFunction(() =>
+      document.documentElement.dataset.theme === "dark"
+    );
+    await page.getByText("Toronto Towers").first().waitFor();
+
+    sentFrames.length = 0;
+    receivedFrames.length = 0;
+  });
 
   await step("load hydrated /standings", async () => {
     sentFrames.length = 0;

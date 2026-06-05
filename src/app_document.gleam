@@ -7,11 +7,11 @@ import app_session
 @target(erlang)
 import app_ssr
 @target(erlang)
-import device_preferences
-@target(erlang)
 import generated/proute/admin/page_input as admin_page_input
 @target(erlang)
 import generated/proute/public/page_input as public_page_input
+@target(erlang)
+import generated/rally/theme
 @target(erlang)
 import gleam/bytes_tree
 @target(erlang)
@@ -20,8 +20,6 @@ import gleam/http/request.{type Request}
 import gleam/http/response.{type Response}
 @target(erlang)
 import gleam/int
-@target(erlang)
-import gleam/list
 @target(erlang)
 import gleam/option.{None, Some}
 @target(erlang)
@@ -70,8 +68,7 @@ fn html(
     True -> "admin_app.mjs"
     False -> "public_app.mjs"
   }
-  let theme = resolve_theme(req)
-  let dark_mode = theme == "dark"
+  let dark_mode = theme.request_dark_mode(req)
   let ssr_app = case string.starts_with(path, "/admin") {
     True ->
       app_ssr.admin(
@@ -97,7 +94,7 @@ fn html(
     <> hydration_attr(ssr_app.hydration)
 
   "<!doctype html>
-<html data-theme=\"" <> theme <> "\">
+<html " <> theme.document_attribute(req) <> ">
 <head>
   <meta charset=\"utf-8\">
   <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">
@@ -143,30 +140,6 @@ fn hydration_attr(payloads: List(String)) -> String {
       " data-hydration=\""
       <> html_attr_escape(string.join(payloads, ","))
       <> "\""
-  }
-}
-
-@target(erlang)
-fn resolve_theme(req: Request(Connection)) -> String {
-  let cookies = request.get_cookies(req)
-  case
-    list.find_map(cookies, fn(cookie) {
-      case cookie.0 {
-        name if name == device_preferences.cookie_name -> Ok(cookie.1)
-        _ -> Error(Nil)
-      }
-    })
-  {
-    Ok(value) ->
-      case device_preferences.parse(value) {
-        Ok(preferences) ->
-          case preferences.dark_mode {
-            True -> "dark"
-            False -> "light"
-          }
-        Error(Nil) -> "light"
-      }
-    Error(Nil) -> "light"
   }
 }
 

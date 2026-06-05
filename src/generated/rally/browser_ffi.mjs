@@ -79,12 +79,12 @@ export function listen_spa_navigation(dispatch) {
   });
 }
 
-export function device_dark_mode(cookieName) {
-  const raw = getCookie(cookieName);
-  if (raw) {
-    const params = new URLSearchParams(raw);
-    return params.get("dark_mode") === "1";
-  }
+const darkModeCookie = "__rally_dark_mode";
+
+export function device_dark_mode() {
+  const raw = getCookie(darkModeCookie);
+  if (raw === "1") return true;
+  if (raw === "0") return false;
 
   return typeof globalThis.matchMedia === "function"
     ? globalThis.matchMedia("(prefers-color-scheme: dark)").matches
@@ -97,9 +97,8 @@ export function apply_dark_mode(darkMode) {
   document.documentElement.dataset.theme = darkMode ? "dark" : "light";
 }
 
-export function persist_dark_mode(cookieName, darkMode) {
-  const value = "v=1&dark_mode=" + (darkMode ? "1" : "0");
-  setCookie(cookieName, value, 365);
+export function persist_dark_mode(darkMode) {
+  setCookie(darkModeCookie, darkMode ? "1" : "0", 365);
 }
 
 function getCookie(name) {

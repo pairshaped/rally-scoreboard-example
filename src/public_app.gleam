@@ -11,6 +11,8 @@ import generated/rally/browser
 @target(javascript)
 import generated/rally/browser_app
 @target(javascript)
+import generated/rally/browser_mount as rally_browser_mount
+@target(javascript)
 import gleam/option.{None, Some}
 @target(javascript)
 import lustre/effect.{type Effect}
@@ -60,7 +62,7 @@ pub fn ensure() -> Nil {
 fn init(_flags: Nil) -> #(Model, Effect(Msg)) {
   let current_path = browser.path()
   let query_params = query_params_from_browser()
-  let dark_mode = browser_mount.device_dark_mode()
+  let dark_mode = rally_browser_mount.device_dark_mode()
   let #(page, page_effect) =
     browser_app.public_initial_page_from_path(
       page_context: PageContext,
@@ -138,7 +140,7 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
         PublicClientSharedState(..model.shared_state, dark_mode: dark_mode)
       #(
         Model(..model, shared_state:),
-        browser_mount.dark_mode_changed_effects(dark_mode),
+        rally_browser_mount.dark_mode_changed_effects(dark_mode),
       )
     }
     ShellNavigate(path) -> {

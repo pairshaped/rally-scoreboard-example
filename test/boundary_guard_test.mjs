@@ -265,6 +265,7 @@ for (const staleGeneratedFile of [
 for (const staleFrameworkModule of [
   "src/app_topics.gleam",
   "src/app_topics_ffi.erl",
+  "src/device_preferences.gleam",
   "src/server_context.gleam",
   "src/to_client_application.gleam",
 ]) {
@@ -275,14 +276,32 @@ for (const staleFrameworkModule of [
   );
 }
 
+assertNoPatterns("src/browser_mount.gleam", [
+  {
+    pattern: /device_dark_mode|dark_mode_changed_effects|persist_dark_mode/,
+    reason: "dark-mode storage/application mechanics belong in generated Rally browser helpers",
+  },
+  {
+    pattern: /_scoreboard_device|__rally_dark_mode|dark_mode=/,
+    reason: "dark-mode cookie details belong in generated Rally helpers",
+  },
+]);
+
+assertNoPatterns("src/app_document.gleam", [
+  {
+    pattern: /device_preferences|_scoreboard_device|__rally_dark_mode|dark_mode=/,
+    reason: "SSR dark-mode cookie parsing belongs in generated Rally theme helpers",
+  },
+]);
+
 assertNoPatterns("src/generated/rally/browser_mount.gleam", [
   {
     pattern: /authentication_context/,
     reason: "app authentication context parsing belongs in app code",
   },
   {
-    pattern: /_scoreboard_device/,
-    reason: "app cookie names belong in app code",
+    pattern: /cookie_name|_scoreboard_device/,
+    reason: "generated Rally browser helpers must not require app-supplied dark-mode cookie names",
   },
 ]);
 

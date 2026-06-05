@@ -1,3 +1,8 @@
+@target(erlang)
+pub fn ensure() -> Nil {
+  Nil
+}
+
 @target(javascript)
 import generated/rally/browser
 @target(javascript)
@@ -10,8 +15,8 @@ import gleam/string
 import lustre/effect.{type Effect}
 
 @target(javascript)
-pub fn device_dark_mode(cookie_name: String) -> Bool {
-  browser.device_dark_mode(cookie_name)
+pub fn device_dark_mode() -> Bool {
+  browser.device_dark_mode()
 }
 
 @target(javascript)
@@ -20,19 +25,14 @@ fn apply_dark_mode(dark_mode: Bool) -> Effect(msg) {
 }
 
 @target(javascript)
-fn persist_dark_mode(cookie_name: String, dark_mode: Bool) -> Effect(msg) {
-  effect.from(fn(_dispatch) {
-    browser.persist_dark_mode(cookie_name, dark_mode)
-  })
+fn persist_dark_mode(dark_mode: Bool) -> Effect(msg) {
+  effect.from(fn(_dispatch) { browser.persist_dark_mode(dark_mode) })
 }
 
 @target(javascript)
-pub fn dark_mode_changed_effects(
-  cookie_name cookie_name: String,
-  dark_mode dark_mode: Bool,
-) -> Effect(msg) {
+pub fn dark_mode_changed_effects(dark_mode dark_mode: Bool) -> Effect(msg) {
   effect.batch([
-    persist_dark_mode(cookie_name, dark_mode),
+    persist_dark_mode(dark_mode),
     apply_dark_mode(dark_mode),
   ])
 }
