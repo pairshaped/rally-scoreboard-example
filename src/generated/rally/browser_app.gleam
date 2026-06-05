@@ -1,11 +1,225 @@
 @target(javascript)
 import generated/rally/browser_mount
 @target(javascript)
+import generated/rally/client_transport
+@target(javascript)
+import generated/rally/hydration
+@target(javascript)
+import generated/rally/result.{type ApiLoadError}
+@target(javascript)
 import lustre
 @target(javascript)
 import lustre/effect.{type Effect}
 @target(javascript)
 import lustre/element.{type Element}
+@target(javascript)
+import page_context.{type PageContext}
+
+@target(javascript)
+import generated/proute/admin/page_input as admin_page_input
+@target(javascript)
+import generated/proute/admin/pages as admin_pages
+@target(javascript)
+import generated/proute/admin/routes as admin_routes
+@target(javascript)
+import generated/proute/public/page_input as public_page_input
+@target(javascript)
+import generated/proute/public/pages as public_pages
+@target(javascript)
+import generated/proute/public/routes as public_routes
+@target(javascript)
+import gleam/int
+
+@target(javascript)
+import admin/pages/games as admin_games_wire
+@target(javascript)
+import public/pages/games/id_/wire as public_game_detail_wire
+@target(javascript)
+import public/pages/games/wire as public_games_wire
+@target(javascript)
+import public/pages/standings/wire as public_standings_wire
+@target(javascript)
+import public/pages/teams/slug_/wire as public_team_detail_wire
+
+@target(javascript)
+pub type AdminLoadRoute {
+  AdminNoLoad
+  AdminGamesLoad(
+    message: admin_games_wire.ServerMsg,
+    to_message: fn(Result(admin_games_wire.LoadResult, List(ApiLoadError))) ->
+      admin_pages.Message,
+  )
+}
+
+@target(javascript)
+pub type PublicLoadRoute {
+  PublicNoLoad
+  PublicGameDetailLoad(
+    to_message: fn(
+      Result(public_game_detail_wire.LoadResult, List(ApiLoadError)),
+    ) -> public_pages.Message,
+  )
+  PublicGamesLoad(
+    to_message: fn(Result(public_games_wire.LoadResult, List(ApiLoadError))) ->
+      public_pages.Message,
+  )
+  PublicStandingsLoad(
+    to_message: fn(Result(public_standings_wire.LoadResult, List(ApiLoadError))) ->
+      public_pages.Message,
+  )
+  PublicTeamDetailLoad(
+    to_message: fn(
+      Result(public_team_detail_wire.LoadResult, List(ApiLoadError)),
+    ) -> public_pages.Message,
+  )
+}
+
+@target(javascript)
+pub fn admin_load_client(
+  page_context page_context: PageContext,
+  query_params query_params: admin_page_input.QueryParams,
+  route route: admin_routes.Route,
+  select_load select_load: fn(admin_routes.Route) -> AdminLoadRoute,
+) -> #(admin_pages.Page, Effect(admin_pages.Message)) {
+  let page = admin_pages.load_sync(page_context, query_params, route)
+  #(page, admin_request_effect(route, select_load(route)))
+}
+
+@target(javascript)
+pub fn admin_initial_page(
+  page_context page_context: PageContext,
+  query_params query_params: admin_page_input.QueryParams,
+  route route: admin_routes.Route,
+  select_load select_load: fn(admin_routes.Route) -> AdminLoadRoute,
+  update_page update_page: fn(admin_pages.Page, admin_pages.Message) ->
+    #(admin_pages.Page, Effect(admin_pages.Message)),
+) -> #(admin_pages.Page, Effect(admin_pages.Message)) {
+  let page = admin_pages.load_sync(page_context, query_params, route)
+
+  case select_load(route) {
+    AdminNoLoad -> #(page, effect.none())
+    AdminGamesLoad(message: _, to_message:) -> {
+      initial_loaded_page(
+        page: page,
+        hydration: hydration.admin_games_load_result(),
+        to_message: to_message,
+        load_client: fn() { admin_request_effect(route, select_load(route)) },
+        update_page: update_page,
+      )
+    }
+  }
+}
+
+@target(javascript)
+fn admin_request_effect(
+  route _route: admin_routes.Route,
+  selected selected: AdminLoadRoute,
+) -> Effect(admin_pages.Message) {
+  case selected {
+    AdminNoLoad -> effect.none()
+    AdminGamesLoad(message:, to_message:) ->
+      client_transport.send_admin_games_load(message:, on_result: to_message)
+  }
+}
+
+@target(javascript)
+pub fn public_load_client(
+  page_context page_context: PageContext,
+  query_params query_params: public_page_input.QueryParams,
+  route route: public_routes.Route,
+  select_load select_load: fn(public_routes.Route) -> PublicLoadRoute,
+) -> #(public_pages.Page, Effect(public_pages.Message)) {
+  let page = public_pages.load_sync(page_context, query_params, route)
+  #(page, public_request_effect(route, select_load(route)))
+}
+
+@target(javascript)
+pub fn public_initial_page(
+  page_context page_context: PageContext,
+  query_params query_params: public_page_input.QueryParams,
+  route route: public_routes.Route,
+  select_load select_load: fn(public_routes.Route) -> PublicLoadRoute,
+  update_page update_page: fn(public_pages.Page, public_pages.Message) ->
+    #(public_pages.Page, Effect(public_pages.Message)),
+) -> #(public_pages.Page, Effect(public_pages.Message)) {
+  let page = public_pages.load_sync(page_context, query_params, route)
+
+  case select_load(route) {
+    PublicNoLoad -> #(page, effect.none())
+    PublicGameDetailLoad(to_message:) -> {
+      initial_loaded_page(
+        page: page,
+        hydration: hydration.public_game_detail_load_result(),
+        to_message: to_message,
+        load_client: fn() { public_request_effect(route, select_load(route)) },
+        update_page: update_page,
+      )
+    }
+    PublicGamesLoad(to_message:) -> {
+      initial_loaded_page(
+        page: page,
+        hydration: hydration.public_games_load_result(),
+        to_message: to_message,
+        load_client: fn() { public_request_effect(route, select_load(route)) },
+        update_page: update_page,
+      )
+    }
+    PublicStandingsLoad(to_message:) -> {
+      initial_loaded_page(
+        page: page,
+        hydration: hydration.public_standings_load_result(),
+        to_message: to_message,
+        load_client: fn() { public_request_effect(route, select_load(route)) },
+        update_page: update_page,
+      )
+    }
+    PublicTeamDetailLoad(to_message:) -> {
+      initial_loaded_page(
+        page: page,
+        hydration: hydration.public_team_detail_load_result(),
+        to_message: to_message,
+        load_client: fn() { public_request_effect(route, select_load(route)) },
+        update_page: update_page,
+      )
+    }
+  }
+}
+
+@target(javascript)
+fn public_request_effect(
+  route route: public_routes.Route,
+  selected selected: PublicLoadRoute,
+) -> Effect(public_pages.Message) {
+  case selected {
+    PublicNoLoad -> effect.none()
+    PublicGameDetailLoad(to_message:) ->
+      case route {
+        public_routes.GamesId(id:) ->
+          case int.parse(id) {
+            Ok(game_id) ->
+              client_transport.send_public_game_detail_load(
+                game_id:,
+                on_result: to_message,
+              )
+            Error(Nil) -> effect.none()
+          }
+        _ -> effect.none()
+      }
+    PublicGamesLoad(to_message:) ->
+      client_transport.send_public_games_load(on_result: to_message)
+    PublicStandingsLoad(to_message:) ->
+      client_transport.send_public_standings_load(on_result: to_message)
+    PublicTeamDetailLoad(to_message:) ->
+      case route {
+        public_routes.TeamsSlug(slug:) ->
+          client_transport.send_public_team_detail_load(
+            slug:,
+            on_result: to_message,
+          )
+        _ -> effect.none()
+      }
+  }
+}
 
 @target(javascript)
 pub fn start(
@@ -83,4 +297,21 @@ pub fn navigation_effects(
   }
 
   effect.batch([history_effect, effect.map(page_effect, on_page)])
+}
+
+@target(javascript)
+fn initial_loaded_page(
+  page page: page,
+  hydration hydration: Result(result, Nil),
+  to_message to_message: fn(result) -> message,
+  load_client load_client: fn() -> Effect(message),
+  update_page update_page: fn(page, message) -> #(page, Effect(message)),
+) -> #(page, Effect(message)) {
+  case hydration {
+    Ok(result) -> {
+      let #(page, _) = update_page(page, to_message(result))
+      #(page, effect.none())
+    }
+    Error(Nil) -> #(page, load_client())
+  }
 }

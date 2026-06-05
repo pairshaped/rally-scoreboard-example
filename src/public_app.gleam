@@ -9,8 +9,6 @@ import generated/rally/browser
 @target(javascript)
 import generated/rally/browser_app
 @target(javascript)
-import generated/rally/hydration
-@target(javascript)
 import gleam/int
 @target(javascript)
 import gleam/option.{type Option, None, Some}
@@ -101,91 +99,12 @@ fn initial_page(
   route route: routes.Route,
   query_params query_params: page_input.QueryParams,
 ) -> #(pages.Page, Effect(pages.Message)) {
-  case route {
-    routes.Home | routes.Games -> initial_public_games_page(route, query_params)
-    routes.GamesId(_) -> initial_public_game_detail_page(route, query_params)
-    routes.Standings -> initial_public_standings_page(route, query_params)
-    routes.TeamsSlug(_) -> initial_public_team_detail_page(route, query_params)
-    _ -> public_boot.load_client(PageContext, query_params, route)
-  }
-}
-
-@target(javascript)
-fn initial_public_games_page(
-  route route: routes.Route,
-  query_params query_params: page_input.QueryParams,
-) -> #(pages.Page, Effect(pages.Message)) {
-  browser_app.initial_page(
-    hydration: hydration.public_games_load_result(),
-    load_hydrated: fn(result) {
-      let page = pages.load_sync(PageContext, query_params, route)
-      let message = public_boot.public_games_load_result_message(route, result)
-      let #(page, _) = pages.update(page, message)
-      page
-    },
-    load_client: fn() {
-      public_boot.load_client(PageContext, query_params, route)
-    },
-  )
-}
-
-@target(javascript)
-fn initial_public_team_detail_page(
-  route route: routes.Route,
-  query_params query_params: page_input.QueryParams,
-) -> #(pages.Page, Effect(pages.Message)) {
-  browser_app.initial_page(
-    hydration: hydration.public_team_detail_load_result(),
-    load_hydrated: fn(result) {
-      let page = pages.load_sync(PageContext, query_params, route)
-      let message =
-        public_boot.public_team_detail_load_result_message(route, result)
-      let #(page, _) = pages.update(page, message)
-      page
-    },
-    load_client: fn() {
-      public_boot.load_client(PageContext, query_params, route)
-    },
-  )
-}
-
-@target(javascript)
-fn initial_public_game_detail_page(
-  route route: routes.Route,
-  query_params query_params: page_input.QueryParams,
-) -> #(pages.Page, Effect(pages.Message)) {
-  browser_app.initial_page(
-    hydration: hydration.public_game_detail_load_result(),
-    load_hydrated: fn(result) {
-      let page = pages.load_sync(PageContext, query_params, route)
-      let message =
-        public_boot.public_game_detail_load_result_message(route, result)
-      let #(page, _) = pages.update(page, message)
-      page
-    },
-    load_client: fn() {
-      public_boot.load_client(PageContext, query_params, route)
-    },
-  )
-}
-
-@target(javascript)
-fn initial_public_standings_page(
-  route route: routes.Route,
-  query_params query_params: page_input.QueryParams,
-) -> #(pages.Page, Effect(pages.Message)) {
-  browser_app.initial_page(
-    hydration: hydration.public_standings_load_result(),
-    load_hydrated: fn(result) {
-      let page = pages.load_sync(PageContext, query_params, route)
-      let message =
-        public_boot.public_standings_load_result_message(route, result)
-      let #(page, _) = pages.update(page, message)
-      page
-    },
-    load_client: fn() {
-      public_boot.load_client(PageContext, query_params, route)
-    },
+  browser_app.public_initial_page(
+    page_context: PageContext,
+    query_params:,
+    route:,
+    select_load: public_boot.load_route,
+    update_page: pages.update,
   )
 }
 
@@ -281,7 +200,12 @@ fn navigate(
 ) -> #(Model, Effect(Msg)) {
   let path = routes.route_to_path(route)
   let #(page, page_effect) =
-    public_boot.load_client(PageContext, page_input.empty_query_params(), route)
+    browser_app.public_load_client(
+      page_context: PageContext,
+      query_params: page_input.empty_query_params(),
+      route:,
+      select_load: public_boot.load_route,
+    )
   let shared_state =
     PublicClientSharedState(..model.shared_state, active_section: path)
 

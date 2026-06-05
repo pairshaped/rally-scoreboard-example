@@ -1,20 +1,14 @@
 import broadcasts
-@target(javascript)
-import generated/proute/public/page_input
 import generated/proute/public/pages
 @target(javascript)
 import generated/proute/public/routes
 @target(javascript)
-import generated/rally/client_transport
+import generated/rally/browser_app
 @target(javascript)
 import generated/rally/result as wire_result
 @target(javascript)
-import gleam/int
-@target(javascript)
 import gleam/list
 import lustre/effect.{type Effect}
-@target(javascript)
-import page_context.{type PageContext}
 import public/pages/games as games_page
 import public/pages/games/id_ as games_id_page
 @target(javascript)
@@ -29,44 +23,25 @@ import public/pages/teams/slug_ as teams_slug_page
 import public/pages/teams/slug_/wire as public_team_detail_wire
 
 @target(javascript)
-pub fn load_client(
-  page_context page_context: PageContext,
-  query_params query_params: page_input.QueryParams,
-  route route: routes.Route,
-) -> #(pages.Page, Effect(pages.Message)) {
-  #(pages.load_sync(page_context, query_params, route), request_effect(route))
-}
-
-@target(javascript)
-fn request_effect(route: routes.Route) -> Effect(pages.Message) {
+pub fn load_route(route: routes.Route) -> browser_app.PublicLoadRoute {
   case route {
     routes.Home | routes.Games ->
-      client_transport.send_public_games_load(on_result: fn(result) {
+      browser_app.PublicGamesLoad(to_message: fn(result) {
         public_games_load_result_message(route, result)
       })
-    routes.GamesId(id) ->
-      case int.parse(id) {
-        Ok(game_id) ->
-          client_transport.send_public_game_detail_load(
-            game_id:,
-            on_result: fn(result) {
-              public_game_detail_load_result_message(route, result)
-            },
-          )
-        Error(Nil) -> effect.none()
-      }
+    routes.GamesId(_) ->
+      browser_app.PublicGameDetailLoad(to_message: fn(result) {
+        public_game_detail_load_result_message(route, result)
+      })
     routes.Standings ->
-      client_transport.send_public_standings_load(on_result: fn(result) {
+      browser_app.PublicStandingsLoad(to_message: fn(result) {
         public_standings_load_result_message(route, result)
       })
-    routes.TeamsSlug(slug) ->
-      client_transport.send_public_team_detail_load(
-        slug:,
-        on_result: fn(result) {
-          public_team_detail_load_result_message(route, result)
-        },
-      )
-    routes.SignIn | routes.NotFound -> effect.none()
+    routes.TeamsSlug(_) ->
+      browser_app.PublicTeamDetailLoad(to_message: fn(result) {
+        public_team_detail_load_result_message(route, result)
+      })
+    routes.SignIn | routes.NotFound -> browser_app.PublicNoLoad
   }
 }
 

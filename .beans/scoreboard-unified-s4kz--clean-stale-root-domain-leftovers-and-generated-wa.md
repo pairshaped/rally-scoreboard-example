@@ -8,7 +8,7 @@ tags:
     - rally
     - chase
 created_at: 2026-06-04T03:38:31Z
-updated_at: 2026-06-05T04:02:37Z
+updated_at: 2026-06-05T04:42:58Z
 parent: scoreboard-unified-wm8p
 blocked_by:
     - scoreboard-unified-qf1q
@@ -126,3 +126,17 @@ Validated with:
 • gleam test --target erlang
 • node test/boundary_guard_test.mjs
 • node test/ws_result_smoke.mjs
+
+
+
+Eighth cleanup pass regenerated Rally browser glue and moved public/admin root browser load routing to generated/rally/browser_app.gleam. public_app.gleam and admin_app.gleam now call generated initial/load helpers; public_boot.gleam and admin_boot.gleam retain the app-owned load result message callbacks and broadcast behavior.
+
+Validated with:
+
+• gleam run -m rally -- load-rpc
+• gleam build --target erlang
+• gleam build --target javascript
+• node test/boundary_guard_test.mjs
+• node test/ws_result_smoke.mjs
+
+Validation caveat: gleam test --target erlang is blocked in this workspace by stale /tmp/scoreboard-unified-*.db files owned by debian. The test helper hardcodes /tmp, so TEMP/TMPDIR cannot redirect it.

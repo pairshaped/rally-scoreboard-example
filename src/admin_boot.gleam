@@ -1,36 +1,23 @@
 import admin/pages/games as admin_games_page
 import broadcasts
-@target(javascript)
-import generated/proute/admin/page_input
 import generated/proute/admin/pages
 @target(javascript)
 import generated/proute/admin/routes
 @target(javascript)
-import generated/rally/client_transport
+import generated/rally/browser_app
 @target(javascript)
 import generated/rally/result as wire_result
 import lustre/effect.{type Effect}
-@target(javascript)
-import page_context.{type PageContext}
 
 @target(javascript)
-pub fn load_client(
-  page_context page_context: PageContext,
-  query_params query_params: page_input.QueryParams,
-  route route: routes.Route,
-) -> #(pages.Page, Effect(pages.Message)) {
-  #(pages.load_sync(page_context, query_params, route), request_effect(route))
-}
-
-@target(javascript)
-fn request_effect(route: routes.Route) -> Effect(pages.Message) {
+pub fn load_route(route: routes.Route) -> browser_app.AdminLoadRoute {
   case route {
     routes.AdminHome | routes.AdminGames ->
-      client_transport.send_admin_games_load(
+      browser_app.AdminGamesLoad(
         message: admin_games_page.AdminGamesLoad,
-        on_result: fn(result) { load_result_message(route, result) },
+        to_message: fn(result) { load_result_message(route, result) },
       )
-    routes.NotFound -> effect.none()
+    routes.NotFound -> browser_app.AdminNoLoad
   }
 }
 

@@ -9,9 +9,6 @@ import generated/rally/browser
 @target(javascript)
 import generated/rally/browser_app
 @target(javascript)
-import generated/rally/hydration
-
-@target(javascript)
 import gleam/option.{None}
 
 @target(javascript)
@@ -91,22 +88,13 @@ fn initial_page(
 ) -> #(pages.Page, Effect(pages.Message)) {
   let query_params = page_input.empty_query_params()
 
-  case route {
-    routes.AdminHome | routes.AdminGames ->
-      browser_app.initial_page(
-        hydration: hydration.admin_games_load_result(),
-        load_hydrated: fn(result) {
-          let page = pages.load_sync(PageContext, query_params, route)
-          let message = admin_boot.load_result_message(route, result)
-          let #(page, _) = pages.update(PageContext, page, message)
-          page
-        },
-        load_client: fn() {
-          admin_boot.load_client(PageContext, query_params, route)
-        },
-      )
-    routes.NotFound -> admin_boot.load_client(PageContext, query_params, route)
-  }
+  browser_app.admin_initial_page(
+    page_context: PageContext,
+    query_params:,
+    route:,
+    select_load: admin_boot.load_route,
+    update_page: fn(page, message) { pages.update(PageContext, page, message) },
+  )
 }
 
 // UPDATE
@@ -176,7 +164,12 @@ fn navigate(
 ) -> #(Model, Effect(Msg)) {
   let path = routes.route_to_path(route)
   let #(page, page_effect) =
-    admin_boot.load_client(PageContext, page_input.empty_query_params(), route)
+    browser_app.admin_load_client(
+      page_context: PageContext,
+      query_params: page_input.empty_query_params(),
+      route:,
+      select_load: admin_boot.load_route,
+    )
   let shared_state =
     AdminClientSharedState(..model.shared_state, active_section: path)
 
