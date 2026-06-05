@@ -94,15 +94,13 @@ Small modules do not need headers. Large modules should use headers consistently
 
 Imports are grouped in this order:
 
-1. generated modules
-2. standard library modules
-3. external package modules
-4. app/root shared modules
-5. page-local or sibling modules
+1. unannotated imports that compile on both targets
+2. `@target(erlang)` imports
+3. `@target(javascript)` imports
 
-Within each group, imports are sorted alphabetically.
+Groups are separated by a blank line. Within each target group, imports are sorted alphabetically.
 
-Generated output and rewritten source should preserve this import order and module layout style where `gleam format` allows it. The formatter owns final import ordering and may re-sort imports or collapse groups. Rally should not fight the formatter, emit random import order, or churn section layout when the semantics did not change.
+Generated output and rewritten source should preserve this import order and module layout style where `gleam format` allows it. The formatter owns final import formatting and preserves blank-line groups. Rally should not fight the formatter, emit random import order, or churn section layout when the semantics did not change.
 
 ## Stop Conditions
 
@@ -128,7 +126,7 @@ Expected changes:
 - Keep `view` target-neutral.
 - Keep JavaScript `init` and `update` under `// CLIENT`.
 - Keep Erlang DB loading under `// SERVER`.
-- Keep imports grouped as shared, JavaScript, Erlang.
+- Keep imports grouped as shared, Erlang, JavaScript.
 
 Acceptance:
 
@@ -281,8 +279,8 @@ Expected changes:
 
 - Use section headers for large authored modules.
 - Keep small modules header-free when headers add noise.
-- Group imports by generated, standard library, external package, app/root shared, and page-local or sibling modules.
-- Sort imports alphabetically within each group.
+- Group imports by target: unannotated shared imports, Erlang-targeted imports, then JavaScript-targeted imports.
+- Sort imports alphabetically within each target group.
 - Ensure generated output follows the same import grouping.
 - Ensure rewritten source does not churn section layout or imports when semantics do not change.
 

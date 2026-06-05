@@ -1,19 +1,21 @@
 import broadcasts
 import generated/proute/public/pages
 import generated/proute/public/routes
-@target(javascript)
-import generated/rally/browser_app
-@target(javascript)
-import generated/rally/result as wire_result
-@target(erlang)
-import generated/rally/server_ssr
-@target(javascript)
-import gleam/int
 import lustre/effect.{type Effect}
 import public/pages/games as games_page
 import public/pages/games/id_ as games_id_page
 import public/pages/standings as standings_page
 import public/pages/teams/slug_ as teams_slug_page
+
+@target(erlang)
+import generated/rally/server_ssr
+
+@target(javascript)
+import generated/rally/browser_app
+@target(javascript)
+import generated/rally/result as wire_result
+@target(javascript)
+import gleam/int
 
 @target(javascript)
 pub fn load_route(route: routes.Route) -> browser_app.PublicLoadRoute {

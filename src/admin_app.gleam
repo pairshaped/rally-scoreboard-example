@@ -1,4 +1,14 @@
 @target(javascript)
+import admin/client_shared_state.{
+  type AdminClientSharedState, AdminClientSharedState,
+}
+@target(javascript)
+import admin_boot
+@target(javascript)
+import app_shell
+@target(javascript)
+import browser_mount
+@target(javascript)
 import generated/proute/admin/page_input
 @target(javascript)
 import generated/proute/admin/pages
@@ -10,22 +20,10 @@ import generated/rally/browser
 import generated/rally/browser_app
 @target(javascript)
 import gleam/option.{None}
-
 @target(javascript)
 import lustre/effect.{type Effect}
 @target(javascript)
 import lustre/element.{type Element}
-
-@target(javascript)
-import admin/client_shared_state.{
-  type AdminClientSharedState, AdminClientSharedState,
-}
-@target(javascript)
-import admin_boot
-@target(javascript)
-import app_shell
-@target(javascript)
-import browser_mount
 @target(javascript)
 import page_context.{PageContext}
 

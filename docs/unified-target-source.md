@@ -26,11 +26,11 @@ import components/ui
 import lustre/effect.{type Effect}
 import lustre/element.{type Element}
 
-@target(javascript)
-import rally/server
-
 @target(erlang)
 import generated/sql/games_sql
+
+@target(javascript)
+import rally/server
 
 pub type Model {
   Model(games: List(Game), saving: Bool)
@@ -84,7 +84,7 @@ pub fn handle(ctx, msg: ServerMsg) -> Result(Game, SaveError) {
 }
 ```
 
-Shared imports come first, followed by JavaScript-targeted imports, then Erlang-targeted imports. The module body follows the same order: shared types and view first, then `// CLIENT`, then `// SERVER`.
+Shared imports come first, followed by Erlang-targeted imports, then JavaScript-targeted imports. The module body follows the same target grouping when practical: shared declarations first, then server/client sections for target-specific behavior.
 
 The section comments are for humans. Rally validates the page contract by function names, signatures, target availability, and wire-visible types.
 
@@ -128,17 +128,15 @@ Use the existing Rally/Gleam house style for module layout. Large modules use se
 
 Small modules do not need headers when headers add noise.
 
-Imports are grouped in this order:
+Imports are grouped by target first:
 
-1. generated modules
-2. standard library modules
-3. external package modules
-4. app/root shared modules
-5. page-local or sibling modules
+1. unannotated imports that compile on both targets
+2. `@target(erlang)` imports
+3. `@target(javascript)` imports
 
-Within each group, imports are sorted alphabetically.
+Groups are separated by a blank line. Within each target group, imports are sorted alphabetically.
 
-Generated output and rewritten source should preserve this order and style where `gleam format` allows it. The formatter owns final import ordering and may re-sort imports or collapse groups. Rally should not fight the formatter, emit random import order, or churn section layout when semantics did not change.
+Generated output and rewritten source should preserve this order and style where `gleam format` allows it. The formatter owns final import formatting and preserves blank-line groups. Rally should not fight the formatter, emit random import order, or churn section layout when semantics did not change.
 
 ## Page Data
 

@@ -1,6 +1,9 @@
 @target(erlang)
+import admin/pages/games as admin_games_page
+@target(erlang)
+import app_api
+@target(erlang)
 import generated/rally/server_ws
-
 @target(erlang)
 import gleam/erlang/process.{type Selector}
 @target(erlang)
@@ -13,11 +16,6 @@ import mist.{type Next, type WebsocketConnection, type WebsocketMessage}
 import rally/runtime/topics
 @target(erlang)
 import sqlight
-
-@target(erlang)
-import admin/pages/games as admin_games_page
-@target(erlang)
-import app_api
 
 @target(javascript)
 pub fn ensure() -> Nil {

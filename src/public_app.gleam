@@ -1,4 +1,8 @@
 @target(javascript)
+import app_shell
+@target(javascript)
+import browser_mount
+@target(javascript)
 import generated/proute/public/page_input
 @target(javascript)
 import generated/proute/public/pages
@@ -12,16 +16,10 @@ import generated/rally/browser_app
 import gleam/int
 @target(javascript)
 import gleam/option.{type Option, None, Some}
-
 @target(javascript)
 import lustre/effect.{type Effect}
 @target(javascript)
 import lustre/element.{type Element}
-
-@target(javascript)
-import app_shell
-@target(javascript)
-import browser_mount
 @target(javascript)
 import page_context.{PageContext}
 @target(javascript)

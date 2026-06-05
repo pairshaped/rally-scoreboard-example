@@ -1,13 +1,11 @@
+import authentication_context.{type AuthenticationContext}
 import gleam/option.{type Option, None, Some}
 import gleam/string
-
 import lustre/attribute
 import lustre/element.{type Element}
 import lustre/element/html
 import lustre/element/svg
 import lustre/event
-
-import authentication_context.{type AuthenticationContext}
 
 // SHELLS
 

@@ -1,31 +1,4 @@
 @target(erlang)
-import generated/proute/admin/page_input as admin_page_input
-@target(erlang)
-import generated/proute/admin/pages as admin_pages
-@target(erlang)
-import generated/proute/admin/routes as admin_routes
-@target(erlang)
-import generated/proute/public/page_input as public_page_input
-@target(erlang)
-import generated/proute/public/pages as public_pages
-@target(erlang)
-import generated/proute/public/routes as public_routes
-@target(erlang)
-import generated/rally/server_ssr
-
-@target(erlang)
-import gleam/http/request.{type Request}
-@target(erlang)
-import gleam/option.{type Option, None, Some}
-
-@target(erlang)
-import lustre/element
-@target(erlang)
-import mist.{type Connection}
-@target(erlang)
-import sqlight
-
-@target(erlang)
 import admin/pages/games as admin_games_page
 @target(erlang)
 import admin_boot
@@ -40,9 +13,33 @@ import app_shell
 @target(erlang)
 import authentication_context.{type AuthenticationContext}
 @target(erlang)
+import generated/proute/admin/page_input as admin_page_input
+@target(erlang)
+import generated/proute/admin/pages as admin_pages
+@target(erlang)
+import generated/proute/admin/routes as admin_routes
+@target(erlang)
+import generated/proute/public/page_input as public_page_input
+@target(erlang)
+import generated/proute/public/pages as public_pages
+@target(erlang)
+import generated/proute/public/routes as public_routes
+@target(erlang)
+import generated/rally/server_ssr
+@target(erlang)
+import gleam/http/request.{type Request}
+@target(erlang)
+import gleam/option.{type Option, None, Some}
+@target(erlang)
+import lustre/element
+@target(erlang)
+import mist.{type Connection}
+@target(erlang)
 import page_context.{PageContext}
 @target(erlang)
 import public_boot
+@target(erlang)
+import sqlight
 
 @target(javascript)
 pub fn ensure() -> Nil {

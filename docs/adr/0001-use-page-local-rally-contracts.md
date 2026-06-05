@@ -11,11 +11,11 @@ import components/ui
 import lustre/effect.{type Effect}
 import lustre/element.{type Element}
 
-@target(javascript)
-import rally/server
-
 @target(erlang)
 import generated/sql/games_sql
+
+@target(javascript)
+import rally/server
 
 pub type Model {
   Model(games: List(Game), saving: Bool)
@@ -69,7 +69,7 @@ pub fn handle(ctx, msg: ServerMsg) -> Result(Game, SaveError) {
 }
 ```
 
-Shared declarations appear before `// CLIENT`. JavaScript declarations appear under `// CLIENT`. Erlang declarations appear under `// SERVER`. Imports follow the same order: shared imports first, then JavaScript-targeted imports, then Erlang-targeted imports. The section comments are a human convention; Rally should validate function names, signatures, target availability, and wire-visible types, not rely on comments.
+Shared declarations appear before `// SERVER` and `// CLIENT`. Erlang declarations appear under `// SERVER`. JavaScript declarations appear under `// CLIENT`. Imports follow the house style from ADR 0007: shared imports first, then Erlang-targeted imports, then JavaScript-targeted imports. The section comments are a human convention; Rally should validate function names, signatures, target availability, and wire-visible types, not rely on comments.
 
 `Loaded(Result(data, LoadError))` and `Saved(Result(data, SaveError))` are normal browser `Msg` constructors. The server returns page data directly inside `Result`; wrapper types such as `LoadData` or `SaveData` are optional and should only exist when the page needs a named multi-field payload.
 

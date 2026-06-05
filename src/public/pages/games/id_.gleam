@@ -1,21 +1,20 @@
 import generated/proute/public/page_input
-@target(javascript)
-import generated/rally/server
-@target(erlang)
-import generated/sql/public/pages/games/id__sql as games_sql
-
 import gleam/int
 import gleam/option.{type Option, None, Some}
-
 import lustre/attribute
 import lustre/effect.{type Effect}
 import lustre/element.{type Element}
 import lustre/element/html
 import lustre/event
+import page_context.{type PageContext}
+
+@target(erlang)
+import generated/sql/public/pages/games/id__sql as games_sql
 @target(erlang)
 import sqlight
 
-import page_context.{type PageContext}
+@target(javascript)
+import generated/rally/server
 
 // TYPES
 

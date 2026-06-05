@@ -2,13 +2,15 @@ import admin/pages/games as admin_games_page
 import broadcasts
 import generated/proute/admin/pages
 import generated/proute/admin/routes
+import lustre/effect.{type Effect}
+
+@target(erlang)
+import generated/rally/server_ssr
+
 @target(javascript)
 import generated/rally/browser_app
 @target(javascript)
 import generated/rally/result as wire_result
-@target(erlang)
-import generated/rally/server_ssr
-import lustre/effect.{type Effect}
 
 @target(javascript)
 pub fn load_route(route: routes.Route) -> browser_app.AdminLoadRoute {
