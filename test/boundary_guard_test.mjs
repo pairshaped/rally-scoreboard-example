@@ -357,6 +357,22 @@ assertNoPatterns("src/app_document.gleam", [
     pattern: /device_preferences|_scoreboard_device|__rally_dark_mode|dark_mode=/,
     reason: "SSR dark-mode cookie parsing belongs in generated Rally theme helpers",
   },
+  {
+    pattern: /response\.(?:new|set_header|set_body)|mist\.Bytes|bytes_tree/,
+    reason: "standard HTML response construction belongs in Rally runtime document helpers",
+  },
+  {
+    pattern: /request\.get_query/,
+    reason: "query-param extraction into page input belongs in Rally runtime document helpers",
+  },
+  {
+    pattern: /data-hydration|html_attr_escape|string\.replace\("&"|&quot;|&lt;|&gt;/,
+    reason: "hydration and boot attribute encoding belongs in Rally runtime document helpers",
+  },
+  {
+    pattern: /admin_app\.mjs|public_app\.mjs/,
+    reason: "standard browser entrypoint selection belongs in Rally runtime document helpers",
+  },
 ]);
 
 assertNoPatterns("src/generated/rally/browser_mount.gleam", [

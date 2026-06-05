@@ -9,19 +9,15 @@ import generated/proute/public/page_input as public_page_input
 @target(erlang)
 import generated/rally/theme
 @target(erlang)
-import gleam/bytes_tree
-@target(erlang)
 import gleam/http/request.{type Request}
 @target(erlang)
 import gleam/http/response.{type Response}
 @target(erlang)
-import gleam/int
-@target(erlang)
 import gleam/option.{type Option, None, Some}
 @target(erlang)
-import gleam/string
-@target(erlang)
 import mist.{type Connection, type ResponseData}
+@target(erlang)
+import rally/runtime/document
 @target(erlang)
 import rally/runtime/session
 @target(erlang)
@@ -45,14 +41,7 @@ pub fn response(
   session session: session.AuthSession,
 ) -> Response(ResponseData) {
   html(req: req, path: path, db: db, session: session)
-  |> html_response
-}
-
-@target(erlang)
-fn html_response(body: String) -> Response(ResponseData) {
-  response.new(200)
-  |> response.set_header("content-type", "text/html; charset=utf-8")
-  |> response.set_body(mist.Bytes(bytes_tree.from_string(body)))
+  |> document.html_response
 }
 
 @target(erlang)
@@ -62,13 +51,11 @@ fn html(
   db db: sqlight.Connection,
   session session: session.AuthSession,
 ) -> String {
-  let entrypoint = case string.starts_with(path, "/admin") {
-    True -> "admin_app.mjs"
-    False -> "public_app.mjs"
-  }
+  let mount = document.standard_mount(path: path, admin_prefix: "/admin")
+  let entrypoint = document.standard_entrypoint(mount)
   let dark_mode = theme.request_dark_mode(req)
-  let ssr_app = case string.starts_with(path, "/admin") {
-    True ->
+  let ssr_app = case mount {
+    document.Admin ->
       app_ssr.admin(
         req: req,
         path: path,
@@ -77,7 +64,7 @@ fn html(
         dark_mode: dark_mode,
         session: session,
       )
-    False ->
+    document.Public ->
       app_ssr.public(
         req: req,
         path: path,
@@ -92,7 +79,7 @@ fn html(
       authentication_context: ssr_app.authentication_context,
       can_access_admin: ssr_app.can_access_admin,
     )
-    <> hydration_attr(ssr_app.hydration)
+    <> document.hydration_attr(ssr_app.hydration)
 
   "<!doctype html>
 <html " <> theme.document_attribute(req) <> ">
@@ -117,31 +104,22 @@ fn html(
 fn public_query_params(
   req: Request(Connection),
 ) -> public_page_input.QueryParams {
-  case request.get_query(req) {
-    Ok(values) -> public_page_input.QueryParams(values:)
-    Error(Nil) -> public_page_input.empty_query_params()
-  }
+  document.query_params(
+    req: req,
+    from_values: fn(values) { public_page_input.QueryParams(values:) },
+    empty: public_page_input.empty_query_params,
+  )
 }
 
 @target(erlang)
 fn admin_query_params(
   req: Request(Connection),
 ) -> admin_page_input.QueryParams {
-  case request.get_query(req) {
-    Ok(values) -> admin_page_input.QueryParams(values:)
-    Error(Nil) -> admin_page_input.empty_query_params()
-  }
-}
-
-@target(erlang)
-fn hydration_attr(payloads: List(String)) -> String {
-  case payloads {
-    [] -> ""
-    _ ->
-      " data-hydration=\""
-      <> html_attr_escape(string.join(payloads, ","))
-      <> "\""
-  }
+  document.query_params(
+    req: req,
+    from_values: fn(values) { admin_page_input.QueryParams(values:) },
+    empty: admin_page_input.empty_query_params,
+  )
 }
 
 @target(erlang)
@@ -155,34 +133,16 @@ fn app_boot_attrs(
         Some(value) -> value
         None -> ""
       }
-      " data-auth-user-id=\""
-      <> int.to_string(context.user_id)
-      <> "\" data-auth-email=\""
-      <> html_attr_escape(context.email)
-      <> "\" data-auth-display-name=\""
-      <> html_attr_escape(display_name)
-      <> "\" data-can-access-admin=\""
-      <> bool_attr(can_access_admin)
-      <> "\""
+      document.boot_attrs([
+        document.IntAttribute("auth-user-id", context.user_id),
+        document.StringAttribute("auth-email", context.email),
+        document.StringAttribute("auth-display-name", display_name),
+        document.BoolAttribute("can-access-admin", can_access_admin),
+      ])
     }
-    None -> " data-can-access-admin=\"" <> bool_attr(can_access_admin) <> "\""
+    None ->
+      document.boot_attrs([
+        document.BoolAttribute("can-access-admin", can_access_admin),
+      ])
   }
-}
-
-// nolint: prefer_guard_clause -- this is a string conversion helper, not control flow.
-@target(erlang)
-fn bool_attr(value: Bool) -> String {
-  case value {
-    True -> "1"
-    False -> "0"
-  }
-}
-
-@target(erlang)
-fn html_attr_escape(value: String) -> String {
-  value
-  |> string.replace("&", "&amp;")
-  |> string.replace("\"", "&quot;")
-  |> string.replace("<", "&lt;")
-  |> string.replace(">", "&gt;")
 }
