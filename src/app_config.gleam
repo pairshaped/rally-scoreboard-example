@@ -3,6 +3,11 @@ import gleam/bit_array
 @target(erlang)
 import gleam/int
 
+@target(javascript)
+pub fn ensure() -> Nil {
+  Nil
+}
+
 @target(erlang)
 const secret_key_base = "SCOREBOARD_SECRET_KEY_BASE"
 
@@ -21,7 +26,7 @@ pub type SecretKeyError {
 
 @target(erlang)
 /// Reads the session encryption key from process configuration.
-/// scoreboard_unified calls this on startup before constructing app_session.
+/// scoreboard_unified calls this on startup before constructing Rally auth state.
 pub fn secret_key() -> Result(BitArray, SecretKeyError) {
   case getenv(secret_key_base) {
     Error(Nil) -> Error(MissingSecret)

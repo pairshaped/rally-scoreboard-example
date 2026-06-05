@@ -1,13 +1,9 @@
 @target(erlang)
 import app_auth
 @target(erlang)
-import app_session
-@target(erlang)
 import gleam/bit_array
 @target(erlang)
 import gleam/bytes_tree
-@target(erlang)
-import gleam/http/cookie
 @target(erlang)
 import gleam/http/request.{type Request}
 @target(erlang)
@@ -17,8 +13,6 @@ import gleam/io
 @target(erlang)
 import gleam/list
 @target(erlang)
-import gleam/option.{None, Some}
-@target(erlang)
 import gleam/result
 @target(erlang)
 import gleam/string
@@ -27,7 +21,14 @@ import gleam/uri
 @target(erlang)
 import mist.{type Connection, type ResponseData}
 @target(erlang)
+import rally/runtime/session
+@target(erlang)
 import sqlight
+
+@target(javascript)
+pub fn ensure() -> Nil {
+  Nil
+}
 
 @target(erlang)
 /// HTTP handler for POST /sign_in.
@@ -35,7 +36,7 @@ import sqlight
 pub fn handle_sign_in_post(
   req req: Request(Connection),
   db db: sqlight.Connection,
-  session session: app_session.Session,
+  session session: session.AuthSession,
 ) -> response.Response(ResponseData) {
   case mist.read_body(req, max_body_limit: 4096) {
     Ok(req_with_body) ->
@@ -69,8 +70,8 @@ pub fn handle_sign_out(
   response.new(302)
   |> response.set_header("location", path)
   |> response.expire_cookie(
-    app_session.session_cookie,
-    session_cookie_attributes(),
+    session.auth_cookie_name,
+    session.auth_cookie_attributes(secure: False),
   )
   |> response.set_body(mist.Bytes(bytes_tree.from_string("")))
 }
@@ -89,7 +90,7 @@ pub fn sign_in_redirect(return_to: String) -> response.Response(ResponseData) {
 pub fn check_admin_session(
   req req: Request(Connection),
   db db: sqlight.Connection,
-  session session: app_session.Session,
+  session session: session.AuthSession,
 ) -> Result(app_auth.AuthenticatedUser, Nil) {
   use user <- result.try(authenticated_user(req: req, db: db, session: session))
   case app_auth.can_access_admin(user) {
@@ -105,11 +106,11 @@ pub fn check_admin_session(
 pub fn authenticated_user(
   req req: Request(Connection),
   db db: sqlight.Connection,
-  session session: app_session.Session,
+  session session: session.AuthSession,
 ) -> Result(app_auth.AuthenticatedUser, Nil) {
   let cookies = request.get_cookies(req)
-  use cookie_value <- result.try(app_auth.find_session(cookies))
-  use user_id <- result.try(app_session.decode_user_id(
+  use cookie_value <- result.try(session.find_auth_cookie(cookies))
+  use user_id <- result.try(session.decode_user_id(
     encoded: cookie_value,
     session: session,
   ))
@@ -119,7 +120,7 @@ pub fn authenticated_user(
 @target(erlang)
 fn process_sign_in_body(
   db db: sqlight.Connection,
-  session session: app_session.Session,
+  session session: session.AuthSession,
   body body: String,
 ) -> response.Response(ResponseData) {
   case uri.parse_query(body) {
@@ -131,7 +132,7 @@ fn process_sign_in_body(
 @target(erlang)
 fn verify_credentials(
   db db: sqlight.Connection,
-  session session: app_session.Session,
+  session session: session.AuthSession,
   pairs pairs: List(#(String, String)),
 ) -> response.Response(ResponseData) {
   let return_to =
@@ -155,18 +156,18 @@ fn verify_credentials(
 
 @target(erlang)
 fn issue_session(
-  session session: app_session.Session,
+  session session: session.AuthSession,
   return_to return_to: String,
   user_id user_id: Int,
 ) -> response.Response(ResponseData) {
-  case app_session.encode_user_id(user_id: user_id, session: session) {
+  case session.encode_user_id(user_id: user_id, session: session) {
     Ok(encoded) ->
       response.new(302)
       |> response.set_header("location", return_to)
       |> response.set_cookie(
-        app_session.session_cookie,
+        session.auth_cookie_name,
         encoded,
-        session_cookie_attributes(),
+        session.auth_cookie_attributes(secure: False),
       )
       |> response.set_body(mist.Bytes(bytes_tree.from_string("")))
     Error(Nil) ->
@@ -191,18 +192,6 @@ fn redirect(path: String) -> response.Response(ResponseData) {
   response.new(302)
   |> response.set_header("location", path)
   |> response.set_body(mist.Bytes(bytes_tree.from_string("")))
-}
-
-@target(erlang)
-fn session_cookie_attributes() -> cookie.Attributes {
-  cookie.Attributes(
-    max_age: None,
-    domain: None,
-    path: Some("/"),
-    secure: False,
-    http_only: True,
-    same_site: Some(cookie.Lax),
-  )
 }
 
 @target(erlang)

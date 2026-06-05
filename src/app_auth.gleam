@@ -1,6 +1,4 @@
 @target(erlang)
-import app_session
-@target(erlang)
 import authentication_context.{type AuthenticationContext, AuthenticationContext}
 @target(erlang)
 import gleam/bit_array
@@ -9,13 +7,16 @@ import gleam/crypto
 @target(erlang)
 import gleam/dynamic/decode
 @target(erlang)
-import gleam/list
-@target(erlang)
 import gleam/option.{type Option, None, Some}
 @target(erlang)
 import gleam/string
 @target(erlang)
 import sqlight.{type Connection}
+
+@target(javascript)
+pub fn ensure() -> Nil {
+  Nil
+}
 
 @target(erlang)
 const sign_in_code_secret = "scoreboard-demo-secret"
@@ -26,18 +27,6 @@ const sign_in_code_secret = "scoreboard-demo-secret"
 /// into AuthenticationContext for shell rendering and hydration.
 pub type AuthenticatedUser {
   AuthenticatedUser(context: AuthenticationContext, role: String)
-}
-
-@target(erlang)
-/// Finds this app's session cookie in a request cookie list.
-/// app_auth_http calls this before asking app_session to decode the user id.
-pub fn find_session(cookies: List(#(String, String))) -> Result(String, Nil) {
-  list.find_map(cookies, fn(pair) {
-    case pair.0 {
-      name if name == app_session.session_cookie -> Ok(pair.1)
-      _ -> Error(Nil)
-    }
-  })
 }
 
 @target(erlang)

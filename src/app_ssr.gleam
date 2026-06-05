@@ -3,8 +3,6 @@ import app_auth
 @target(erlang)
 import app_auth_http
 @target(erlang)
-import app_session
-@target(erlang)
 import app_shell
 @target(erlang)
 import authentication_context.{type AuthenticationContext}
@@ -24,6 +22,8 @@ import lustre/element
 import mist.{type Connection}
 @target(erlang)
 import page_context.{PageContext}
+@target(erlang)
+import rally/runtime/session
 @target(erlang)
 import sqlight
 
@@ -55,7 +55,7 @@ pub fn public(
   db db: sqlight.Connection,
   query_params query_params: public_page_input.QueryParams,
   dark_mode dark_mode: Bool,
-  session session: app_session.Session,
+  session session: session.AuthSession,
 ) -> SsrApp {
   let #(authentication_context, can_access_admin) =
     boot_identity(req: req, db: db, session: session)
@@ -115,7 +115,7 @@ pub fn admin(
   db db: sqlight.Connection,
   query_params query_params: admin_page_input.QueryParams,
   dark_mode dark_mode: Bool,
-  session session: app_session.Session,
+  session session: session.AuthSession,
 ) -> SsrApp {
   let #(authentication_context, _) =
     boot_identity(req: req, db: db, session: session)
@@ -173,7 +173,7 @@ fn admin_load_handlers(db: sqlight.Connection) -> server_ssr.AdminLoadHandlers {
 fn boot_identity(
   req req: Request(Connection),
   db db: sqlight.Connection,
-  session session: app_session.Session,
+  session session: session.AuthSession,
 ) -> #(Option(AuthenticationContext), Bool) {
   case app_auth_http.authenticated_user(req: req, db: db, session: session) {
     Ok(user) -> #(Some(user.context), app_auth.can_access_admin(user))

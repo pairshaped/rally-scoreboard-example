@@ -263,6 +263,8 @@ for (const staleGeneratedFile of [
 }
 
 for (const staleFrameworkModule of [
+  "src/app_session.gleam",
+  "src/app_session_crypto_ffi.erl",
   "src/app_topics.gleam",
   "src/app_topics_ffi.erl",
   "src/device_preferences.gleam",
@@ -275,6 +277,24 @@ for (const staleFrameworkModule of [
     `${staleFrameworkModule} is generic Rally topic plumbing and must not live in app code`,
   );
 }
+
+assertNoPatterns("src/app_auth.gleam", [
+  {
+    pattern: /app_session|session_cookie|find_session|_scoreboard_session/,
+    reason: "generic session-cookie lookup and codec details belong in Rally runtime session helpers",
+  },
+]);
+
+assertNoPatterns("src/app_auth_http.gleam", [
+  {
+    pattern: /gleam\/http\/cookie|session_cookie_attributes|_scoreboard_session/,
+    reason: "generic auth session cookie attributes belong in Rally runtime session helpers",
+  },
+  {
+    pattern: /app_session|app_session_crypto_ffi/,
+    reason: "session cookie crypto belongs in Rally runtime session helpers",
+  },
+]);
 
 assertNoPatterns("src/browser_mount.gleam", [
   {

@@ -5,8 +5,6 @@ import app_config
 @target(erlang)
 import app_document
 @target(erlang)
-import app_session
-@target(erlang)
 import app_ws
 @target(erlang)
 import gleam/crypto
@@ -27,6 +25,8 @@ import mist.{type Connection, type ResponseData}
 @target(erlang)
 import rally/runtime/http_server
 @target(erlang)
+import rally/runtime/session
+@target(erlang)
 import rally/runtime/static
 @target(erlang)
 import sqlight
@@ -39,7 +39,7 @@ const db_path = "db/scoreboard.db"
 /// rally/runtime/http_server passes this to auth, websocket, admin, and public
 /// handlers on every request.
 pub type AppContext {
-  AppContext(db: sqlight.Connection, session: app_session.Session)
+  AppContext(db: sqlight.Connection, session: session.AuthSession)
 }
 
 @target(erlang)
@@ -49,7 +49,7 @@ pub type AppContext {
 pub fn main() -> Nil {
   let assert Ok(db) = sqlight.open(db_path)
   let assert Ok(key) = session_key()
-  let session = app_session.new(key)
+  let session = session.new_auth_session(key)
   let port = app_config.http_port(default: 8080)
   let context = AppContext(db:, session:)
 
