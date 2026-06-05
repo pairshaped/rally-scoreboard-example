@@ -9,6 +9,8 @@ import lustre/event
 
 // SHELLS
 
+/// Public mount shell shared by SSR and browser rendering.
+/// app_ssr and public_app both call this so hydration keeps the same outer UI.
 pub fn public(
   current_path current_path: String,
   dark_mode dark_mode: Bool,
@@ -30,6 +32,8 @@ pub fn public(
   ])
 }
 
+/// Admin mount shell shared by SSR and browser rendering.
+/// app_ssr and admin_app both call this so hydration keeps the same outer UI.
 pub fn admin(
   current_path current_path: String,
   dark_mode dark_mode: Bool,

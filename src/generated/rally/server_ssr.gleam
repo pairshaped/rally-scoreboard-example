@@ -131,10 +131,14 @@ pub fn public_boot_page(
         public_routes.GamesId(id:) ->
           case int.parse(id) {
             Ok(game_id) ->
-              public_game_detail_wire.load_wire(
-                handlers.load_context(),
-                game_id,
-              )
+              case
+                public_game_detail_wire.load(handlers.load_context(), game_id)
+              {
+                Ok(data) ->
+                  Ok(public_game_detail_wire.PublicGameDetailLoaded(data))
+                Error(public_game_detail_wire.LoadError(message: message)) ->
+                  Error([message])
+              }
             Error(Nil) -> Error(["Invalid route parameter."])
           }
         _ -> Error(["Unexpected route."])
@@ -148,7 +152,10 @@ pub fn public_boot_page(
       )
     }
     PublicGamesLoad(to_message:) -> {
-      let result = public_games_wire.load_wire(handlers.load_context())
+      let result = case public_games_wire.load(handlers.load_context()) {
+        Ok(data) -> Ok(public_games_wire.PublicGamesLoaded(data))
+        Error(public_games_wire.LoadError(message: message)) -> Error([message])
+      }
       boot_loaded_page(
         page: page,
         result: result,
@@ -158,7 +165,11 @@ pub fn public_boot_page(
       )
     }
     PublicStandingsLoad(to_message:) -> {
-      let result = public_standings_wire.load_wire(handlers.load_context())
+      let result = case public_standings_wire.load(handlers.load_context()) {
+        Ok(data) -> Ok(public_standings_wire.PublicStandingsLoaded(data))
+        Error(public_standings_wire.LoadError(message: message)) ->
+          Error([message])
+      }
       boot_loaded_page(
         page: page,
         result: result,
@@ -170,7 +181,11 @@ pub fn public_boot_page(
     PublicTeamDetailLoad(to_message:) -> {
       let result = case route {
         public_routes.TeamsSlug(slug:) ->
-          public_team_detail_wire.load_wire(handlers.load_context(), slug)
+          case public_team_detail_wire.load(handlers.load_context(), slug) {
+            Ok(data) -> Ok(public_team_detail_wire.PublicTeamDetailLoaded(data))
+            Error(public_team_detail_wire.LoadError(message: message)) ->
+              Error([message])
+          }
         _ -> Error(["Unexpected route."])
       }
       boot_loaded_page(

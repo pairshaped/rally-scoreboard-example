@@ -10,6 +10,9 @@ const secret_key_base = "SCOREBOARD_SECRET_KEY_BASE"
 const port = "PORT"
 
 @target(erlang)
+/// Configuration error returned by secret_key.
+/// scoreboard_unified turns this into startup output before refusing to run with
+/// an invalid session encryption key.
 pub type SecretKeyError {
   MissingSecret
   InvalidSecretEncoding
@@ -17,6 +20,8 @@ pub type SecretKeyError {
 }
 
 @target(erlang)
+/// Reads the session encryption key from process configuration.
+/// scoreboard_unified calls this on startup before constructing app_session.
 pub fn secret_key() -> Result(BitArray, SecretKeyError) {
   case getenv(secret_key_base) {
     Error(Nil) -> Error(MissingSecret)
@@ -33,6 +38,8 @@ pub fn secret_key() -> Result(BitArray, SecretKeyError) {
 }
 
 @target(erlang)
+/// Formats secret_key errors for startup logs.
+/// scoreboard_unified uses this before refusing to run with an invalid key.
 pub fn secret_key_error_message(error: SecretKeyError) -> String {
   case error {
     MissingSecret -> secret_key_base <> " is not set"
@@ -45,6 +52,8 @@ pub fn secret_key_error_message(error: SecretKeyError) -> String {
 }
 
 @target(erlang)
+/// Reads the HTTP port from process configuration.
+/// scoreboard_unified calls this when starting rally/runtime/http_server.
 pub fn http_port(default default: Int) -> Int {
   case getenv(port) {
     Ok(value) ->

@@ -18,16 +18,24 @@ import generated/rally/server
 
 // TYPES
 
+/// Libero wire payload nested in LoadResult.
+/// Generated codecs include this because PublicGameDetailLoaded carries game
+/// status values across the browser/server boundary.
 pub type GameStatus {
   Scheduled
   Live(period: String)
   Final
 }
 
+/// Libero wire payload nested in GameDetail.
+/// Generated codecs include this because PublicGameDetailLoaded carries teams
+/// across the browser/server boundary.
 pub type Team {
   Team(code: String, name: String, slug: String)
 }
 
+/// Libero wire payload nested in LoadResult.
+/// Rally load responses send this through generated client/server protocol code.
 pub type GameDetail {
   GameDetail(
     id: Int,
@@ -39,26 +47,43 @@ pub type GameDetail {
   )
 }
 
+/// Page-local broadcast projection.
+/// public_boot converts broadcasts.GameSnapshot into this type before calling the
+/// page-owned game_updated hook.
 pub type GameUpdate {
   GameUpdate(id: Int, home_score: Int, away_score: Int, status: GameStatus)
 }
 
+/// Page-local load error carried by Message.Loaded.
+/// Browser and SSR load adapters translate Rally/Libero load failures into this
+/// type before calling update.
 pub type LoadError {
   LoadError(message: String)
 }
 
+/// Rally load request message.
+/// generated/rally browser and server protocol code encodes this for detail page
+/// load requests, and load_route builds it from Proute route params.
 pub type ServerMsg {
   PublicGameDetailLoad(game_id: Int)
 }
 
+/// Rally load response payload.
+/// generated/rally and Libero code encode/decode this across SSR and websocket
+/// load paths before boot code maps it into Message.
 pub type LoadResult {
   PublicGameDetailLoaded(game: GameDetail)
 }
 
+/// Proute page model.
+/// generated/proute/public/pages stores this inside GamesIdPage.
 pub type Model {
   Model(game: Option(GameDetail))
 }
 
+/// Proute page message.
+/// generated/proute/public/pages wraps this as GamesIdMsg and routes it back
+/// into this module's update function.
 pub type Message {
   Loaded(Result(GameDetail, LoadError))
   NavigateTeam(slug: String)
@@ -66,6 +91,9 @@ pub type Message {
 
 // INIT
 
+/// Proute page init function.
+/// generated/proute/public/pages calls this when it constructs the game detail
+/// page, then maps the returned page effect into pages.Message.
 pub fn init(
   page_context page_context: PageContext,
   route_params route_params: page_input.GamesIdRouteParams,
@@ -77,9 +105,9 @@ pub fn init(
   )
 }
 
-// Pure starting state for the game detail page.
-// init adds the route-specific load effect on top; generated page and SSR glue
-// can call this when they need the empty page model without starting a load.
+/// Pure starting state for the game detail page.
+/// init adds the route-specific load effect on top; generated page and SSR glue
+/// can call this when they need the empty page model without starting a load.
 pub fn initial_model(
   _page_context: PageContext,
   _route_params: page_input.GamesIdRouteParams,
@@ -88,32 +116,83 @@ pub fn initial_model(
   Model(game: None)
 }
 
+// LOAD LIFECYCLE
+
+/// Page-owned load hook for Rally/Proute route glue.
+/// Generated dispatch can call this after PublicGameDetailLoaded arrives,
+/// keeping the state transition here instead of in app-level boot code.
+pub fn game_loaded(
+  model _model: Model,
+  game game: GameDetail,
+) -> #(Model, Effect(Message)) {
+  apply_loaded(game)
+}
+
+@target(javascript)
+fn init_effect(id: String) -> Effect(Message) {
+  case int.parse(id) {
+    Ok(game_id) ->
+      server.load_public_game_detail(
+        message: PublicGameDetailLoad(game_id:),
+        on_result: fn(result) { Loaded(map_load_result(result)) },
+      )
+    Error(Nil) -> effect.none()
+  }
+}
+
+@target(erlang)
+fn init_effect(_id: String) -> Effect(Message) {
+  effect.none()
+}
+
+@target(javascript)
+fn map_load_result(
+  result: Result(LoadResult, List(server.LoadError)),
+) -> Result(GameDetail, LoadError) {
+  case result {
+    Ok(PublicGameDetailLoaded(game)) -> Ok(game)
+    Error([server.LoadError(message: message), ..]) ->
+      Error(LoadError(message: message))
+    Error([]) -> Error(LoadError(message: "Could not load game."))
+  }
+}
+
+@target(erlang)
+/// SSR load adapter.
+/// public_boot.ssr_load_route calls this after generated Rally SSR load code
+/// runs the page load adapter, turning wire errors/results back into this page's
+/// Message type.
+pub fn loaded_from_wire(result: Result(LoadResult, List(String))) -> Message {
+  case result {
+    Ok(PublicGameDetailLoaded(game)) -> Loaded(Ok(game))
+    Error([message, ..]) -> Loaded(Error(LoadError(message: message)))
+    Error([]) -> Loaded(Error(LoadError(message: "Could not load game.")))
+  }
+}
+
+fn apply_loaded(game: GameDetail) -> #(Model, Effect(Message)) {
+  #(Model(game: Some(game)), effect.none())
+}
+
 // UPDATE
 
+/// Proute page update function.
+/// generated/proute/public/pages calls this when a GamesIdMsg is active on the
+/// current page.
 pub fn update(
   model model: Model,
   msg msg: Message,
 ) -> #(Model, Effect(Message)) {
   case msg {
-    Loaded(Ok(game)) -> #(Model(game: Some(game)), effect.none())
+    Loaded(Ok(game)) -> apply_loaded(game)
     Loaded(Error(_)) -> #(model, effect.none())
     NavigateTeam(_) -> #(model, effect.none())
   }
 }
 
-// Page-owned load hook for Rally/Proute route glue.
-// Generated dispatch can call this after PublicGameDetailLoaded arrives,
-// keeping the state transition here instead of in app-level boot code.
-pub fn game_loaded(
-  model _model: Model,
-  game game: GameDetail,
-) -> #(Model, Effect(Message)) {
-  update(model: Model(game: None), msg: Loaded(Ok(game)))
-}
-
-// Page-owned broadcast hook.
-// public_boot.apply_broadcast calls this after a BroadcastGameUpdated push frame
-// is decoded, then wraps the returned effect back into pages.Message.
+/// Page-owned broadcast hook.
+/// public_boot.apply_broadcast calls this after a BroadcastGameUpdated push frame
+/// is decoded, then wraps the returned effect back into pages.Message.
 pub fn game_updated(
   model model: Model,
   game game: GameUpdate,
@@ -129,6 +208,9 @@ pub fn game_updated(
 
 // VIEW
 
+/// Proute page view function.
+/// generated/proute/public/pages calls this and wraps emitted messages back into
+/// the generated pages.Message union.
 pub fn view(model model: Model) -> Element(Message) {
   html.main([], [
     html.section([attribute.class("panel")], [
@@ -205,66 +287,11 @@ fn status_badge(status: GameStatus) -> Element(msg) {
   }
 }
 
-// EFFECTS
-
-@target(javascript)
-fn init_effect(id: String) -> Effect(Message) {
-  case int.parse(id) {
-    Ok(game_id) ->
-      server.load_public_game_detail(
-        message: PublicGameDetailLoad(game_id:),
-        on_result: fn(result) { Loaded(map_load_result(result)) },
-      )
-    Error(Nil) -> effect.none()
-  }
-}
-
-@target(erlang)
-fn init_effect(_id: String) -> Effect(Message) {
-  effect.none()
-}
-
-@target(javascript)
-fn map_load_result(
-  result: Result(LoadResult, List(server.LoadError)),
-) -> Result(GameDetail, LoadError) {
-  case result {
-    Ok(PublicGameDetailLoaded(game)) -> Ok(game)
-    Error([server.LoadError(message: message), ..]) ->
-      Error(LoadError(message: message))
-    Error([]) -> Error(LoadError(message: "Could not load game."))
-  }
-}
-
-// Wire-facing server load.
-// Generated Rally SSR and WS helpers call this with the app load context, then
-// pass the result through the Libero codec boundary.
-@target(erlang)
-pub fn load_wire(
-  db: sqlight.Connection,
-  game_id: Int,
-) -> Result(LoadResult, List(String)) {
-  case load(db, game_id) {
-    Ok(game) -> Ok(PublicGameDetailLoaded(game))
-    Error(LoadError(message: message)) -> Error([message])
-  }
-}
-
-// SSR load adapter.
-// public_boot.ssr_load_route calls this after Rally SSR load code runs
-// load_wire, turning wire errors/results back into this page's Message type.
-@target(erlang)
-pub fn loaded_from_wire(result: Result(LoadResult, List(String))) -> Message {
-  case result {
-    Ok(PublicGameDetailLoaded(game)) -> Loaded(Ok(game))
-    Error([message, ..]) -> Loaded(Error(LoadError(message: message)))
-    Error([]) -> Loaded(Error(LoadError(message: "Could not load game.")))
-  }
-}
-
 // SERVER
 
 @target(erlang)
+/// Server data loader behind the generated Rally SSR and WS load adapters.
+/// Rally calls this, then wraps page data in the Rally/Libero load result shape.
 pub fn load(
   db: sqlight.Connection,
   game_id: Int,

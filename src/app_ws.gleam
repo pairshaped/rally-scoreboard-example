@@ -18,6 +18,8 @@ import rally/runtime/topics
 import sqlight
 
 @target(javascript)
+/// JavaScript-side compile anchor for the websocket module.
+/// Browser builds can import this module without pulling in Erlang-only code.
 pub fn ensure() -> Nil {
   Nil
 }
@@ -25,16 +27,19 @@ pub fn ensure() -> Nil {
 // TYPES
 
 @target(erlang)
+/// Per-connection websocket state.
+/// Mist threads this through on_init, handler, and on_close while generated Rally
+/// server_ws handlers use it to reach the database and auth flag.
 pub type State {
   State(db: sqlight.Connection, admin_authorized: Bool)
 }
 
 // INIT
 
-// Mist websocket init callback.
-// scoreboard_unified passes this to mist.websocket so each connection can join
-// the app push topic and keep its database/authorization context.
 @target(erlang)
+/// Mist websocket init callback.
+/// scoreboard_unified passes this to mist.websocket so each connection can join
+/// the app push topic and keep its database/authorization context.
 pub fn on_init(
   _conn: WebsocketConnection,
   db: sqlight.Connection,
@@ -45,20 +50,20 @@ pub fn on_init(
   #(State(db: db, admin_authorized:), Some(topics.frame_selector()))
 }
 
-// Mist websocket close callback.
-// scoreboard_unified passes this to mist.websocket; the topic process is shared
-// by the runtime, so this connection has no page-local cleanup to do.
 @target(erlang)
+/// Mist websocket close callback.
+/// scoreboard_unified passes this to mist.websocket; the topic process is shared
+/// by the runtime, so this connection has no page-local cleanup to do.
 pub fn on_close(_state: State) -> Nil {
   Nil
 }
 
 // HANDLER
 
-// Mist websocket message callback.
-// scoreboard_unified passes this to mist.websocket; it forwards client frames to
-// generated Rally server_ws code and relays topic broadcasts back to the client.
 @target(erlang)
+/// Mist websocket message callback.
+/// scoreboard_unified passes this to mist.websocket; it forwards client frames to
+/// generated Rally server_ws code and relays topic broadcasts back to the client.
 pub fn handler(
   state state: State,
   msg msg: WebsocketMessage(BitArray),

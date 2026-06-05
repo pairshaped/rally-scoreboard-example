@@ -31,11 +31,17 @@ import sqlight
 const db_path = "db/scoreboard.db"
 
 @target(erlang)
+/// HTTP server context shared by route handlers.
+/// rally/runtime/http_server passes this to auth, websocket, admin, and public
+/// handlers on every request.
 pub type AppContext {
   AppContext(db: sqlight.Connection, session: app_session.Session)
 }
 
 @target(erlang)
+/// Server entrypoint.
+/// The Erlang release starts here, then this wires app handlers into
+/// rally/runtime/http_server.
 pub fn main() -> Nil {
   let assert Ok(db) = sqlight.open(db_path)
   let assert Ok(key) = session_key()
@@ -151,6 +157,8 @@ fn handle_public_path(
 }
 
 @target(javascript)
+/// JavaScript-side compile anchor for the server module.
+/// Browser builds can import this module without pulling in Erlang-only code.
 pub fn ensure() -> Nil {
   Nil
 }

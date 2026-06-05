@@ -10,6 +10,9 @@
 import authentication_context.{type AuthenticationContext}
 import gleam/option.{type Option}
 
+/// Public shell state shared between SSR and browser hydration.
+/// app_ssr builds this for the initial document, and public_app owns updates to
+/// the hydrated client copy.
 pub type PublicClientSharedState {
   PublicClientSharedState(
     league_name: String,

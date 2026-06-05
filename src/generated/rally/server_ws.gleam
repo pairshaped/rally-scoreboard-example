@@ -308,7 +308,11 @@ fn send_public_game_detail_load_result(
   game_id game_id: Int,
 ) -> Nil {
   let result =
-    public_game_detail_wire.load_wire(handlers.load_context(state), game_id)
+    case public_game_detail_wire.load(handlers.load_context(state), game_id) {
+      Ok(data) -> Ok(public_game_detail_wire.PublicGameDetailLoaded(data))
+      Error(public_game_detail_wire.LoadError(message: message)) ->
+        Error([message])
+    }
     |> map_page_load_result
     |> map_load_result
 
@@ -331,7 +335,10 @@ fn send_public_games_load_result(
   handlers handlers: Handlers(state),
 ) -> Nil {
   let result =
-    public_games_wire.load_wire(handlers.load_context(state))
+    case public_games_wire.load(handlers.load_context(state)) {
+      Ok(data) -> Ok(public_games_wire.PublicGamesLoaded(data))
+      Error(public_games_wire.LoadError(message: message)) -> Error([message])
+    }
     |> map_page_load_result
     |> map_load_result
 
@@ -354,7 +361,11 @@ fn send_public_standings_load_result(
   handlers handlers: Handlers(state),
 ) -> Nil {
   let result =
-    public_standings_wire.load_wire(handlers.load_context(state))
+    case public_standings_wire.load(handlers.load_context(state)) {
+      Ok(data) -> Ok(public_standings_wire.PublicStandingsLoaded(data))
+      Error(public_standings_wire.LoadError(message: message)) ->
+        Error([message])
+    }
     |> map_page_load_result
     |> map_load_result
 
@@ -378,7 +389,11 @@ fn send_public_team_detail_load_result(
   slug slug: String,
 ) -> Nil {
   let result =
-    public_team_detail_wire.load_wire(handlers.load_context(state), slug)
+    case public_team_detail_wire.load(handlers.load_context(state), slug) {
+      Ok(data) -> Ok(public_team_detail_wire.PublicTeamDetailLoaded(data))
+      Error(public_team_detail_wire.LoadError(message: message)) ->
+        Error([message])
+    }
     |> map_page_load_result
     |> map_load_result
 

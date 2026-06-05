@@ -56,11 +56,16 @@ type Msg {
 // INIT
 
 @target(javascript)
+/// Browser entrypoint for the public mount.
+/// The public browser bundle calls this and hands Lustre the app init, update,
+/// and view functions.
 pub fn main() -> Nil {
   browser_app.start(init, update, view)
 }
 
 @target(erlang)
+/// Erlang-side compile anchor for the public browser module.
+/// Server builds can import this module without pulling in JavaScript-only code.
 pub fn ensure() -> Nil {
   Nil
 }

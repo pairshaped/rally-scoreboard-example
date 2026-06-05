@@ -6,15 +6,22 @@ import lustre/element.{type Element}
 import lustre/element/html
 import page_context.{type PageContext}
 
+/// Proute page model for the sign-in route.
+/// generated/proute/public/pages stores this inside the SignInPage variant.
 pub type Model {
   Model(return_to: String, invalid: Bool)
 }
 
+/// Proute page message for the sign-in route.
+/// generated/proute/public/pages wraps this as SignInMsg and routes it back into
+/// this module's update function.
 pub type Message {
   NoOp
 }
 
 // nolint: label_possible -- generated page glue calls conventional page init positionally.
+/// Proute page init function for the sign-in route.
+/// generated/proute/public/pages calls this when it constructs SignInPage.
 pub fn init(
   page_context: PageContext,
   query_params: page_input.QueryParams,
@@ -22,9 +29,9 @@ pub fn init(
   #(initial_model(page_context, query_params), effect.none())
 }
 
-// Pure starting state for the sign-in page.
-// It keeps the return target and error flag in the model so SSR and browser
-// hydration render the same form without needing any init effects.
+/// Pure starting state for the sign-in page.
+/// It keeps the return target and error flag in the model so SSR and browser
+/// hydration render the same form without needing any init effects.
 pub fn initial_model(
   _page_context: PageContext,
   query_params: page_input.QueryParams,
@@ -36,6 +43,8 @@ pub fn initial_model(
   )
 }
 
+/// Proute page update function for the sign-in route.
+/// generated/proute/public/pages calls this when SignInMsg is active.
 pub fn update(
   model model: Model,
   msg _msg: Message,
@@ -43,6 +52,8 @@ pub fn update(
   #(model, effect.none())
 }
 
+/// Proute page view function for the sign-in route.
+/// generated/proute/public/pages calls this when rendering SignInPage.
 pub fn view(model model: Model) -> Element(Message) {
   html.section([attribute.class("panel")], [
     html.h1([], [html.text("Sign in")]),

@@ -42,6 +42,8 @@ import public_boot
 import sqlight
 
 @target(javascript)
+/// JavaScript-side compile anchor for the SSR module.
+/// Browser builds can import this module without pulling in Erlang-only code.
 pub fn ensure() -> Nil {
   Nil
 }
@@ -49,6 +51,9 @@ pub fn ensure() -> Nil {
 // TYPES
 
 @target(erlang)
+/// SSR render result passed to app_document.
+/// app_document sends html as the response body and embeds hydration into the
+/// browser boot payload.
 pub type SsrApp {
   SsrApp(html: String, hydration: List(String))
 }
@@ -56,6 +61,8 @@ pub type SsrApp {
 // PUBLIC
 
 @target(erlang)
+/// Public SSR entrypoint used by app_document.
+/// It resolves request identity before delegating to public_render.
 pub fn public(
   req req: Request(Connection),
   path path: String,
@@ -78,6 +85,9 @@ pub fn public(
 }
 
 @target(erlang)
+/// Public SSR renderer for an already-resolved shell identity.
+/// app_document reaches this through public, and tests can call it without
+/// needing to build an HTTP request identity.
 pub fn public_render(
   path path: String,
   db db: sqlight.Connection,
@@ -106,6 +116,8 @@ pub fn public_render(
 // ADMIN
 
 @target(erlang)
+/// Admin SSR entrypoint used by app_document.
+/// It resolves request identity before delegating to admin_render.
 pub fn admin(
   req req: Request(Connection),
   path path: String,
@@ -121,6 +133,9 @@ pub fn admin(
 }
 
 @target(erlang)
+/// Admin SSR renderer for an already-resolved shell identity.
+/// app_document reaches this through admin, and tests can call it without
+/// needing to build an HTTP request identity.
 pub fn admin_render(
   path path: String,
   db db: sqlight.Connection,

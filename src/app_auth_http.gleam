@@ -30,6 +30,8 @@ import mist.{type Connection, type ResponseData}
 import sqlight
 
 @target(erlang)
+/// HTTP handler for POST /sign_in.
+/// scoreboard_unified routes auth requests here before normal document routing.
 pub fn handle_sign_in_post(
   req req: Request(Connection),
   db db: sqlight.Connection,
@@ -51,6 +53,9 @@ pub fn handle_sign_in_post(
 }
 
 @target(erlang)
+/// HTTP handler for sign-out routes.
+/// scoreboard_unified routes GET/POST /sign_out here so the session cookie can
+/// be expired before redirecting.
 pub fn handle_sign_out(
   req: Request(Connection),
 ) -> response.Response(ResponseData) {
@@ -71,11 +76,16 @@ pub fn handle_sign_out(
 }
 
 @target(erlang)
+/// Redirect helper used by admin route protection.
+/// scoreboard_unified calls this when an unauthenticated request targets /admin.
 pub fn sign_in_redirect(return_to: String) -> response.Response(ResponseData) {
   redirect("/sign_in?return_to=" <> uri.percent_encode(return_to))
 }
 
 @target(erlang)
+/// Admin session guard.
+/// scoreboard_unified uses this for admin HTTP and websocket entrypoints, and
+/// app_ssr uses it when deciding shell identity.
 pub fn check_admin_session(
   req req: Request(Connection),
   db db: sqlight.Connection,
@@ -89,6 +99,9 @@ pub fn check_admin_session(
 }
 
 @target(erlang)
+/// Request identity loader.
+/// app_ssr and check_admin_session use this to turn cookies into an
+/// AuthenticatedUser.
 pub fn authenticated_user(
   req req: Request(Connection),
   db db: sqlight.Connection,

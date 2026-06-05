@@ -21,11 +21,16 @@ import sqlight.{type Connection}
 const sign_in_code_secret = "scoreboard-demo-secret"
 
 @target(erlang)
+/// Authenticated server-side user record.
+/// app_auth_http checks this for admin access, and app_ssr projects its context
+/// into AuthenticationContext for shell rendering and hydration.
 pub type AuthenticatedUser {
   AuthenticatedUser(context: AuthenticationContext, role: String)
 }
 
 @target(erlang)
+/// Finds this app's session cookie in a request cookie list.
+/// app_auth_http calls this before asking app_session to decode the user id.
 pub fn find_session(cookies: List(#(String, String))) -> Result(String, Nil) {
   list.find_map(cookies, fn(pair) {
     case pair.0 {
@@ -36,6 +41,8 @@ pub fn find_session(cookies: List(#(String, String))) -> Result(String, Nil) {
 }
 
 @target(erlang)
+/// Verifies the demo sign-in code and returns the admin user id.
+/// app_auth_http calls this while processing POST /sign_in.
 pub fn verify_sign_in_code(
   db db: Connection,
   code code: String,
@@ -63,6 +70,8 @@ pub fn verify_sign_in_code(
 }
 
 @target(erlang)
+/// Loads the authenticated user record after a session cookie decodes.
+/// app_auth_http uses this to build the request identity for auth checks.
 pub fn user_by_id(
   db db: Connection,
   user_id user_id: Int,
@@ -81,6 +90,8 @@ pub fn user_by_id(
 }
 
 @target(erlang)
+/// Admin authorization policy for authenticated users.
+/// app_auth_http.check_admin_session calls this before allowing admin routes.
 pub fn can_access_admin(user: AuthenticatedUser) -> Bool {
   user.role == "admin"
 }

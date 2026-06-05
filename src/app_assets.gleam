@@ -1,6 +1,9 @@
 // CSS
 
 @target(erlang)
+/// Stylesheet payload embedded by app_document.
+/// Keeping this exported lets the document renderer include CSS without knowing
+/// how the asset text is stored.
 pub fn css() -> String {
   "
 :root {
@@ -424,6 +427,9 @@ input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='
 }
 
 @target(javascript)
+/// Compile anchor for modules that need app assets available.
+/// It gives callers a stable exported symbol without forcing them to inspect the
+/// asset payload.
 pub fn ensure() -> Nil {
   Nil
 }

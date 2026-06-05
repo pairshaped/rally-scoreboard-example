@@ -21,6 +21,9 @@ const session_aad = "_scoreboard_session:v1"
 const session_version = "v1"
 
 @target(erlang)
+/// Server-side session codec handle.
+/// app_auth_http and app_ssr pass this around so cookie encode/decode uses the
+/// same authenticated encryption key.
 pub type Session {
   Session(key: BitArray)
 }
@@ -31,6 +34,8 @@ type Encrypted {
 }
 
 @target(erlang)
+/// Creates a session codec handle from the validated secret key.
+/// scoreboard_unified constructs this once and passes it to HTTP and SSR code.
 pub fn new(key: BitArray) -> Session {
   Session(key:)
 }
@@ -76,6 +81,9 @@ fn decode(
 }
 
 @target(erlang)
+/// Decodes the authenticated user id from the session cookie.
+/// app_auth_http calls this before loading the full user record from the
+/// database.
 pub fn decode_user_id(
   encoded encoded: String,
   session session: Session,
@@ -88,6 +96,8 @@ pub fn decode_user_id(
 }
 
 @target(erlang)
+/// Encodes the authenticated user id into a session cookie value.
+/// app_auth_http calls this after a successful sign-in.
 pub fn encode_user_id(
   user_id user_id: Int,
   session session: Session,

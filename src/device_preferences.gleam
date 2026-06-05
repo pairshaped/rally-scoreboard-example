@@ -4,18 +4,27 @@ import gleam/string
 
 pub const cookie_name = "_scoreboard_device"
 
+/// Browser/device preference cookie payload.
+/// app_document reads this on SSR, and browser mount code keeps the dark-mode
+/// shell state aligned with the same shape.
 pub type DevicePreferences {
   DevicePreferences(dark_mode: Bool)
 }
 
+/// Default cookie state used when SSR cannot parse device preferences.
+/// app_document falls back to this before rendering the shell.
 pub fn default() -> DevicePreferences {
   DevicePreferences(dark_mode: False)
 }
 
+/// Encodes device preferences for the browser cookie.
+/// browser_mount writes this through generated Rally browser helpers.
 pub fn encode(preferences: DevicePreferences) -> String {
   "v=1&dark_mode=" <> bool_flag(preferences.dark_mode)
 }
 
+/// Parses the device preference cookie read during SSR.
+/// app_document uses this to choose the initial shell theme before hydration.
 pub fn parse(value: String) -> Result(DevicePreferences, Nil) {
   use pairs <- result.try(parse_query(value))
   use _ <- result.try(require_version(pairs))
