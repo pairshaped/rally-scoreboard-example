@@ -1,7 +1,7 @@
 ---
 # scoreboard-unified-l0ad
 title: Generate load route and result-message adapters
-status: todo
+status: completed
 type: task
 priority: high
 tags:
@@ -9,7 +9,7 @@ tags:
     - routing
     - load-rpc
 created_at: 2026-06-05T18:00:00Z
-updated_at: 2026-06-05T18:00:00Z
+updated_at: 2026-06-05T15:34:08Z
 parent: scoreboard-unified-r0ut
 ---
 
@@ -41,3 +41,10 @@ Remove handwritten browser and SSR load route dispatch from `src/public_boot.gle
 - `TEMP=./tmp gleam test --target erlang`
 - `node test/ws_result_smoke.mjs`
 - `npm run test:browser`
+
+## Summary of Changes
+
+- Regenerated Rally load RPC glue so browser and SSR load dispatch comes from generated Proute/Rally wiring.
+- Removed handwritten load route selectors and load result adapters from `src/public_boot.gleam` and `src/admin_boot.gleam`.
+- Updated app roots to stop passing `select_load`; boot modules now keep only broadcast push handling.
+- Validation: `gleam run -m rally load-rpc`; `gleam build --target erlang`; `gleam build --target javascript`; `TEMP=./tmp gleam test --target erlang`; `node test/boundary_guard_test.mjs`; `node test/ws_result_smoke.mjs`; `npm run test:browser`.

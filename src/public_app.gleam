@@ -109,7 +109,6 @@ fn initial_page(
     page_context: PageContext,
     query_params:,
     route:,
-    select_load: public_boot.load_route,
     update_page: pages.update,
   )
 }
@@ -208,7 +207,6 @@ fn navigate(
       page_context: PageContext,
       query_params: page_input.empty_query_params(),
       route:,
-      select_load: public_boot.load_route,
     )
   let shared_state =
     PublicClientSharedState(..model.shared_state, active_section: path)

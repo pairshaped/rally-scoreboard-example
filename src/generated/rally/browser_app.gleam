@@ -28,7 +28,9 @@ import generated/rally/client_transport
 @target(javascript)
 import generated/rally/hydration
 @target(javascript)
-import generated/rally/result.{type ApiLoadError}
+import generated/rally/result.{type ApiLoadError, ApiLoadError}
+@target(javascript)
+import gleam/int
 @target(javascript)
 import lustre
 @target(javascript)
@@ -84,14 +86,167 @@ pub type PublicLoadRoute {
 }
 
 @target(javascript)
+pub fn admin_load_route(route route: admin_routes.Route) -> AdminLoadRoute {
+  case route {
+    admin_routes.AdminGames ->
+      AdminGamesLoad(
+        message: admin_games_wire.AdminGamesLoad,
+        to_message: fn(result) {
+          case result {
+            Ok(admin_games_wire.AdminGamesLoadResult(data)) ->
+              admin_pages.AdminGamesMsg(admin_games_wire.Loaded(Ok(data)))
+            Error(errors) ->
+              admin_pages.AdminGamesMsg(
+                admin_games_wire.Loaded(
+                  Error(
+                    admin_games_wire.LoadError(message: api_load_error(errors)),
+                  ),
+                ),
+              )
+          }
+        },
+      )
+    admin_routes.AdminHome ->
+      AdminGamesLoad(
+        message: admin_games_wire.AdminGamesLoad,
+        to_message: fn(result) {
+          case result {
+            Ok(admin_games_wire.AdminGamesLoadResult(data)) ->
+              admin_pages.AdminHomeMsg(admin_games_wire.Loaded(Ok(data)))
+            Error(errors) ->
+              admin_pages.AdminHomeMsg(
+                admin_games_wire.Loaded(
+                  Error(
+                    admin_games_wire.LoadError(message: api_load_error(errors)),
+                  ),
+                ),
+              )
+          }
+        },
+      )
+    _ -> AdminNoLoad
+  }
+}
+
+@target(javascript)
+pub fn public_load_route(route route: public_routes.Route) -> PublicLoadRoute {
+  case route {
+    public_routes.GamesId(id:) ->
+      case int.parse(id) {
+        Ok(game_id) ->
+          PublicGameDetailLoad(
+            message: public_game_detail_wire.PublicGameDetailLoad(game_id:),
+            to_message: fn(result) {
+              case result {
+                Ok(public_game_detail_wire.PublicGameDetailLoaded(data)) ->
+                  public_pages.GamesIdMsg(
+                    public_game_detail_wire.Loaded(Ok(data)),
+                  )
+                Error(errors) ->
+                  public_pages.GamesIdMsg(
+                    public_game_detail_wire.Loaded(
+                      Error(
+                        public_game_detail_wire.LoadError(
+                          message: api_load_error(errors),
+                        ),
+                      ),
+                    ),
+                  )
+              }
+            },
+          )
+        Error(Nil) -> PublicNoLoad
+      }
+    public_routes.Games ->
+      PublicGamesLoad(
+        message: public_games_wire.PublicGamesLoad,
+        to_message: fn(result) {
+          case result {
+            Ok(public_games_wire.PublicGamesLoaded(data)) ->
+              public_pages.GamesMsg(public_games_wire.Loaded(Ok(data)))
+            Error(errors) ->
+              public_pages.GamesMsg(
+                public_games_wire.Loaded(
+                  Error(
+                    public_games_wire.LoadError(message: api_load_error(errors)),
+                  ),
+                ),
+              )
+          }
+        },
+      )
+    public_routes.Home ->
+      PublicGamesLoad(
+        message: public_games_wire.PublicGamesLoad,
+        to_message: fn(result) {
+          case result {
+            Ok(public_games_wire.PublicGamesLoaded(data)) ->
+              public_pages.HomeMsg(public_games_wire.Loaded(Ok(data)))
+            Error(errors) ->
+              public_pages.HomeMsg(
+                public_games_wire.Loaded(
+                  Error(
+                    public_games_wire.LoadError(message: api_load_error(errors)),
+                  ),
+                ),
+              )
+          }
+        },
+      )
+    public_routes.Standings ->
+      PublicStandingsLoad(
+        message: public_standings_wire.PublicStandingsLoad,
+        to_message: fn(result) {
+          case result {
+            Ok(public_standings_wire.PublicStandingsLoaded(data)) ->
+              public_pages.StandingsMsg(public_standings_wire.Loaded(Ok(data)))
+            Error(errors) ->
+              public_pages.StandingsMsg(
+                public_standings_wire.Loaded(
+                  Error(
+                    public_standings_wire.LoadError(message: api_load_error(
+                      errors,
+                    )),
+                  ),
+                ),
+              )
+          }
+        },
+      )
+    public_routes.TeamsSlug(slug:) ->
+      PublicTeamDetailLoad(
+        message: public_team_detail_wire.PublicTeamDetailLoad(slug:),
+        to_message: fn(result) {
+          case result {
+            Ok(public_team_detail_wire.PublicTeamDetailLoaded(data)) ->
+              public_pages.TeamsSlugMsg(
+                public_team_detail_wire.Loaded(Ok(data)),
+              )
+            Error(errors) ->
+              public_pages.TeamsSlugMsg(
+                public_team_detail_wire.Loaded(
+                  Error(
+                    public_team_detail_wire.LoadError(message: api_load_error(
+                      errors,
+                    )),
+                  ),
+                ),
+              )
+          }
+        },
+      )
+    _ -> PublicNoLoad
+  }
+}
+
+@target(javascript)
 pub fn admin_load_client(
   page_context page_context: PageContext,
   query_params query_params: admin_page_input.QueryParams,
   route route: admin_routes.Route,
-  select_load select_load: fn(admin_routes.Route) -> AdminLoadRoute,
 ) -> #(admin_pages.Page, Effect(admin_pages.Message)) {
   let page = admin_pages.load_sync(page_context, query_params, route)
-  #(page, admin_request_effect(route, select_load(route)))
+  #(page, admin_request_effect(route, admin_load_route(route)))
 }
 
 @target(javascript)
@@ -99,20 +254,21 @@ pub fn admin_initial_page(
   page_context page_context: PageContext,
   query_params query_params: admin_page_input.QueryParams,
   route route: admin_routes.Route,
-  select_load select_load: fn(admin_routes.Route) -> AdminLoadRoute,
   update_page update_page: fn(admin_pages.Page, admin_pages.Message) ->
     #(admin_pages.Page, Effect(admin_pages.Message)),
 ) -> #(admin_pages.Page, Effect(admin_pages.Message)) {
   let page = admin_pages.load_sync(page_context, query_params, route)
 
-  case select_load(route) {
+  case admin_load_route(route) {
     AdminNoLoad -> #(page, effect.none())
     AdminGamesLoad(message: _, to_message:) -> {
       initial_loaded_page(
         page: page,
         hydration: hydration.admin_games_load_result(),
         to_message: to_message,
-        load_client: fn() { admin_request_effect(route, select_load(route)) },
+        load_client: fn() {
+          admin_request_effect(route, admin_load_route(route))
+        },
         update_page: update_page,
       )
     }
@@ -136,10 +292,9 @@ pub fn public_load_client(
   page_context page_context: PageContext,
   query_params query_params: public_page_input.QueryParams,
   route route: public_routes.Route,
-  select_load select_load: fn(public_routes.Route) -> PublicLoadRoute,
 ) -> #(public_pages.Page, Effect(public_pages.Message)) {
   let page = public_pages.load_sync(page_context, query_params, route)
-  #(page, public_request_effect(route, select_load(route)))
+  #(page, public_request_effect(route, public_load_route(route)))
 }
 
 @target(javascript)
@@ -147,20 +302,21 @@ pub fn public_initial_page(
   page_context page_context: PageContext,
   query_params query_params: public_page_input.QueryParams,
   route route: public_routes.Route,
-  select_load select_load: fn(public_routes.Route) -> PublicLoadRoute,
   update_page update_page: fn(public_pages.Page, public_pages.Message) ->
     #(public_pages.Page, Effect(public_pages.Message)),
 ) -> #(public_pages.Page, Effect(public_pages.Message)) {
   let page = public_pages.load_sync(page_context, query_params, route)
 
-  case select_load(route) {
+  case public_load_route(route) {
     PublicNoLoad -> #(page, effect.none())
     PublicGameDetailLoad(message: _, to_message:) -> {
       initial_loaded_page(
         page: page,
         hydration: hydration.public_game_detail_load_result(),
         to_message: to_message,
-        load_client: fn() { public_request_effect(route, select_load(route)) },
+        load_client: fn() {
+          public_request_effect(route, public_load_route(route))
+        },
         update_page: update_page,
       )
     }
@@ -169,7 +325,9 @@ pub fn public_initial_page(
         page: page,
         hydration: hydration.public_games_load_result(),
         to_message: to_message,
-        load_client: fn() { public_request_effect(route, select_load(route)) },
+        load_client: fn() {
+          public_request_effect(route, public_load_route(route))
+        },
         update_page: update_page,
       )
     }
@@ -178,7 +336,9 @@ pub fn public_initial_page(
         page: page,
         hydration: hydration.public_standings_load_result(),
         to_message: to_message,
-        load_client: fn() { public_request_effect(route, select_load(route)) },
+        load_client: fn() {
+          public_request_effect(route, public_load_route(route))
+        },
         update_page: update_page,
       )
     }
@@ -187,7 +347,9 @@ pub fn public_initial_page(
         page: page,
         hydration: hydration.public_team_detail_load_result(),
         to_message: to_message,
-        load_client: fn() { public_request_effect(route, select_load(route)) },
+        load_client: fn() {
+          public_request_effect(route, public_load_route(route))
+        },
         update_page: update_page,
       )
     }
@@ -325,5 +487,13 @@ fn initial_loaded_page(
       #(page, effect.none())
     }
     Error(Nil) -> #(page, load_client())
+  }
+}
+
+@target(javascript)
+fn api_load_error(errors: List(ApiLoadError)) -> String {
+  case errors {
+    [ApiLoadError(message: message), ..] -> message
+    [] -> "Could not load page."
   }
 }

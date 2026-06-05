@@ -1,8 +1,6 @@
 @target(erlang)
 import admin/pages/games as admin_games_page
 @target(erlang)
-import admin_boot
-@target(erlang)
 import app_auth
 @target(erlang)
 import app_auth_http
@@ -36,8 +34,6 @@ import lustre/element
 import mist.{type Connection}
 @target(erlang)
 import page_context.{PageContext}
-@target(erlang)
-import public_boot
 @target(erlang)
 import sqlight
 
@@ -171,7 +167,6 @@ fn public_boot_page(
     page_context: PageContext,
     query_params:,
     route:,
-    select_load: public_boot.ssr_load_route,
     handlers: public_load_handlers(db),
     update_page: public_pages.update,
   )
@@ -187,7 +182,6 @@ fn admin_boot_page(
     page_context: PageContext,
     query_params:,
     route:,
-    select_load: admin_boot.ssr_load_route,
     handlers: admin_load_handlers(db),
     update_page: fn(page, message) {
       admin_pages.update(PageContext, page, message)

@@ -73,6 +73,50 @@ pub type PublicLoadRoute {
 }
 
 @target(erlang)
+pub fn admin_load_route(route route: admin_routes.Route) -> AdminLoadRoute {
+  case route {
+    admin_routes.AdminGames ->
+      AdminGamesLoad(to_message: fn(result) {
+        admin_pages.AdminGamesMsg(admin_games_wire.loaded_from_wire(result))
+      })
+    admin_routes.AdminHome ->
+      AdminGamesLoad(to_message: fn(result) {
+        admin_pages.AdminHomeMsg(admin_games_wire.loaded_from_wire(result))
+      })
+    _ -> AdminNoLoad
+  }
+}
+
+@target(erlang)
+pub fn public_load_route(route route: public_routes.Route) -> PublicLoadRoute {
+  case route {
+    public_routes.GamesId(id: _) ->
+      PublicGameDetailLoad(to_message: fn(result) {
+        public_pages.GamesIdMsg(public_game_detail_wire.loaded_from_wire(result))
+      })
+    public_routes.Games ->
+      PublicGamesLoad(to_message: fn(result) {
+        public_pages.GamesMsg(public_games_wire.loaded_from_wire(result))
+      })
+    public_routes.Home ->
+      PublicGamesLoad(to_message: fn(result) {
+        public_pages.HomeMsg(public_games_wire.loaded_from_wire(result))
+      })
+    public_routes.Standings ->
+      PublicStandingsLoad(to_message: fn(result) {
+        public_pages.StandingsMsg(public_standings_wire.loaded_from_wire(result))
+      })
+    public_routes.TeamsSlug(slug: _) ->
+      PublicTeamDetailLoad(to_message: fn(result) {
+        public_pages.TeamsSlugMsg(public_team_detail_wire.loaded_from_wire(
+          result,
+        ))
+      })
+    _ -> PublicNoLoad
+  }
+}
+
+@target(erlang)
 pub type AdminLoadHandlers {
   AdminLoadHandlers(
     admin_games_load: fn(admin_routes.Route) ->
@@ -90,14 +134,13 @@ pub fn admin_boot_page(
   page_context page_context: PageContext,
   query_params query_params: admin_page_input.QueryParams,
   route route: admin_routes.Route,
-  select_load select_load: fn(admin_routes.Route) -> AdminLoadRoute,
   handlers handlers: AdminLoadHandlers,
   update_page update_page: fn(admin_pages.Page, admin_pages.Message) ->
     #(admin_pages.Page, Effect(admin_pages.Message)),
 ) -> #(admin_pages.Page, List(String)) {
   let page = admin_pages.load_sync(page_context, query_params, route)
 
-  case select_load(route) {
+  case admin_load_route(route) {
     AdminNoLoad -> #(page, [])
     AdminGamesLoad(to_message:) -> {
       let result = handlers.admin_games_load(route)
@@ -117,14 +160,13 @@ pub fn public_boot_page(
   page_context page_context: PageContext,
   query_params query_params: public_page_input.QueryParams,
   route route: public_routes.Route,
-  select_load select_load: fn(public_routes.Route) -> PublicLoadRoute,
   handlers handlers: PublicLoadHandlers,
   update_page update_page: fn(public_pages.Page, public_pages.Message) ->
     #(public_pages.Page, Effect(public_pages.Message)),
 ) -> #(public_pages.Page, List(String)) {
   let page = public_pages.load_sync(page_context, query_params, route)
 
-  case select_load(route) {
+  case public_load_route(route) {
     PublicNoLoad -> #(page, [])
     PublicGameDetailLoad(to_message:) -> {
       let result = case route {
