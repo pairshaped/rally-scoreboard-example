@@ -29,20 +29,20 @@ This should enforce the chase rule: wire-crossing types may reference page-local
 
 ## Acceptance criteria
 
-- [ ] Invalid wire type references fail with a clear diagnostic.
+- [x] Invalid wire type references fail with a clear diagnostic.
 - [ ] Invalid imports across client/server boundaries fail with a clear diagnostic.
-- [ ] Diagnostics identify the contract, offending type/import, and how Rally reached it.
-- [ ] Valid page-local types, primitives, containers, and approved shared wire types pass.
-- [ ] Tests cover at least one transitive violation.
+- [x] Diagnostics identify the contract, offending type/import, and how Rally reached it.
+- [x] Valid page-local types, primitives, containers, and approved shared wire types pass.
+- [x] Tests cover at least one transitive violation.
 
 ## Progress
 
 - Added the first Rally diagnostic slice for direct type references in Rally-managed `ServerMsg`, `LoadResult`, and page-owned `GameUpdate` contracts.
 - The diagnostic reports the contract, field path, and offending type reference.
 - Valid page-local types, primitives, containers, `src/wire/**`, and `src/broadcasts.gleam` references are allowed.
+- Extended the check to walk referenced page-local and shared wire type definitions transitively, with the reference path included in the diagnostic.
 
 Still open:
 
-- Walk transitive type definitions.
 - Diagnose invalid imports that cross client/server boundaries.
-- Add negative tests for query row, display helper, and target-specific import leaks.
+- Add negative tests for query row and target-specific import leaks.
