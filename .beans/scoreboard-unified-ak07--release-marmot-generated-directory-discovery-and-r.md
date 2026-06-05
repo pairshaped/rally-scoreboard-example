@@ -1,7 +1,7 @@
 ---
 # scoreboard-unified-ak07
 title: Release Marmot generated-directory discovery and remove the path dependency
-status: todo
+status: done
 type: task
 priority: normal
 tags:
@@ -9,7 +9,7 @@ tags:
     - chase
     - sql
 created_at: 2026-06-04T03:38:31Z
-updated_at: 2026-06-04T03:38:31Z
+updated_at: 2026-06-05T01:25:00Z
 parent: scoreboard-unified-wm8p
 ---
 
@@ -29,12 +29,28 @@ Authored SQL should remain colocated beside owning pages/workflows in local `sql
 
 ## Acceptance criteria
 
-- [ ] Scoreboard no longer relies on an uncommitted local Marmot scanner fix.
-- [ ] `gleam run -m marmot` does not scan or warn about `src/generated/sql`.
-- [ ] Authored SQL remains colocated beside owning pages/workflows.
-- [ ] Generated SQL modules remain under generated SQL output.
-- [ ] Dependency and manifest changes are committed.
+- [x] Scoreboard no longer relies on an uncommitted local Marmot scanner fix.
+- [x] `gleam run -m marmot` does not scan or warn about `src/generated/sql`.
+- [x] Authored SQL remains colocated beside owning pages/workflows.
+- [x] Generated SQL modules remain under generated SQL output.
+- [x] Dependency and manifest changes are committed.
 
 ## Blocked by
 
 None - can start immediately.
+
+## Progress
+
+Moved Scoreboard's dev dependency from `marmot = { path = "../marmot" }` to released `marmot >= 1.7.1 and < 2.0.0`. `gleam run -m marmot` with the released dependency writes the five expected generated SQL modules and does not scan or warn about `src/generated/sql`.
+
+`manifest.toml` is ignored by this repo, so the committed dependency change is `gleam.toml`; the local ignored manifest resolves Marmot from Hex at 1.7.1.
+
+Validated with:
+
+• gleam run -m marmot
+• gleam build --target erlang
+• gleam build --target javascript
+• TEMP=/home/daverapin/projects/gleam/rally-scoreboard-example/tmp gleam test --target erlang
+• node test/boundary_guard_test.mjs
+• node test/ws_result_smoke.mjs
+• npm run test:browser

@@ -17,7 +17,7 @@ rally = { path = "../rally-gleam" }
 gleeunit = ">= 1.0.0 and < 2.0.0"
 birdie = ">= 2.0.0 and < 3.0.0"
 glinter = ">= 2.19.0 and < 3.0.0"
-marmot = { path = "../marmot" }
+marmot = ">= 1.7.1 and < 2.0.0"
 proute = { path = "../proute" }
 simplifile = ">= 2.4.0 and < 3.0.0"
 
