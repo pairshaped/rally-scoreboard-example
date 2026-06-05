@@ -8,40 +8,48 @@ import generated/rally/result as wire_result
 @target(erlang)
 import generated/rally/server_ssr
 @target(javascript)
-import gleam/list
+import gleam/int
 import lustre/effect.{type Effect}
 import public/pages/games as games_page
 import public/pages/games/id_ as games_id_page
-@target(javascript)
-import public/pages/games/id_/wire as public_game_detail_wire
-@target(javascript)
-import public/pages/games/wire as public_games_wire
 import public/pages/standings as standings_page
-@target(javascript)
-import public/pages/standings/wire as public_standings_wire
 import public/pages/teams/slug_ as teams_slug_page
-@target(javascript)
-import public/pages/teams/slug_/wire as public_team_detail_wire
 
 @target(javascript)
 pub fn load_route(route: routes.Route) -> browser_app.PublicLoadRoute {
   case route {
     routes.Home | routes.Games ->
-      browser_app.PublicGamesLoad(to_message: fn(result) {
-        public_games_load_result_message(route, result)
-      })
-    routes.GamesId(_) ->
-      browser_app.PublicGameDetailLoad(to_message: fn(result) {
-        public_game_detail_load_result_message(route, result)
-      })
+      browser_app.PublicGamesLoad(
+        message: games_page.PublicGamesLoad,
+        to_message: fn(result) {
+          public_games_load_result_message(route, result)
+        },
+      )
+    routes.GamesId(game_id) ->
+      case int.parse(game_id) {
+        Ok(game_id) ->
+          browser_app.PublicGameDetailLoad(
+            message: games_id_page.PublicGameDetailLoad(game_id:),
+            to_message: fn(result) {
+              public_game_detail_load_result_message(route, result)
+            },
+          )
+        Error(Nil) -> browser_app.PublicNoLoad
+      }
     routes.Standings ->
-      browser_app.PublicStandingsLoad(to_message: fn(result) {
-        public_standings_load_result_message(route, result)
-      })
-    routes.TeamsSlug(_) ->
-      browser_app.PublicTeamDetailLoad(to_message: fn(result) {
-        public_team_detail_load_result_message(route, result)
-      })
+      browser_app.PublicStandingsLoad(
+        message: standings_page.PublicStandingsLoad,
+        to_message: fn(result) {
+          public_standings_load_result_message(route, result)
+        },
+      )
+    routes.TeamsSlug(slug) ->
+      browser_app.PublicTeamDetailLoad(
+        message: teams_slug_page.PublicTeamDetailLoad(slug:),
+        to_message: fn(result) {
+          public_team_detail_load_result_message(route, result)
+        },
+      )
     routes.SignIn | routes.NotFound -> browser_app.PublicNoLoad
   }
 }
@@ -76,17 +84,13 @@ pub fn ssr_load_route(route: routes.Route) -> server_ssr.PublicLoadRoute {
 @target(javascript)
 pub fn public_games_load_result_message(
   route: routes.Route,
-  result: Result(public_games_wire.LoadResult, List(wire_result.ApiLoadError)),
+  result: Result(games_page.LoadResult, List(wire_result.ApiLoadError)),
 ) -> pages.Message {
   case route, result {
-    routes.Home, Ok(public_games_wire.PublicGamesLoaded(games)) ->
-      pages.HomeMsg(
-        games_page.Loaded(Ok(list.map(games, games_page.from_wire_summary))),
-      )
-    routes.Games, Ok(public_games_wire.PublicGamesLoaded(games)) ->
-      pages.GamesMsg(
-        games_page.Loaded(Ok(list.map(games, games_page.from_wire_summary))),
-      )
+    routes.Home, Ok(games_page.PublicGamesLoaded(games)) ->
+      pages.HomeMsg(games_page.Loaded(Ok(games)))
+    routes.Games, Ok(games_page.PublicGamesLoaded(games)) ->
+      pages.GamesMsg(games_page.Loaded(Ok(games)))
     _, Error(errors) -> load_error_message(route, api_load_error(errors))
     _, Ok(_) -> load_error_message(route, "Unexpected public games response.")
   }
@@ -95,17 +99,11 @@ pub fn public_games_load_result_message(
 @target(javascript)
 pub fn public_game_detail_load_result_message(
   route: routes.Route,
-  result: Result(
-    public_game_detail_wire.LoadResult,
-    List(wire_result.ApiLoadError),
-  ),
+  result: Result(games_id_page.LoadResult, List(wire_result.ApiLoadError)),
 ) -> pages.Message {
   case route, result {
-    routes.GamesId(_), Ok(public_game_detail_wire.PublicGameDetailLoaded(game))
-    ->
-      pages.GamesIdMsg(
-        games_id_page.Loaded(Ok(games_id_page.from_wire_detail(game))),
-      )
+    routes.GamesId(_), Ok(games_id_page.PublicGameDetailLoaded(game)) ->
+      pages.GamesIdMsg(games_id_page.Loaded(Ok(game)))
     _, Error(errors) -> load_error_message(route, api_load_error(errors))
     _, Ok(_) -> load_error_message(route, "Unexpected game response.")
   }
@@ -114,18 +112,11 @@ pub fn public_game_detail_load_result_message(
 @target(javascript)
 pub fn public_standings_load_result_message(
   route: routes.Route,
-  result: Result(
-    public_standings_wire.LoadResult,
-    List(wire_result.ApiLoadError),
-  ),
+  result: Result(standings_page.LoadResult, List(wire_result.ApiLoadError)),
 ) -> pages.Message {
   case route, result {
-    routes.Standings, Ok(public_standings_wire.PublicStandingsLoaded(games)) ->
-      pages.StandingsMsg(
-        standings_page.Loaded(
-          Ok(list.map(games, standings_page.from_wire_summary)),
-        ),
-      )
+    routes.Standings, Ok(standings_page.PublicStandingsLoaded(games)) ->
+      pages.StandingsMsg(standings_page.Loaded(Ok(games)))
     _, Error(errors) -> load_error_message(route, api_load_error(errors))
     _, Ok(_) -> load_error_message(route, "Unexpected standings response.")
   }
@@ -134,18 +125,11 @@ pub fn public_standings_load_result_message(
 @target(javascript)
 pub fn public_team_detail_load_result_message(
   route: routes.Route,
-  result: Result(
-    public_team_detail_wire.LoadResult,
-    List(wire_result.ApiLoadError),
-  ),
+  result: Result(teams_slug_page.LoadResult, List(wire_result.ApiLoadError)),
 ) -> pages.Message {
   case route, result {
-    routes.TeamsSlug(_),
-      Ok(public_team_detail_wire.PublicTeamDetailLoaded(team))
-    ->
-      pages.TeamsSlugMsg(
-        teams_slug_page.Loaded(Ok(teams_slug_page.from_wire_detail(team))),
-      )
+    routes.TeamsSlug(_), Ok(teams_slug_page.PublicTeamDetailLoaded(team)) ->
+      pages.TeamsSlugMsg(teams_slug_page.Loaded(Ok(team)))
     _, Error(errors) -> load_error_message(route, api_load_error(errors))
     _, Ok(_) -> load_error_message(route, "Unexpected team response.")
   }

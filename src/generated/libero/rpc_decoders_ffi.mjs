@@ -10,10 +10,10 @@ import { registerAtomDecoder } from "../../../libero/libero/etf/wire_ffi.mjs";
 import * as _m_generated_libero_dispatch from "./dispatch.mjs";
 import * as _m_broadcasts from "../../../scoreboard_unified/broadcasts.mjs";
 import * as _m_admin_pages_games from "../../../scoreboard_unified/admin/pages/games.mjs";
-import * as _m_public_pages_games_id__wire from "../../../scoreboard_unified/public/pages/games/id_/wire.mjs";
-import * as _m_public_pages_games_wire from "../../../scoreboard_unified/public/pages/games/wire.mjs";
-import * as _m_public_pages_standings_wire from "../../../scoreboard_unified/public/pages/standings/wire.mjs";
-import * as _m_public_pages_teams_slug__wire from "../../../scoreboard_unified/public/pages/teams/slug_/wire.mjs";
+import * as _m_public_pages_games_id_ from "../../../scoreboard_unified/public/pages/games/id_.mjs";
+import * as _m_public_pages_games from "../../../scoreboard_unified/public/pages/games.mjs";
+import * as _m_public_pages_standings from "../../../scoreboard_unified/public/pages/standings.mjs";
+import * as _m_public_pages_teams_slug_ from "../../../scoreboard_unified/public/pages/teams/slug_.mjs";
 
 export function decode_broadcasts_event(term) {
   if (!Array.isArray(term) || term.length !== 2 || term[0] !== "10a502b9f6") throw new DecodeError("expected 10a502b9f6 (BroadcastGameUpdated @ broadcasts), got " + (Array.isArray(term) ? String(term[0]) : typeof term));
@@ -126,175 +126,175 @@ export function decode_admin_pages_games_game_update(term) {
   );
 }
 
-export function decode_public_pages_games_id__wire_server_msg(term) {
-  if (!Array.isArray(term) || term.length !== 2 || term[0] !== "aba9f55edb") throw new DecodeError("expected aba9f55edb (PublicGameDetailLoad @ public/pages/games/id_/wire), got " + (Array.isArray(term) ? String(term[0]) : typeof term));
-  return new _m_public_pages_games_id__wire.PublicGameDetailLoad(
+export function decode_public_pages_games_id__server_msg(term) {
+  if (!Array.isArray(term) || term.length !== 2 || term[0] !== "a285907ff6") throw new DecodeError("expected a285907ff6 (PublicGameDetailLoad @ public/pages/games/id_), got " + (Array.isArray(term) ? String(term[0]) : typeof term));
+  return new _m_public_pages_games_id_.PublicGameDetailLoad(
     decode_int(term[1])
   );
 }
 
-export function decode_public_pages_games_id__wire_load_result(term) {
-  if (!Array.isArray(term) || term.length !== 2 || term[0] !== "f0227706ed") throw new DecodeError("expected f0227706ed (PublicGameDetailLoaded @ public/pages/games/id_/wire), got " + (Array.isArray(term) ? String(term[0]) : typeof term));
-  return new _m_public_pages_games_id__wire.PublicGameDetailLoaded(
-    decode_public_pages_games_id__wire_game_detail(term[1])
+export function decode_public_pages_games_id__load_result(term) {
+  if (!Array.isArray(term) || term.length !== 2 || term[0] !== "adfc3bb196") throw new DecodeError("expected adfc3bb196 (PublicGameDetailLoaded @ public/pages/games/id_), got " + (Array.isArray(term) ? String(term[0]) : typeof term));
+  return new _m_public_pages_games_id_.PublicGameDetailLoaded(
+    decode_public_pages_games_id__game_detail(term[1])
   );
 }
 
-export function decode_public_pages_games_id__wire_game_detail(term) {
-  if (!Array.isArray(term) || term.length !== 7 || term[0] !== "fe07310a28") throw new DecodeError("expected fe07310a28 (PublicGameDetailGameDetail @ public/pages/games/id_/wire), got " + (Array.isArray(term) ? String(term[0]) : typeof term));
-  return new _m_public_pages_games_id__wire.PublicGameDetailGameDetail(
+export function decode_public_pages_games_id__game_detail(term) {
+  if (!Array.isArray(term) || term.length !== 7 || term[0] !== "2978a54100") throw new DecodeError("expected 2978a54100 (GameDetail @ public/pages/games/id_), got " + (Array.isArray(term) ? String(term[0]) : typeof term));
+  return new _m_public_pages_games_id_.GameDetail(
     decode_int(term[1]),
-    decode_public_pages_games_id__wire_team(term[2]),
-    decode_public_pages_games_id__wire_team(term[3]),
+    decode_public_pages_games_id__team(term[2]),
+    decode_public_pages_games_id__team(term[3]),
     decode_int(term[4]),
     decode_int(term[5]),
-    decode_public_pages_games_id__wire_game_status(term[6])
+    decode_public_pages_games_id__game_status(term[6])
   );
 }
 
-export function decode_public_pages_games_id__wire_game_status(term) {
+export function decode_public_pages_games_id__game_status(term) {
   const tag = Array.isArray(term) ? term[0] : term;
   switch (tag) {
-    case "068b97d9ae": // PublicGameDetailScheduled @ public/pages/games/id_/wire
-      if (Array.isArray(term) && term.length !== 1) throw new DecodeError("expected 068b97d9ae arity 1, got " + term.length);
-      return new _m_public_pages_games_id__wire.PublicGameDetailScheduled();
-    case "e5dc046a4a": // PublicGameDetailLive @ public/pages/games/id_/wire
-      if (!Array.isArray(term) || term.length !== 2) throw new DecodeError("expected e5dc046a4a arity 2, got " + (Array.isArray(term) ? term.length : typeof term));
-      return new _m_public_pages_games_id__wire.PublicGameDetailLive(decode_string(term[1]));
-    case "c46ef5198e": // PublicGameDetailFinal @ public/pages/games/id_/wire
-      if (Array.isArray(term) && term.length !== 1) throw new DecodeError("expected c46ef5198e arity 1, got " + term.length);
-      return new _m_public_pages_games_id__wire.PublicGameDetailFinal();
+    case "c333a9a563": // Scheduled @ public/pages/games/id_
+      if (Array.isArray(term) && term.length !== 1) throw new DecodeError("expected c333a9a563 arity 1, got " + term.length);
+      return new _m_public_pages_games_id_.Scheduled();
+    case "c3d9709266": // Live @ public/pages/games/id_
+      if (!Array.isArray(term) || term.length !== 2) throw new DecodeError("expected c3d9709266 arity 2, got " + (Array.isArray(term) ? term.length : typeof term));
+      return new _m_public_pages_games_id_.Live(decode_string(term[1]));
+    case "ff28c60e94": // Final @ public/pages/games/id_
+      if (Array.isArray(term) && term.length !== 1) throw new DecodeError("expected ff28c60e94 arity 1, got " + term.length);
+      return new _m_public_pages_games_id_.Final();
     default:
       throw new DecodeError("unknown variant atom: " + String(tag));
   }
 }
 
-export function decode_public_pages_games_id__wire_team(term) {
-  if (!Array.isArray(term) || term.length !== 4 || term[0] !== "855e438e11") throw new DecodeError("expected 855e438e11 (PublicGameDetailTeam @ public/pages/games/id_/wire), got " + (Array.isArray(term) ? String(term[0]) : typeof term));
-  return new _m_public_pages_games_id__wire.PublicGameDetailTeam(
+export function decode_public_pages_games_id__team(term) {
+  if (!Array.isArray(term) || term.length !== 4 || term[0] !== "fa9f119e79") throw new DecodeError("expected fa9f119e79 (Team @ public/pages/games/id_), got " + (Array.isArray(term) ? String(term[0]) : typeof term));
+  return new _m_public_pages_games_id_.Team(
     decode_string(term[1]),
     decode_string(term[2]),
     decode_string(term[3])
   );
 }
 
-export function decode_public_pages_games_wire_server_msg(term) {
-  if (term === "670543b335") return new _m_public_pages_games_wire.PublicGamesLoad(); // PublicGamesLoad @ public/pages/games/wire
+export function decode_public_pages_games_server_msg(term) {
+  if (term === "4b89a8dc50") return new _m_public_pages_games.PublicGamesLoad(); // PublicGamesLoad @ public/pages/games
   throw new DecodeError("unknown variant atom: " + String(term));
 }
 
-export function decode_public_pages_games_wire_load_result(term) {
-  if (!Array.isArray(term) || term.length !== 2 || term[0] !== "c45d4203f2") throw new DecodeError("expected c45d4203f2 (PublicGamesLoaded @ public/pages/games/wire), got " + (Array.isArray(term) ? String(term[0]) : typeof term));
-  return new _m_public_pages_games_wire.PublicGamesLoaded(
-    decode_list_of((t0) => decode_public_pages_games_wire_game_summary(t0), term[1])
+export function decode_public_pages_games_load_result(term) {
+  if (!Array.isArray(term) || term.length !== 2 || term[0] !== "87dc6b9f9a") throw new DecodeError("expected 87dc6b9f9a (PublicGamesLoaded @ public/pages/games), got " + (Array.isArray(term) ? String(term[0]) : typeof term));
+  return new _m_public_pages_games.PublicGamesLoaded(
+    decode_list_of((t0) => decode_public_pages_games_game_summary(t0), term[1])
   );
 }
 
-export function decode_public_pages_games_wire_game_summary(term) {
-  if (!Array.isArray(term) || term.length !== 7 || term[0] !== "d2d09f257a") throw new DecodeError("expected d2d09f257a (PublicGamesGameSummary @ public/pages/games/wire), got " + (Array.isArray(term) ? String(term[0]) : typeof term));
-  return new _m_public_pages_games_wire.PublicGamesGameSummary(
+export function decode_public_pages_games_game_summary(term) {
+  if (!Array.isArray(term) || term.length !== 7 || term[0] !== "85052aa8ec") throw new DecodeError("expected 85052aa8ec (GameSummary @ public/pages/games), got " + (Array.isArray(term) ? String(term[0]) : typeof term));
+  return new _m_public_pages_games.GameSummary(
     decode_int(term[1]),
-    decode_public_pages_games_wire_team(term[2]),
-    decode_public_pages_games_wire_team(term[3]),
+    decode_public_pages_games_team(term[2]),
+    decode_public_pages_games_team(term[3]),
     decode_int(term[4]),
     decode_int(term[5]),
-    decode_public_pages_games_wire_game_status(term[6])
+    decode_public_pages_games_game_status(term[6])
   );
 }
 
-export function decode_public_pages_games_wire_game_status(term) {
+export function decode_public_pages_games_game_status(term) {
   const tag = Array.isArray(term) ? term[0] : term;
   switch (tag) {
-    case "ce9f4265f3": // PublicGamesScheduled @ public/pages/games/wire
-      if (Array.isArray(term) && term.length !== 1) throw new DecodeError("expected ce9f4265f3 arity 1, got " + term.length);
-      return new _m_public_pages_games_wire.PublicGamesScheduled();
-    case "9452498ffb": // PublicGamesLive @ public/pages/games/wire
-      if (!Array.isArray(term) || term.length !== 2) throw new DecodeError("expected 9452498ffb arity 2, got " + (Array.isArray(term) ? term.length : typeof term));
-      return new _m_public_pages_games_wire.PublicGamesLive(decode_string(term[1]));
-    case "58de046fb2": // PublicGamesFinal @ public/pages/games/wire
-      if (Array.isArray(term) && term.length !== 1) throw new DecodeError("expected 58de046fb2 arity 1, got " + term.length);
-      return new _m_public_pages_games_wire.PublicGamesFinal();
+    case "f3de5cfa12": // Scheduled @ public/pages/games
+      if (Array.isArray(term) && term.length !== 1) throw new DecodeError("expected f3de5cfa12 arity 1, got " + term.length);
+      return new _m_public_pages_games.Scheduled();
+    case "9fc19a5e7d": // Live @ public/pages/games
+      if (!Array.isArray(term) || term.length !== 2) throw new DecodeError("expected 9fc19a5e7d arity 2, got " + (Array.isArray(term) ? term.length : typeof term));
+      return new _m_public_pages_games.Live(decode_string(term[1]));
+    case "72c225386c": // Final @ public/pages/games
+      if (Array.isArray(term) && term.length !== 1) throw new DecodeError("expected 72c225386c arity 1, got " + term.length);
+      return new _m_public_pages_games.Final();
     default:
       throw new DecodeError("unknown variant atom: " + String(tag));
   }
 }
 
-export function decode_public_pages_games_wire_team(term) {
-  if (!Array.isArray(term) || term.length !== 4 || term[0] !== "621836eae2") throw new DecodeError("expected 621836eae2 (PublicGamesTeam @ public/pages/games/wire), got " + (Array.isArray(term) ? String(term[0]) : typeof term));
-  return new _m_public_pages_games_wire.PublicGamesTeam(
+export function decode_public_pages_games_team(term) {
+  if (!Array.isArray(term) || term.length !== 4 || term[0] !== "977fa41cd1") throw new DecodeError("expected 977fa41cd1 (Team @ public/pages/games), got " + (Array.isArray(term) ? String(term[0]) : typeof term));
+  return new _m_public_pages_games.Team(
     decode_string(term[1]),
     decode_string(term[2]),
     decode_string(term[3])
   );
 }
 
-export function decode_public_pages_standings_wire_server_msg(term) {
-  if (term === "4d44732914") return new _m_public_pages_standings_wire.PublicStandingsLoad(); // PublicStandingsLoad @ public/pages/standings/wire
+export function decode_public_pages_standings_server_msg(term) {
+  if (term === "8e6db035a7") return new _m_public_pages_standings.PublicStandingsLoad(); // PublicStandingsLoad @ public/pages/standings
   throw new DecodeError("unknown variant atom: " + String(term));
 }
 
-export function decode_public_pages_standings_wire_load_result(term) {
-  if (!Array.isArray(term) || term.length !== 2 || term[0] !== "a7d83e5c3b") throw new DecodeError("expected a7d83e5c3b (PublicStandingsLoaded @ public/pages/standings/wire), got " + (Array.isArray(term) ? String(term[0]) : typeof term));
-  return new _m_public_pages_standings_wire.PublicStandingsLoaded(
-    decode_list_of((t0) => decode_public_pages_standings_wire_game_summary(t0), term[1])
+export function decode_public_pages_standings_load_result(term) {
+  if (!Array.isArray(term) || term.length !== 2 || term[0] !== "3e3c283ed5") throw new DecodeError("expected 3e3c283ed5 (PublicStandingsLoaded @ public/pages/standings), got " + (Array.isArray(term) ? String(term[0]) : typeof term));
+  return new _m_public_pages_standings.PublicStandingsLoaded(
+    decode_list_of((t0) => decode_public_pages_standings_game_summary(t0), term[1])
   );
 }
 
-export function decode_public_pages_standings_wire_game_summary(term) {
-  if (!Array.isArray(term) || term.length !== 7 || term[0] !== "9b7caa6767") throw new DecodeError("expected 9b7caa6767 (PublicStandingsGameSummary @ public/pages/standings/wire), got " + (Array.isArray(term) ? String(term[0]) : typeof term));
-  return new _m_public_pages_standings_wire.PublicStandingsGameSummary(
+export function decode_public_pages_standings_game_summary(term) {
+  if (!Array.isArray(term) || term.length !== 7 || term[0] !== "1af8440324") throw new DecodeError("expected 1af8440324 (GameSummary @ public/pages/standings), got " + (Array.isArray(term) ? String(term[0]) : typeof term));
+  return new _m_public_pages_standings.GameSummary(
     decode_int(term[1]),
-    decode_public_pages_standings_wire_team(term[2]),
-    decode_public_pages_standings_wire_team(term[3]),
+    decode_public_pages_standings_team(term[2]),
+    decode_public_pages_standings_team(term[3]),
     decode_int(term[4]),
     decode_int(term[5]),
-    decode_public_pages_standings_wire_game_status(term[6])
+    decode_public_pages_standings_game_status(term[6])
   );
 }
 
-export function decode_public_pages_standings_wire_game_status(term) {
+export function decode_public_pages_standings_game_status(term) {
   const tag = Array.isArray(term) ? term[0] : term;
   switch (tag) {
-    case "de69dd54a9": // PublicStandingsScheduled @ public/pages/standings/wire
-      if (Array.isArray(term) && term.length !== 1) throw new DecodeError("expected de69dd54a9 arity 1, got " + term.length);
-      return new _m_public_pages_standings_wire.PublicStandingsScheduled();
-    case "66ea920688": // PublicStandingsLive @ public/pages/standings/wire
-      if (!Array.isArray(term) || term.length !== 2) throw new DecodeError("expected 66ea920688 arity 2, got " + (Array.isArray(term) ? term.length : typeof term));
-      return new _m_public_pages_standings_wire.PublicStandingsLive(decode_string(term[1]));
-    case "a49bdfb3da": // PublicStandingsFinal @ public/pages/standings/wire
-      if (Array.isArray(term) && term.length !== 1) throw new DecodeError("expected a49bdfb3da arity 1, got " + term.length);
-      return new _m_public_pages_standings_wire.PublicStandingsFinal();
+    case "d6ca0027f2": // Scheduled @ public/pages/standings
+      if (Array.isArray(term) && term.length !== 1) throw new DecodeError("expected d6ca0027f2 arity 1, got " + term.length);
+      return new _m_public_pages_standings.Scheduled();
+    case "afe06326fa": // Live @ public/pages/standings
+      if (!Array.isArray(term) || term.length !== 2) throw new DecodeError("expected afe06326fa arity 2, got " + (Array.isArray(term) ? term.length : typeof term));
+      return new _m_public_pages_standings.Live(decode_string(term[1]));
+    case "cf4683279a": // Final @ public/pages/standings
+      if (Array.isArray(term) && term.length !== 1) throw new DecodeError("expected cf4683279a arity 1, got " + term.length);
+      return new _m_public_pages_standings.Final();
     default:
       throw new DecodeError("unknown variant atom: " + String(tag));
   }
 }
 
-export function decode_public_pages_standings_wire_team(term) {
-  if (!Array.isArray(term) || term.length !== 4 || term[0] !== "83b1df5576") throw new DecodeError("expected 83b1df5576 (PublicStandingsTeam @ public/pages/standings/wire), got " + (Array.isArray(term) ? String(term[0]) : typeof term));
-  return new _m_public_pages_standings_wire.PublicStandingsTeam(
+export function decode_public_pages_standings_team(term) {
+  if (!Array.isArray(term) || term.length !== 4 || term[0] !== "b8ce4654cf") throw new DecodeError("expected b8ce4654cf (Team @ public/pages/standings), got " + (Array.isArray(term) ? String(term[0]) : typeof term));
+  return new _m_public_pages_standings.Team(
     decode_string(term[1]),
     decode_string(term[2]),
     decode_string(term[3])
   );
 }
 
-export function decode_public_pages_teams_slug__wire_server_msg(term) {
-  if (!Array.isArray(term) || term.length !== 2 || term[0] !== "9860eebd2d") throw new DecodeError("expected 9860eebd2d (PublicTeamDetailLoad @ public/pages/teams/slug_/wire), got " + (Array.isArray(term) ? String(term[0]) : typeof term));
-  return new _m_public_pages_teams_slug__wire.PublicTeamDetailLoad(
+export function decode_public_pages_teams_slug__server_msg(term) {
+  if (!Array.isArray(term) || term.length !== 2 || term[0] !== "27cb5f3d1d") throw new DecodeError("expected 27cb5f3d1d (PublicTeamDetailLoad @ public/pages/teams/slug_), got " + (Array.isArray(term) ? String(term[0]) : typeof term));
+  return new _m_public_pages_teams_slug_.PublicTeamDetailLoad(
     decode_string(term[1])
   );
 }
 
-export function decode_public_pages_teams_slug__wire_load_result(term) {
-  if (!Array.isArray(term) || term.length !== 2 || term[0] !== "2542f533b6") throw new DecodeError("expected 2542f533b6 (PublicTeamDetailLoaded @ public/pages/teams/slug_/wire), got " + (Array.isArray(term) ? String(term[0]) : typeof term));
-  return new _m_public_pages_teams_slug__wire.PublicTeamDetailLoaded(
-    decode_public_pages_teams_slug__wire_team_detail(term[1])
+export function decode_public_pages_teams_slug__load_result(term) {
+  if (!Array.isArray(term) || term.length !== 2 || term[0] !== "f98530e952") throw new DecodeError("expected f98530e952 (PublicTeamDetailLoaded @ public/pages/teams/slug_), got " + (Array.isArray(term) ? String(term[0]) : typeof term));
+  return new _m_public_pages_teams_slug_.PublicTeamDetailLoaded(
+    decode_public_pages_teams_slug__team_detail(term[1])
   );
 }
 
-export function decode_public_pages_teams_slug__wire_team_detail(term) {
-  if (!Array.isArray(term) || term.length !== 9 || term[0] !== "53d46e9b9f") throw new DecodeError("expected 53d46e9b9f (PublicTeamDetailTeamDetail @ public/pages/teams/slug_/wire), got " + (Array.isArray(term) ? String(term[0]) : typeof term));
-  return new _m_public_pages_teams_slug__wire.PublicTeamDetailTeamDetail(
+export function decode_public_pages_teams_slug__team_detail(term) {
+  if (!Array.isArray(term) || term.length !== 9 || term[0] !== "6fad534c30") throw new DecodeError("expected 6fad534c30 (TeamDetail @ public/pages/teams/slug_), got " + (Array.isArray(term) ? String(term[0]) : typeof term));
+  return new _m_public_pages_teams_slug_.TeamDetail(
     decode_string(term[1]),
     decode_string(term[2]),
     decode_string(term[3]),
@@ -302,42 +302,42 @@ export function decode_public_pages_teams_slug__wire_team_detail(term) {
     decode_int(term[5]),
     decode_int(term[6]),
     decode_int(term[7]),
-    decode_list_of((t0) => decode_public_pages_teams_slug__wire_game_summary(t0), term[8])
+    decode_list_of((t0) => decode_public_pages_teams_slug__game_summary(t0), term[8])
   );
 }
 
-export function decode_public_pages_teams_slug__wire_game_summary(term) {
-  if (!Array.isArray(term) || term.length !== 7 || term[0] !== "1139d71d23") throw new DecodeError("expected 1139d71d23 (PublicTeamDetailGameSummary @ public/pages/teams/slug_/wire), got " + (Array.isArray(term) ? String(term[0]) : typeof term));
-  return new _m_public_pages_teams_slug__wire.PublicTeamDetailGameSummary(
+export function decode_public_pages_teams_slug__game_summary(term) {
+  if (!Array.isArray(term) || term.length !== 7 || term[0] !== "cd7ae58b19") throw new DecodeError("expected cd7ae58b19 (GameSummary @ public/pages/teams/slug_), got " + (Array.isArray(term) ? String(term[0]) : typeof term));
+  return new _m_public_pages_teams_slug_.GameSummary(
     decode_int(term[1]),
-    decode_public_pages_teams_slug__wire_team(term[2]),
-    decode_public_pages_teams_slug__wire_team(term[3]),
+    decode_public_pages_teams_slug__team(term[2]),
+    decode_public_pages_teams_slug__team(term[3]),
     decode_int(term[4]),
     decode_int(term[5]),
-    decode_public_pages_teams_slug__wire_game_status(term[6])
+    decode_public_pages_teams_slug__game_status(term[6])
   );
 }
 
-export function decode_public_pages_teams_slug__wire_game_status(term) {
+export function decode_public_pages_teams_slug__game_status(term) {
   const tag = Array.isArray(term) ? term[0] : term;
   switch (tag) {
-    case "4ac5f8cdbc": // PublicTeamDetailScheduled @ public/pages/teams/slug_/wire
-      if (Array.isArray(term) && term.length !== 1) throw new DecodeError("expected 4ac5f8cdbc arity 1, got " + term.length);
-      return new _m_public_pages_teams_slug__wire.PublicTeamDetailScheduled();
-    case "3fa1eb1b1e": // PublicTeamDetailLive @ public/pages/teams/slug_/wire
-      if (!Array.isArray(term) || term.length !== 2) throw new DecodeError("expected 3fa1eb1b1e arity 2, got " + (Array.isArray(term) ? term.length : typeof term));
-      return new _m_public_pages_teams_slug__wire.PublicTeamDetailLive(decode_string(term[1]));
-    case "3ab9fa5d55": // PublicTeamDetailFinal @ public/pages/teams/slug_/wire
-      if (Array.isArray(term) && term.length !== 1) throw new DecodeError("expected 3ab9fa5d55 arity 1, got " + term.length);
-      return new _m_public_pages_teams_slug__wire.PublicTeamDetailFinal();
+    case "556fd4dc0c": // Scheduled @ public/pages/teams/slug_
+      if (Array.isArray(term) && term.length !== 1) throw new DecodeError("expected 556fd4dc0c arity 1, got " + term.length);
+      return new _m_public_pages_teams_slug_.Scheduled();
+    case "e4445de733": // Live @ public/pages/teams/slug_
+      if (!Array.isArray(term) || term.length !== 2) throw new DecodeError("expected e4445de733 arity 2, got " + (Array.isArray(term) ? term.length : typeof term));
+      return new _m_public_pages_teams_slug_.Live(decode_string(term[1]));
+    case "daba1d88e1": // Final @ public/pages/teams/slug_
+      if (Array.isArray(term) && term.length !== 1) throw new DecodeError("expected daba1d88e1 arity 1, got " + term.length);
+      return new _m_public_pages_teams_slug_.Final();
     default:
       throw new DecodeError("unknown variant atom: " + String(tag));
   }
 }
 
-export function decode_public_pages_teams_slug__wire_team(term) {
-  if (!Array.isArray(term) || term.length !== 4 || term[0] !== "e2be8683f9") throw new DecodeError("expected e2be8683f9 (PublicTeamDetailTeam @ public/pages/teams/slug_/wire), got " + (Array.isArray(term) ? String(term[0]) : typeof term));
-  return new _m_public_pages_teams_slug__wire.PublicTeamDetailTeam(
+export function decode_public_pages_teams_slug__team(term) {
+  if (!Array.isArray(term) || term.length !== 4 || term[0] !== "0e7883b655") throw new DecodeError("expected 0e7883b655 (Team @ public/pages/teams/slug_), got " + (Array.isArray(term) ? String(term[0]) : typeof term));
+  return new _m_public_pages_teams_slug_.Team(
     decode_string(term[1]),
     decode_string(term[2]),
     decode_string(term[3])
@@ -384,64 +384,64 @@ export function ensure_decoders() {
   _m_admin_pages_games.AdminGamesFinal.__fieldTypes = [];
   _m_admin_pages_games.AdminGamesUpdate.__wireAtom = "635cfb19da";
   _m_admin_pages_games.AdminGamesUpdate.__fieldTypes = [null, null, null, null, null, null];
-  _m_public_pages_games_id__wire.PublicGameDetailLoad.__wireAtom = "aba9f55edb";
-  _m_public_pages_games_id__wire.PublicGameDetailLoad.__fieldTypes = [null];
-  _m_public_pages_games_id__wire.PublicGameDetailLoaded.__wireAtom = "f0227706ed";
-  _m_public_pages_games_id__wire.PublicGameDetailLoaded.__fieldTypes = [null];
-  _m_public_pages_games_id__wire.PublicGameDetailGameDetail.__wireAtom = "fe07310a28";
-  _m_public_pages_games_id__wire.PublicGameDetailGameDetail.__fieldTypes = [null, null, null, null, null, null];
-  _m_public_pages_games_id__wire.PublicGameDetailScheduled.__wireAtom = "068b97d9ae";
-  _m_public_pages_games_id__wire.PublicGameDetailScheduled.__fieldTypes = [];
-  _m_public_pages_games_id__wire.PublicGameDetailLive.__wireAtom = "e5dc046a4a";
-  _m_public_pages_games_id__wire.PublicGameDetailLive.__fieldTypes = [null];
-  _m_public_pages_games_id__wire.PublicGameDetailFinal.__wireAtom = "c46ef5198e";
-  _m_public_pages_games_id__wire.PublicGameDetailFinal.__fieldTypes = [];
-  _m_public_pages_games_id__wire.PublicGameDetailTeam.__wireAtom = "855e438e11";
-  _m_public_pages_games_id__wire.PublicGameDetailTeam.__fieldTypes = [null, null, null];
-  _m_public_pages_games_wire.PublicGamesLoad.__wireAtom = "670543b335";
-  _m_public_pages_games_wire.PublicGamesLoad.__fieldTypes = [];
-  _m_public_pages_games_wire.PublicGamesLoaded.__wireAtom = "c45d4203f2";
-  _m_public_pages_games_wire.PublicGamesLoaded.__fieldTypes = [{ kind: "list", element: null }];
-  _m_public_pages_games_wire.PublicGamesGameSummary.__wireAtom = "d2d09f257a";
-  _m_public_pages_games_wire.PublicGamesGameSummary.__fieldTypes = [null, null, null, null, null, null];
-  _m_public_pages_games_wire.PublicGamesScheduled.__wireAtom = "ce9f4265f3";
-  _m_public_pages_games_wire.PublicGamesScheduled.__fieldTypes = [];
-  _m_public_pages_games_wire.PublicGamesLive.__wireAtom = "9452498ffb";
-  _m_public_pages_games_wire.PublicGamesLive.__fieldTypes = [null];
-  _m_public_pages_games_wire.PublicGamesFinal.__wireAtom = "58de046fb2";
-  _m_public_pages_games_wire.PublicGamesFinal.__fieldTypes = [];
-  _m_public_pages_games_wire.PublicGamesTeam.__wireAtom = "621836eae2";
-  _m_public_pages_games_wire.PublicGamesTeam.__fieldTypes = [null, null, null];
-  _m_public_pages_standings_wire.PublicStandingsLoad.__wireAtom = "4d44732914";
-  _m_public_pages_standings_wire.PublicStandingsLoad.__fieldTypes = [];
-  _m_public_pages_standings_wire.PublicStandingsLoaded.__wireAtom = "a7d83e5c3b";
-  _m_public_pages_standings_wire.PublicStandingsLoaded.__fieldTypes = [{ kind: "list", element: null }];
-  _m_public_pages_standings_wire.PublicStandingsGameSummary.__wireAtom = "9b7caa6767";
-  _m_public_pages_standings_wire.PublicStandingsGameSummary.__fieldTypes = [null, null, null, null, null, null];
-  _m_public_pages_standings_wire.PublicStandingsScheduled.__wireAtom = "de69dd54a9";
-  _m_public_pages_standings_wire.PublicStandingsScheduled.__fieldTypes = [];
-  _m_public_pages_standings_wire.PublicStandingsLive.__wireAtom = "66ea920688";
-  _m_public_pages_standings_wire.PublicStandingsLive.__fieldTypes = [null];
-  _m_public_pages_standings_wire.PublicStandingsFinal.__wireAtom = "a49bdfb3da";
-  _m_public_pages_standings_wire.PublicStandingsFinal.__fieldTypes = [];
-  _m_public_pages_standings_wire.PublicStandingsTeam.__wireAtom = "83b1df5576";
-  _m_public_pages_standings_wire.PublicStandingsTeam.__fieldTypes = [null, null, null];
-  _m_public_pages_teams_slug__wire.PublicTeamDetailLoad.__wireAtom = "9860eebd2d";
-  _m_public_pages_teams_slug__wire.PublicTeamDetailLoad.__fieldTypes = [null];
-  _m_public_pages_teams_slug__wire.PublicTeamDetailLoaded.__wireAtom = "2542f533b6";
-  _m_public_pages_teams_slug__wire.PublicTeamDetailLoaded.__fieldTypes = [null];
-  _m_public_pages_teams_slug__wire.PublicTeamDetailTeamDetail.__wireAtom = "53d46e9b9f";
-  _m_public_pages_teams_slug__wire.PublicTeamDetailTeamDetail.__fieldTypes = [null, null, null, null, null, null, null, { kind: "list", element: null }];
-  _m_public_pages_teams_slug__wire.PublicTeamDetailGameSummary.__wireAtom = "1139d71d23";
-  _m_public_pages_teams_slug__wire.PublicTeamDetailGameSummary.__fieldTypes = [null, null, null, null, null, null];
-  _m_public_pages_teams_slug__wire.PublicTeamDetailScheduled.__wireAtom = "4ac5f8cdbc";
-  _m_public_pages_teams_slug__wire.PublicTeamDetailScheduled.__fieldTypes = [];
-  _m_public_pages_teams_slug__wire.PublicTeamDetailLive.__wireAtom = "3fa1eb1b1e";
-  _m_public_pages_teams_slug__wire.PublicTeamDetailLive.__fieldTypes = [null];
-  _m_public_pages_teams_slug__wire.PublicTeamDetailFinal.__wireAtom = "3ab9fa5d55";
-  _m_public_pages_teams_slug__wire.PublicTeamDetailFinal.__fieldTypes = [];
-  _m_public_pages_teams_slug__wire.PublicTeamDetailTeam.__wireAtom = "e2be8683f9";
-  _m_public_pages_teams_slug__wire.PublicTeamDetailTeam.__fieldTypes = [null, null, null];
+  _m_public_pages_games_id_.PublicGameDetailLoad.__wireAtom = "a285907ff6";
+  _m_public_pages_games_id_.PublicGameDetailLoad.__fieldTypes = [null];
+  _m_public_pages_games_id_.PublicGameDetailLoaded.__wireAtom = "adfc3bb196";
+  _m_public_pages_games_id_.PublicGameDetailLoaded.__fieldTypes = [null];
+  _m_public_pages_games_id_.GameDetail.__wireAtom = "2978a54100";
+  _m_public_pages_games_id_.GameDetail.__fieldTypes = [null, null, null, null, null, null];
+  _m_public_pages_games_id_.Scheduled.__wireAtom = "c333a9a563";
+  _m_public_pages_games_id_.Scheduled.__fieldTypes = [];
+  _m_public_pages_games_id_.Live.__wireAtom = "c3d9709266";
+  _m_public_pages_games_id_.Live.__fieldTypes = [null];
+  _m_public_pages_games_id_.Final.__wireAtom = "ff28c60e94";
+  _m_public_pages_games_id_.Final.__fieldTypes = [];
+  _m_public_pages_games_id_.Team.__wireAtom = "fa9f119e79";
+  _m_public_pages_games_id_.Team.__fieldTypes = [null, null, null];
+  _m_public_pages_games.PublicGamesLoad.__wireAtom = "4b89a8dc50";
+  _m_public_pages_games.PublicGamesLoad.__fieldTypes = [];
+  _m_public_pages_games.PublicGamesLoaded.__wireAtom = "87dc6b9f9a";
+  _m_public_pages_games.PublicGamesLoaded.__fieldTypes = [{ kind: "list", element: null }];
+  _m_public_pages_games.GameSummary.__wireAtom = "85052aa8ec";
+  _m_public_pages_games.GameSummary.__fieldTypes = [null, null, null, null, null, null];
+  _m_public_pages_games.Scheduled.__wireAtom = "f3de5cfa12";
+  _m_public_pages_games.Scheduled.__fieldTypes = [];
+  _m_public_pages_games.Live.__wireAtom = "9fc19a5e7d";
+  _m_public_pages_games.Live.__fieldTypes = [null];
+  _m_public_pages_games.Final.__wireAtom = "72c225386c";
+  _m_public_pages_games.Final.__fieldTypes = [];
+  _m_public_pages_games.Team.__wireAtom = "977fa41cd1";
+  _m_public_pages_games.Team.__fieldTypes = [null, null, null];
+  _m_public_pages_standings.PublicStandingsLoad.__wireAtom = "8e6db035a7";
+  _m_public_pages_standings.PublicStandingsLoad.__fieldTypes = [];
+  _m_public_pages_standings.PublicStandingsLoaded.__wireAtom = "3e3c283ed5";
+  _m_public_pages_standings.PublicStandingsLoaded.__fieldTypes = [{ kind: "list", element: null }];
+  _m_public_pages_standings.GameSummary.__wireAtom = "1af8440324";
+  _m_public_pages_standings.GameSummary.__fieldTypes = [null, null, null, null, null, null];
+  _m_public_pages_standings.Scheduled.__wireAtom = "d6ca0027f2";
+  _m_public_pages_standings.Scheduled.__fieldTypes = [];
+  _m_public_pages_standings.Live.__wireAtom = "afe06326fa";
+  _m_public_pages_standings.Live.__fieldTypes = [null];
+  _m_public_pages_standings.Final.__wireAtom = "cf4683279a";
+  _m_public_pages_standings.Final.__fieldTypes = [];
+  _m_public_pages_standings.Team.__wireAtom = "b8ce4654cf";
+  _m_public_pages_standings.Team.__fieldTypes = [null, null, null];
+  _m_public_pages_teams_slug_.PublicTeamDetailLoad.__wireAtom = "27cb5f3d1d";
+  _m_public_pages_teams_slug_.PublicTeamDetailLoad.__fieldTypes = [null];
+  _m_public_pages_teams_slug_.PublicTeamDetailLoaded.__wireAtom = "f98530e952";
+  _m_public_pages_teams_slug_.PublicTeamDetailLoaded.__fieldTypes = [null];
+  _m_public_pages_teams_slug_.TeamDetail.__wireAtom = "6fad534c30";
+  _m_public_pages_teams_slug_.TeamDetail.__fieldTypes = [null, null, null, null, null, null, null, { kind: "list", element: null }];
+  _m_public_pages_teams_slug_.GameSummary.__wireAtom = "cd7ae58b19";
+  _m_public_pages_teams_slug_.GameSummary.__fieldTypes = [null, null, null, null, null, null];
+  _m_public_pages_teams_slug_.Scheduled.__wireAtom = "556fd4dc0c";
+  _m_public_pages_teams_slug_.Scheduled.__fieldTypes = [];
+  _m_public_pages_teams_slug_.Live.__wireAtom = "e4445de733";
+  _m_public_pages_teams_slug_.Live.__fieldTypes = [null];
+  _m_public_pages_teams_slug_.Final.__wireAtom = "daba1d88e1";
+  _m_public_pages_teams_slug_.Final.__fieldTypes = [];
+  _m_public_pages_teams_slug_.Team.__wireAtom = "0e7883b655";
+  _m_public_pages_teams_slug_.Team.__fieldTypes = [null, null, null];
   registerAtomDecoder("10a502b9f6", "decode_broadcasts_event", decode_broadcasts_event);
   registerAtomDecoder("e5610620cc", "decode_broadcasts_game_snapshot", decode_broadcasts_game_snapshot);
   registerAtomDecoder("f9185170a6", "decode_broadcasts_game_status", decode_broadcasts_game_status);
@@ -457,35 +457,35 @@ export function ensure_decoders() {
   registerAtomDecoder("0e0f0ed8f3", "decode_admin_pages_games_game_status", decode_admin_pages_games_game_status);
   registerAtomDecoder("2bb88c38e5", "decode_admin_pages_games_game_status", decode_admin_pages_games_game_status);
   registerAtomDecoder("635cfb19da", "decode_admin_pages_games_game_update", decode_admin_pages_games_game_update);
-  registerAtomDecoder("aba9f55edb", "decode_public_pages_games_id__wire_server_msg", decode_public_pages_games_id__wire_server_msg);
-  registerAtomDecoder("f0227706ed", "decode_public_pages_games_id__wire_load_result", decode_public_pages_games_id__wire_load_result);
-  registerAtomDecoder("fe07310a28", "decode_public_pages_games_id__wire_game_detail", decode_public_pages_games_id__wire_game_detail);
-  registerAtomDecoder("068b97d9ae", "decode_public_pages_games_id__wire_game_status", decode_public_pages_games_id__wire_game_status);
-  registerAtomDecoder("e5dc046a4a", "decode_public_pages_games_id__wire_game_status", decode_public_pages_games_id__wire_game_status);
-  registerAtomDecoder("c46ef5198e", "decode_public_pages_games_id__wire_game_status", decode_public_pages_games_id__wire_game_status);
-  registerAtomDecoder("855e438e11", "decode_public_pages_games_id__wire_team", decode_public_pages_games_id__wire_team);
-  registerAtomDecoder("670543b335", "decode_public_pages_games_wire_server_msg", decode_public_pages_games_wire_server_msg);
-  registerAtomDecoder("c45d4203f2", "decode_public_pages_games_wire_load_result", decode_public_pages_games_wire_load_result);
-  registerAtomDecoder("d2d09f257a", "decode_public_pages_games_wire_game_summary", decode_public_pages_games_wire_game_summary);
-  registerAtomDecoder("ce9f4265f3", "decode_public_pages_games_wire_game_status", decode_public_pages_games_wire_game_status);
-  registerAtomDecoder("9452498ffb", "decode_public_pages_games_wire_game_status", decode_public_pages_games_wire_game_status);
-  registerAtomDecoder("58de046fb2", "decode_public_pages_games_wire_game_status", decode_public_pages_games_wire_game_status);
-  registerAtomDecoder("621836eae2", "decode_public_pages_games_wire_team", decode_public_pages_games_wire_team);
-  registerAtomDecoder("4d44732914", "decode_public_pages_standings_wire_server_msg", decode_public_pages_standings_wire_server_msg);
-  registerAtomDecoder("a7d83e5c3b", "decode_public_pages_standings_wire_load_result", decode_public_pages_standings_wire_load_result);
-  registerAtomDecoder("9b7caa6767", "decode_public_pages_standings_wire_game_summary", decode_public_pages_standings_wire_game_summary);
-  registerAtomDecoder("de69dd54a9", "decode_public_pages_standings_wire_game_status", decode_public_pages_standings_wire_game_status);
-  registerAtomDecoder("66ea920688", "decode_public_pages_standings_wire_game_status", decode_public_pages_standings_wire_game_status);
-  registerAtomDecoder("a49bdfb3da", "decode_public_pages_standings_wire_game_status", decode_public_pages_standings_wire_game_status);
-  registerAtomDecoder("83b1df5576", "decode_public_pages_standings_wire_team", decode_public_pages_standings_wire_team);
-  registerAtomDecoder("9860eebd2d", "decode_public_pages_teams_slug__wire_server_msg", decode_public_pages_teams_slug__wire_server_msg);
-  registerAtomDecoder("2542f533b6", "decode_public_pages_teams_slug__wire_load_result", decode_public_pages_teams_slug__wire_load_result);
-  registerAtomDecoder("53d46e9b9f", "decode_public_pages_teams_slug__wire_team_detail", decode_public_pages_teams_slug__wire_team_detail);
-  registerAtomDecoder("1139d71d23", "decode_public_pages_teams_slug__wire_game_summary", decode_public_pages_teams_slug__wire_game_summary);
-  registerAtomDecoder("4ac5f8cdbc", "decode_public_pages_teams_slug__wire_game_status", decode_public_pages_teams_slug__wire_game_status);
-  registerAtomDecoder("3fa1eb1b1e", "decode_public_pages_teams_slug__wire_game_status", decode_public_pages_teams_slug__wire_game_status);
-  registerAtomDecoder("3ab9fa5d55", "decode_public_pages_teams_slug__wire_game_status", decode_public_pages_teams_slug__wire_game_status);
-  registerAtomDecoder("e2be8683f9", "decode_public_pages_teams_slug__wire_team", decode_public_pages_teams_slug__wire_team);
+  registerAtomDecoder("a285907ff6", "decode_public_pages_games_id__server_msg", decode_public_pages_games_id__server_msg);
+  registerAtomDecoder("adfc3bb196", "decode_public_pages_games_id__load_result", decode_public_pages_games_id__load_result);
+  registerAtomDecoder("2978a54100", "decode_public_pages_games_id__game_detail", decode_public_pages_games_id__game_detail);
+  registerAtomDecoder("c333a9a563", "decode_public_pages_games_id__game_status", decode_public_pages_games_id__game_status);
+  registerAtomDecoder("c3d9709266", "decode_public_pages_games_id__game_status", decode_public_pages_games_id__game_status);
+  registerAtomDecoder("ff28c60e94", "decode_public_pages_games_id__game_status", decode_public_pages_games_id__game_status);
+  registerAtomDecoder("fa9f119e79", "decode_public_pages_games_id__team", decode_public_pages_games_id__team);
+  registerAtomDecoder("4b89a8dc50", "decode_public_pages_games_server_msg", decode_public_pages_games_server_msg);
+  registerAtomDecoder("87dc6b9f9a", "decode_public_pages_games_load_result", decode_public_pages_games_load_result);
+  registerAtomDecoder("85052aa8ec", "decode_public_pages_games_game_summary", decode_public_pages_games_game_summary);
+  registerAtomDecoder("f3de5cfa12", "decode_public_pages_games_game_status", decode_public_pages_games_game_status);
+  registerAtomDecoder("9fc19a5e7d", "decode_public_pages_games_game_status", decode_public_pages_games_game_status);
+  registerAtomDecoder("72c225386c", "decode_public_pages_games_game_status", decode_public_pages_games_game_status);
+  registerAtomDecoder("977fa41cd1", "decode_public_pages_games_team", decode_public_pages_games_team);
+  registerAtomDecoder("8e6db035a7", "decode_public_pages_standings_server_msg", decode_public_pages_standings_server_msg);
+  registerAtomDecoder("3e3c283ed5", "decode_public_pages_standings_load_result", decode_public_pages_standings_load_result);
+  registerAtomDecoder("1af8440324", "decode_public_pages_standings_game_summary", decode_public_pages_standings_game_summary);
+  registerAtomDecoder("d6ca0027f2", "decode_public_pages_standings_game_status", decode_public_pages_standings_game_status);
+  registerAtomDecoder("afe06326fa", "decode_public_pages_standings_game_status", decode_public_pages_standings_game_status);
+  registerAtomDecoder("cf4683279a", "decode_public_pages_standings_game_status", decode_public_pages_standings_game_status);
+  registerAtomDecoder("b8ce4654cf", "decode_public_pages_standings_team", decode_public_pages_standings_team);
+  registerAtomDecoder("27cb5f3d1d", "decode_public_pages_teams_slug__server_msg", decode_public_pages_teams_slug__server_msg);
+  registerAtomDecoder("f98530e952", "decode_public_pages_teams_slug__load_result", decode_public_pages_teams_slug__load_result);
+  registerAtomDecoder("6fad534c30", "decode_public_pages_teams_slug__team_detail", decode_public_pages_teams_slug__team_detail);
+  registerAtomDecoder("cd7ae58b19", "decode_public_pages_teams_slug__game_summary", decode_public_pages_teams_slug__game_summary);
+  registerAtomDecoder("556fd4dc0c", "decode_public_pages_teams_slug__game_status", decode_public_pages_teams_slug__game_status);
+  registerAtomDecoder("e4445de733", "decode_public_pages_teams_slug__game_status", decode_public_pages_teams_slug__game_status);
+  registerAtomDecoder("daba1d88e1", "decode_public_pages_teams_slug__game_status", decode_public_pages_teams_slug__game_status);
+  registerAtomDecoder("0e7883b655", "decode_public_pages_teams_slug__team", decode_public_pages_teams_slug__team);
   _decodersReady = true;
   return true;
 }

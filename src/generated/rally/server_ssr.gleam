@@ -1,3 +1,8 @@
+@target(javascript)
+pub fn ensure() -> Nil {
+  Nil
+}
+
 @target(erlang)
 import generated/rally/result as transport_result
 @target(erlang)
@@ -29,22 +34,13 @@ import page_context.{type PageContext}
 @target(erlang)
 import admin/pages/games as admin_games_wire
 @target(erlang)
-import public/pages/games/id_/wire as public_game_detail_wire
+import public/pages/games as public_games_wire
 @target(erlang)
-import public/pages/games/wire as public_games_wire
+import public/pages/games/id_ as public_game_detail_wire
 @target(erlang)
-import public/pages/standings/wire as public_standings_wire
+import public/pages/standings as public_standings_wire
 @target(erlang)
-import public/pages/teams/slug_/wire as public_team_detail_wire
-
-@target(erlang)
-import public/pages/games as public_games_page
-@target(erlang)
-import public/pages/games/id_ as public_game_detail_page
-@target(erlang)
-import public/pages/standings as public_standings_page
-@target(erlang)
-import public/pages/teams/slug_ as public_team_detail_page
+import public/pages/teams/slug_ as public_team_detail_wire
 
 @target(erlang)
 import sqlight as load_context
@@ -138,7 +134,7 @@ pub fn public_boot_page(
         public_routes.GamesId(id:) ->
           case int.parse(id) {
             Ok(game_id) ->
-              public_game_detail_page.load_wire(
+              public_game_detail_wire.load_wire(
                 handlers.load_context(),
                 game_id,
               )
@@ -155,7 +151,7 @@ pub fn public_boot_page(
       )
     }
     PublicGamesLoad(to_message:) -> {
-      let result = public_games_page.load_wire(handlers.load_context())
+      let result = public_games_wire.load_wire(handlers.load_context())
       boot_loaded_page(
         page: page,
         result: result,
@@ -165,7 +161,7 @@ pub fn public_boot_page(
       )
     }
     PublicStandingsLoad(to_message:) -> {
-      let result = public_standings_page.load_wire(handlers.load_context())
+      let result = public_standings_wire.load_wire(handlers.load_context())
       boot_loaded_page(
         page: page,
         result: result,
@@ -177,7 +173,7 @@ pub fn public_boot_page(
     PublicTeamDetailLoad(to_message:) -> {
       let result = case route {
         public_routes.TeamsSlug(slug:) ->
-          public_team_detail_page.load_wire(handlers.load_context(), slug)
+          public_team_detail_wire.load_wire(handlers.load_context(), slug)
         _ -> Error(["Unexpected route."])
       }
       boot_loaded_page(

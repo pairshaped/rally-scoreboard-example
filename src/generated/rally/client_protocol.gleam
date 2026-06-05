@@ -2,14 +2,6 @@
 import generated/libero/etf as libero_etf
 @target(javascript)
 import generated/rally/result.{type ApiLoadError, type ApiSaveError}
-@target(javascript)
-import public/pages/games/id_/wire as public_game_detail_wire
-@target(javascript)
-import public/pages/games/wire as public_games_wire
-@target(javascript)
-import public/pages/standings/wire as public_standings_wire
-@target(javascript)
-import public/pages/teams/slug_/wire as public_team_detail_wire
 
 @target(javascript)
 import broadcasts as push_payload
@@ -30,43 +22,33 @@ pub fn encode_admin_games_request(
 @target(javascript)
 pub fn encode_public_game_detail_request(
   request_id request_id: Int,
-  game_id game_id: Int,
+  message message: a,
 ) -> BitArray {
-  encode_any(#(
-    request_id,
-    "public/pages/games/id_",
-    public_game_detail_wire.PublicGameDetailLoad(game_id:),
-  ))
+  encode_any(#(request_id, "public/pages/games/id_", message))
 }
 
 @target(javascript)
-pub fn encode_public_games_request(request_id request_id: Int) -> BitArray {
-  encode_any(#(
-    request_id,
-    "public/pages/games",
-    public_games_wire.PublicGamesLoad,
-  ))
+pub fn encode_public_games_request(
+  request_id request_id: Int,
+  message message: a,
+) -> BitArray {
+  encode_any(#(request_id, "public/pages/games", message))
 }
 
 @target(javascript)
-pub fn encode_public_standings_request(request_id request_id: Int) -> BitArray {
-  encode_any(#(
-    request_id,
-    "public/pages/standings",
-    public_standings_wire.PublicStandingsLoad,
-  ))
+pub fn encode_public_standings_request(
+  request_id request_id: Int,
+  message message: a,
+) -> BitArray {
+  encode_any(#(request_id, "public/pages/standings", message))
 }
 
 @target(javascript)
 pub fn encode_public_team_detail_request(
   request_id request_id: Int,
-  slug slug: String,
+  message message: a,
 ) -> BitArray {
-  encode_any(#(
-    request_id,
-    "public/pages/teams/slug_",
-    public_team_detail_wire.PublicTeamDetailLoad(slug:),
-  ))
+  encode_any(#(request_id, "public/pages/teams/slug_", message))
 }
 
 @target(javascript)
@@ -92,40 +74,28 @@ pub fn decode_admin_games_load_result(
 @target(javascript)
 pub fn decode_public_game_detail_load_result(
   bytes: BitArray,
-) -> Result(
-  #(Int, Result(public_game_detail_wire.LoadResult, List(ApiLoadError))),
-  Nil,
-) {
+) -> Result(#(Int, Result(load_result, List(ApiLoadError))), Nil) {
   decode_result_envelope(bytes)
 }
 
 @target(javascript)
 pub fn decode_public_games_load_result(
   bytes: BitArray,
-) -> Result(
-  #(Int, Result(public_games_wire.LoadResult, List(ApiLoadError))),
-  Nil,
-) {
+) -> Result(#(Int, Result(load_result, List(ApiLoadError))), Nil) {
   decode_result_envelope(bytes)
 }
 
 @target(javascript)
 pub fn decode_public_standings_load_result(
   bytes: BitArray,
-) -> Result(
-  #(Int, Result(public_standings_wire.LoadResult, List(ApiLoadError))),
-  Nil,
-) {
+) -> Result(#(Int, Result(load_result, List(ApiLoadError))), Nil) {
   decode_result_envelope(bytes)
 }
 
 @target(javascript)
 pub fn decode_public_team_detail_load_result(
   bytes: BitArray,
-) -> Result(
-  #(Int, Result(public_team_detail_wire.LoadResult, List(ApiLoadError))),
-  Nil,
-) {
+) -> Result(#(Int, Result(load_result, List(ApiLoadError))), Nil) {
   decode_result_envelope(bytes)
 }
 

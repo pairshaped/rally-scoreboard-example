@@ -22,8 +22,6 @@ import page_context.{type PageContext}
 
 @target(javascript)
 import generated/rally/client_protocol
-@target(javascript)
-import gleam/int
 
 @target(javascript)
 import broadcasts as push_payload
@@ -44,13 +42,13 @@ import generated/proute/public/routes as public_routes
 @target(javascript)
 import admin/pages/games as admin_games_wire
 @target(javascript)
-import public/pages/games/id_/wire as public_game_detail_wire
+import public/pages/games as public_games_wire
 @target(javascript)
-import public/pages/games/wire as public_games_wire
+import public/pages/games/id_ as public_game_detail_wire
 @target(javascript)
-import public/pages/standings/wire as public_standings_wire
+import public/pages/standings as public_standings_wire
 @target(javascript)
-import public/pages/teams/slug_/wire as public_team_detail_wire
+import public/pages/teams/slug_ as public_team_detail_wire
 
 @target(javascript)
 pub type AdminLoadRoute {
@@ -66,19 +64,23 @@ pub type AdminLoadRoute {
 pub type PublicLoadRoute {
   PublicNoLoad
   PublicGameDetailLoad(
+    message: public_game_detail_wire.ServerMsg,
     to_message: fn(
       Result(public_game_detail_wire.LoadResult, List(ApiLoadError)),
     ) -> public_pages.Message,
   )
   PublicGamesLoad(
+    message: public_games_wire.ServerMsg,
     to_message: fn(Result(public_games_wire.LoadResult, List(ApiLoadError))) ->
       public_pages.Message,
   )
   PublicStandingsLoad(
+    message: public_standings_wire.ServerMsg,
     to_message: fn(Result(public_standings_wire.LoadResult, List(ApiLoadError))) ->
       public_pages.Message,
   )
   PublicTeamDetailLoad(
+    message: public_team_detail_wire.ServerMsg,
     to_message: fn(
       Result(public_team_detail_wire.LoadResult, List(ApiLoadError)),
     ) -> public_pages.Message,
@@ -157,7 +159,7 @@ pub fn public_initial_page(
 
   case select_load(route) {
     PublicNoLoad -> #(page, effect.none())
-    PublicGameDetailLoad(to_message:) -> {
+    PublicGameDetailLoad(message: _, to_message:) -> {
       initial_loaded_page(
         page: page,
         hydration: hydration.public_game_detail_load_result(),
@@ -166,7 +168,7 @@ pub fn public_initial_page(
         update_page: update_page,
       )
     }
-    PublicGamesLoad(to_message:) -> {
+    PublicGamesLoad(message: _, to_message:) -> {
       initial_loaded_page(
         page: page,
         hydration: hydration.public_games_load_result(),
@@ -175,7 +177,7 @@ pub fn public_initial_page(
         update_page: update_page,
       )
     }
-    PublicStandingsLoad(to_message:) -> {
+    PublicStandingsLoad(message: _, to_message:) -> {
       initial_loaded_page(
         page: page,
         hydration: hydration.public_standings_load_result(),
@@ -184,7 +186,7 @@ pub fn public_initial_page(
         update_page: update_page,
       )
     }
-    PublicTeamDetailLoad(to_message:) -> {
+    PublicTeamDetailLoad(message: _, to_message:) -> {
       initial_loaded_page(
         page: page,
         hydration: hydration.public_team_detail_load_result(),
@@ -203,28 +205,27 @@ fn public_request_effect(
 ) -> Effect(public_pages.Message) {
   case selected {
     PublicNoLoad -> effect.none()
-    PublicGameDetailLoad(to_message:) ->
+    PublicGameDetailLoad(message:, to_message:) ->
       case route {
-        public_routes.GamesId(id:) ->
-          case int.parse(id) {
-            Ok(game_id) ->
-              client_transport.send_public_game_detail_load(
-                game_id:,
-                on_result: to_message,
-              )
-            Error(Nil) -> effect.none()
-          }
+        public_routes.GamesId(id: _) ->
+          client_transport.send_public_game_detail_load(
+            message:,
+            on_result: to_message,
+          )
         _ -> effect.none()
       }
-    PublicGamesLoad(to_message:) ->
-      client_transport.send_public_games_load(on_result: to_message)
-    PublicStandingsLoad(to_message:) ->
-      client_transport.send_public_standings_load(on_result: to_message)
-    PublicTeamDetailLoad(to_message:) ->
+    PublicGamesLoad(message:, to_message:) ->
+      client_transport.send_public_games_load(message:, on_result: to_message)
+    PublicStandingsLoad(message:, to_message:) ->
+      client_transport.send_public_standings_load(
+        message:,
+        on_result: to_message,
+      )
+    PublicTeamDetailLoad(message:, to_message:) ->
       case route {
-        public_routes.TeamsSlug(slug:) ->
+        public_routes.TeamsSlug(slug: _) ->
           client_transport.send_public_team_detail_load(
-            slug:,
+            message:,
             on_result: to_message,
           )
         _ -> effect.none()

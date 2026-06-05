@@ -8,14 +8,6 @@ import gleam/list
 import gleam/option.{type Option}
 @target(javascript)
 import lustre/effect.{type Effect}
-@target(javascript)
-import public/pages/games/id_/wire as public_game_detail_wire
-@target(javascript)
-import public/pages/games/wire as public_games_wire
-@target(javascript)
-import public/pages/standings/wire as public_standings_wire
-@target(javascript)
-import public/pages/teams/slug_/wire as public_team_detail_wire
 
 @target(erlang)
 pub fn ensure() -> Nil {
@@ -45,47 +37,46 @@ pub fn load_admin_games(
 
 @target(javascript)
 pub fn load_public_game_detail(
-  game_id game_id: Int,
-  on_result on_result: fn(
-    Result(public_game_detail_wire.LoadResult, List(LoadError)),
-  ) -> msg,
+  message message: a,
+  on_result on_result: fn(Result(load_result, List(LoadError))) -> msg,
 ) -> Effect(msg) {
-  client_transport.send_public_game_detail_load(game_id:, on_result: fn(result) {
-    on_result(map_load_result(result))
-  })
+  client_transport.send_public_game_detail_load(
+    message: message,
+    on_result: fn(result) { on_result(map_load_result(result)) },
+  )
 }
 
 @target(javascript)
 pub fn load_public_games(
-  on_result on_result: fn(Result(public_games_wire.LoadResult, List(LoadError))) ->
-    msg,
+  message message: a,
+  on_result on_result: fn(Result(load_result, List(LoadError))) -> msg,
 ) -> Effect(msg) {
-  client_transport.send_public_games_load(on_result: fn(result) {
-    on_result(map_load_result(result))
-  })
+  client_transport.send_public_games_load(
+    message: message,
+    on_result: fn(result) { on_result(map_load_result(result)) },
+  )
 }
 
 @target(javascript)
 pub fn load_public_standings(
-  on_result on_result: fn(
-    Result(public_standings_wire.LoadResult, List(LoadError)),
-  ) -> msg,
+  message message: a,
+  on_result on_result: fn(Result(load_result, List(LoadError))) -> msg,
 ) -> Effect(msg) {
-  client_transport.send_public_standings_load(on_result: fn(result) {
-    on_result(map_load_result(result))
-  })
+  client_transport.send_public_standings_load(
+    message: message,
+    on_result: fn(result) { on_result(map_load_result(result)) },
+  )
 }
 
 @target(javascript)
 pub fn load_public_team_detail(
-  slug slug: String,
-  on_result on_result: fn(
-    Result(public_team_detail_wire.LoadResult, List(LoadError)),
-  ) -> msg,
+  message message: a,
+  on_result on_result: fn(Result(load_result, List(LoadError))) -> msg,
 ) -> Effect(msg) {
-  client_transport.send_public_team_detail_load(slug:, on_result: fn(result) {
-    on_result(map_load_result(result))
-  })
+  client_transport.send_public_team_detail_load(
+    message: message,
+    on_result: fn(result) { on_result(map_load_result(result)) },
+  )
 }
 
 @target(javascript)

@@ -8,14 +8,6 @@ import generated/rally/result.{type ApiLoadError}
 import gleam/bit_array
 @target(javascript)
 import gleam/string
-@target(javascript)
-import public/pages/games/id_/wire as public_game_detail_wire
-@target(javascript)
-import public/pages/games/wire as public_games_wire
-@target(javascript)
-import public/pages/standings/wire as public_standings_wire
-@target(javascript)
-import public/pages/teams/slug_/wire as public_team_detail_wire
 
 @target(javascript)
 pub fn admin_games_load_result() -> Result(
@@ -34,7 +26,7 @@ pub fn admin_games_load_result() -> Result(
 
 @target(javascript)
 pub fn public_game_detail_load_result() -> Result(
-  Result(public_game_detail_wire.LoadResult, List(ApiLoadError)),
+  Result(load_result, List(ApiLoadError)),
   Nil,
 ) {
   case browser.take_boot_string("hydration") {
@@ -49,7 +41,7 @@ pub fn public_game_detail_load_result() -> Result(
 
 @target(javascript)
 pub fn public_games_load_result() -> Result(
-  Result(public_games_wire.LoadResult, List(ApiLoadError)),
+  Result(load_result, List(ApiLoadError)),
   Nil,
 ) {
   case browser.take_boot_string("hydration") {
@@ -64,7 +56,7 @@ pub fn public_games_load_result() -> Result(
 
 @target(javascript)
 pub fn public_standings_load_result() -> Result(
-  Result(public_standings_wire.LoadResult, List(ApiLoadError)),
+  Result(load_result, List(ApiLoadError)),
   Nil,
 ) {
   case browser.take_boot_string("hydration") {
@@ -79,7 +71,7 @@ pub fn public_standings_load_result() -> Result(
 
 @target(javascript)
 pub fn public_team_detail_load_result() -> Result(
-  Result(public_team_detail_wire.LoadResult, List(ApiLoadError)),
+  Result(load_result, List(ApiLoadError)),
   Nil,
 ) {
   case browser.take_boot_string("hydration") {
@@ -109,7 +101,7 @@ fn decode_admin_games_load_result(
 @target(javascript)
 fn decode_public_game_detail_load_result(
   encoded: String,
-) -> Result(Result(public_game_detail_wire.LoadResult, List(ApiLoadError)), Nil) {
+) -> Result(Result(load_result, List(ApiLoadError)), Nil) {
   case bit_array.base64_url_decode(encoded) {
     Ok(bytes) ->
       case client_protocol.decode_public_game_detail_load_result(bytes) {
@@ -123,7 +115,7 @@ fn decode_public_game_detail_load_result(
 @target(javascript)
 fn decode_public_games_load_result(
   encoded: String,
-) -> Result(Result(public_games_wire.LoadResult, List(ApiLoadError)), Nil) {
+) -> Result(Result(load_result, List(ApiLoadError)), Nil) {
   case bit_array.base64_url_decode(encoded) {
     Ok(bytes) ->
       case client_protocol.decode_public_games_load_result(bytes) {
@@ -137,7 +129,7 @@ fn decode_public_games_load_result(
 @target(javascript)
 fn decode_public_standings_load_result(
   encoded: String,
-) -> Result(Result(public_standings_wire.LoadResult, List(ApiLoadError)), Nil) {
+) -> Result(Result(load_result, List(ApiLoadError)), Nil) {
   case bit_array.base64_url_decode(encoded) {
     Ok(bytes) ->
       case client_protocol.decode_public_standings_load_result(bytes) {
@@ -151,7 +143,7 @@ fn decode_public_standings_load_result(
 @target(javascript)
 fn decode_public_team_detail_load_result(
   encoded: String,
-) -> Result(Result(public_team_detail_wire.LoadResult, List(ApiLoadError)), Nil) {
+) -> Result(Result(load_result, List(ApiLoadError)), Nil) {
   case bit_array.base64_url_decode(encoded) {
     Ok(bytes) ->
       case client_protocol.decode_public_team_detail_load_result(bytes) {

@@ -19,6 +19,11 @@ import admin/pages/games as admin_games_page
 @target(erlang)
 import app_api
 
+@target(javascript)
+pub fn ensure() -> Nil {
+  Nil
+}
+
 // TYPES
 
 @target(erlang)

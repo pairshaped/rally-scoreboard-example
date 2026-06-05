@@ -1,14 +1,14 @@
 ---
 # scoreboard-unified-wm8p
 title: Complete the Rally chase goal
-status: todo
+status: done
 type: epic
 priority: high
 tags:
     - rally
     - chase
 created_at: 2026-06-04T03:36:11Z
-updated_at: 2026-06-04T03:36:11Z
+updated_at: 2026-06-05T12:40:00Z
 ---
 
 ## What to build
@@ -27,24 +27,33 @@ This epic is done when the chase app no longer depends on hand-edited generated 
 
 ## Acceptance criteria
 
-- [ ] Page/workflow-owned domain models and server handlers are local to their owners.
-- [ ] Generated code is thin glue, codecs, route glue, or build metadata only.
-- [ ] Client app generation is gone from the chase path.
-- [ ] Boundary failures name the contract, offending type/import, and path to the violation.
-- [ ] The chase app builds and smoke tests pass without hand-edit-only generated behavior.
+- [x] Page/workflow-owned domain models and server handlers are local to their owners.
+- [x] Generated code is thin glue, codecs, route glue, or build metadata only.
+- [x] Client app generation is gone from the chase path.
+- [x] Boundary failures name the contract, offending type/import, and path to the violation.
+- [x] The chase app builds and smoke tests pass without hand-edit-only generated behavior.
 
 ## Blocked by
 
-Clean regeneration from empty `src/generated` is blocked outside Scoreboard.
+None.
 
-On 2026-06-05, deleting `src/generated` and running:
+## Progress
+
+Final cleanup moved the remaining public load contracts out of nested `wire.gleam` support modules and into their owning page modules. Rally now treats page-owned public load contracts as app-supplied browser messages while generated server-side WS/SSR glue calls public page `load_wire` functions directly from configured DB context. Admin load/save authorization remains app-owned.
+
+Clean regeneration from empty `src/generated` now succeeds:
 
 - `gleam run -m marmot`
 - `gleam run -m proute`
 - `gleam run -m rally load-rpc`
 
-failed during `proute`. Proute discovered page-local `wire.gleam` modules under `src/public/pages/**` as page modules and reported missing `Model`, `Message`, `init`, `update`, and `view`.
+Validated with:
 
-Scoreboard should not move those modules as a local workaround: the current Rally page-local wire convention maps `public/pages/foo/wire.gleam` to `public/pages/foo.gleam`. Proute needs an ignore/exclude rule for page-local support modules, or the Proute/Rally boundary needs a deliberate design change.
+- `gleam build --target erlang`
+- `gleam build --target javascript`
+- `TEMP=/home/daverapin/projects/gleam/rally-scoreboard-example/tmp gleam test --target erlang`
+- `node test/boundary_guard_test.mjs`
+- `node test/ws_result_smoke.mjs`
+- `npm run test:browser`
 
-Template auth is also deliberately last and tracked in Rally as `rally-mhn4`.
+Template auth remains deliberately separate in Rally as `rally-mhn4`.

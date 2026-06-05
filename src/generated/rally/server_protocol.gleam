@@ -5,13 +5,13 @@ import generated/libero/etf as libero_etf
 @target(erlang)
 import generated/rally/result.{type ApiLoadError, type ApiSaveError}
 @target(erlang)
-import public/pages/games/id_/wire as public_game_detail_wire
+import public/pages/games as public_games_wire
 @target(erlang)
-import public/pages/games/wire as public_games_wire
+import public/pages/games/id_ as public_game_detail_wire
 @target(erlang)
-import public/pages/standings/wire as public_standings_wire
+import public/pages/standings as public_standings_wire
 @target(erlang)
-import public/pages/teams/slug_/wire as public_team_detail_wire
+import public/pages/teams/slug_ as public_team_detail_wire
 
 @target(erlang)
 import broadcasts as push_payload
@@ -210,7 +210,7 @@ fn encode_public_game_detail_load_result_payload(
 }
 
 @target(erlang)
-@external(erlang, "generated@rpc_wire", "encode_public_pages_games_id__wire__load_result")
+@external(erlang, "generated@rpc_wire", "encode_public_pages_games_id___load_result")
 fn encode_public_game_detail_load_result_value(
   _value: public_game_detail_wire.LoadResult,
 ) -> a {
@@ -225,7 +225,7 @@ fn encode_public_games_load_result_payload(
 }
 
 @target(erlang)
-@external(erlang, "generated@rpc_wire", "encode_public_pages_games_wire__load_result")
+@external(erlang, "generated@rpc_wire", "encode_public_pages_games__load_result")
 fn encode_public_games_load_result_value(
   _value: public_games_wire.LoadResult,
 ) -> a {
@@ -240,7 +240,7 @@ fn encode_public_standings_load_result_payload(
 }
 
 @target(erlang)
-@external(erlang, "generated@rpc_wire", "encode_public_pages_standings_wire__load_result")
+@external(erlang, "generated@rpc_wire", "encode_public_pages_standings__load_result")
 fn encode_public_standings_load_result_value(
   _value: public_standings_wire.LoadResult,
 ) -> a {
@@ -255,7 +255,7 @@ fn encode_public_team_detail_load_result_payload(
 }
 
 @target(erlang)
-@external(erlang, "generated@rpc_wire", "encode_public_pages_teams_slug__wire__load_result")
+@external(erlang, "generated@rpc_wire", "encode_public_pages_teams_slug___load_result")
 fn encode_public_team_detail_load_result_value(
   _value: public_team_detail_wire.LoadResult,
 ) -> a {

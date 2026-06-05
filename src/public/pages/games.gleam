@@ -17,7 +17,6 @@ import sqlight
 
 import components/ui
 import page_context.{type PageContext}
-import public/pages/games/wire
 
 // TYPES
 
@@ -48,6 +47,14 @@ pub type GameUpdate {
 
 pub type LoadError {
   LoadError(message: String)
+}
+
+pub type ServerMsg {
+  PublicGamesLoad
+}
+
+pub type LoadResult {
+  PublicGamesLoaded(games: List(GameSummary))
 }
 
 pub type Model {
@@ -209,7 +216,7 @@ fn update_summary(summary: GameSummary, game: GameUpdate) -> GameSummary {
 
 @target(javascript)
 fn init_effect() -> Effect(Message) {
-  server.load_public_games(on_result: fn(result) {
+  server.load_public_games(message: PublicGamesLoad, on_result: fn(result) {
     Loaded(map_load_result(result))
   })
 }
@@ -221,10 +228,10 @@ fn init_effect() -> Effect(Message) {
 
 @target(javascript)
 fn map_load_result(
-  result: Result(wire.LoadResult, List(server.LoadError)),
+  result: Result(LoadResult, List(server.LoadError)),
 ) -> Result(List(GameSummary), LoadError) {
   case result {
-    Ok(wire.PublicGamesLoaded(games)) -> Ok(list.map(games, from_wire_summary))
+    Ok(PublicGamesLoaded(games)) -> Ok(games)
     Error([server.LoadError(message: message), ..]) ->
       Error(LoadError(message: message))
     Error([]) -> Error(LoadError(message: "Could not load games."))
@@ -232,80 +239,19 @@ fn map_load_result(
 }
 
 @target(erlang)
-pub fn load_wire(
-  db: sqlight.Connection,
-) -> Result(wire.LoadResult, List(String)) {
+pub fn load_wire(db: sqlight.Connection) -> Result(LoadResult, List(String)) {
   case load(db) {
-    Ok(games) -> Ok(wire.PublicGamesLoaded(list.map(games, to_wire_summary)))
+    Ok(games) -> Ok(PublicGamesLoaded(games))
     Error(LoadError(message: message)) -> Error([message])
   }
 }
 
 @target(erlang)
-pub fn loaded_from_wire(
-  result: Result(wire.LoadResult, List(String)),
-) -> Message {
+pub fn loaded_from_wire(result: Result(LoadResult, List(String))) -> Message {
   case result {
-    Ok(wire.PublicGamesLoaded(games)) ->
-      Loaded(Ok(list.map(games, from_wire_summary)))
+    Ok(PublicGamesLoaded(games)) -> Loaded(Ok(games))
     Error([message, ..]) -> Loaded(Error(LoadError(message: message)))
     Error([]) -> Loaded(Error(LoadError(message: "Could not load games.")))
-  }
-}
-
-pub fn to_wire_summary(game: GameSummary) -> wire.GameSummary {
-  wire.PublicGamesGameSummary(
-    id: game.id,
-    home: to_wire_team(game.home),
-    away: to_wire_team(game.away),
-    home_score: game.home_score,
-    away_score: game.away_score,
-    status: to_wire_status(game.status),
-  )
-}
-
-pub fn from_wire_summary(game: wire.GameSummary) -> GameSummary {
-  let wire.PublicGamesGameSummary(
-    id:,
-    home:,
-    away:,
-    home_score:,
-    away_score:,
-    status:,
-  ) = game
-
-  GameSummary(
-    id:,
-    home: from_wire_team(home),
-    away: from_wire_team(away),
-    home_score:,
-    away_score:,
-    status: from_wire_status(status),
-  )
-}
-
-fn to_wire_team(team: Team) -> wire.Team {
-  wire.PublicGamesTeam(code: team.code, name: team.name, slug: team.slug)
-}
-
-fn from_wire_team(team: wire.Team) -> Team {
-  let wire.PublicGamesTeam(code:, name:, slug:) = team
-  Team(code:, name:, slug:)
-}
-
-fn to_wire_status(status: GameStatus) -> wire.GameStatus {
-  case status {
-    Scheduled -> wire.PublicGamesScheduled
-    Live(period) -> wire.PublicGamesLive(period)
-    Final -> wire.PublicGamesFinal
-  }
-}
-
-fn from_wire_status(status: wire.GameStatus) -> GameStatus {
-  case status {
-    wire.PublicGamesScheduled -> Scheduled
-    wire.PublicGamesLive(period) -> Live(period)
-    wire.PublicGamesFinal -> Final
   }
 }
 

@@ -20,7 +20,6 @@ import lustre/event
 import sqlight
 
 import page_context.{type PageContext}
-import public/pages/teams/slug_/wire
 
 // TYPES
 
@@ -71,6 +70,14 @@ pub type TeamDetail {
 
 pub type LoadError {
   LoadError(message: String)
+}
+
+pub type ServerMsg {
+  PublicTeamDetailLoad(slug: String)
+}
+
+pub type LoadResult {
+  PublicTeamDetailLoaded(team: TeamDetail)
 }
 
 pub type Model {
@@ -355,9 +362,10 @@ fn status_badge(status: GameStatus) -> Element(msg) {
 
 @target(javascript)
 fn init_effect(slug: String) -> Effect(Message) {
-  server.load_public_team_detail(slug:, on_result: fn(result) {
-    Loaded(map_load_result(result))
-  })
+  server.load_public_team_detail(
+    message: PublicTeamDetailLoad(slug:),
+    on_result: fn(result) { Loaded(map_load_result(result)) },
+  )
 }
 
 @target(erlang)
@@ -367,10 +375,10 @@ fn init_effect(_slug: String) -> Effect(Message) {
 
 @target(javascript)
 fn map_load_result(
-  result: Result(wire.LoadResult, List(server.LoadError)),
+  result: Result(LoadResult, List(server.LoadError)),
 ) -> Result(TeamDetail, LoadError) {
   case result {
-    Ok(wire.PublicTeamDetailLoaded(team)) -> Ok(from_wire_detail(team))
+    Ok(PublicTeamDetailLoaded(team)) -> Ok(team)
     Error([server.LoadError(message: message), ..]) ->
       Error(LoadError(message: message))
     Error([]) -> Error(LoadError(message: "Could not load team."))
@@ -381,114 +389,19 @@ fn map_load_result(
 pub fn load_wire(
   db: sqlight.Connection,
   slug: String,
-) -> Result(wire.LoadResult, List(String)) {
+) -> Result(LoadResult, List(String)) {
   case load(db, slug) {
-    Ok(team) -> Ok(wire.PublicTeamDetailLoaded(to_wire_detail(team)))
+    Ok(team) -> Ok(PublicTeamDetailLoaded(team))
     Error(LoadError(message: message)) -> Error([message])
   }
 }
 
 @target(erlang)
-pub fn loaded_from_wire(
-  result: Result(wire.LoadResult, List(String)),
-) -> Message {
+pub fn loaded_from_wire(result: Result(LoadResult, List(String))) -> Message {
   case result {
-    Ok(wire.PublicTeamDetailLoaded(team)) -> Loaded(Ok(from_wire_detail(team)))
+    Ok(PublicTeamDetailLoaded(team)) -> Loaded(Ok(team))
     Error([message, ..]) -> Loaded(Error(LoadError(message: message)))
     Error([]) -> Loaded(Error(LoadError(message: "Could not load team.")))
-  }
-}
-
-pub fn to_wire_detail(team: TeamDetail) -> wire.TeamDetail {
-  wire.PublicTeamDetailTeamDetail(
-    code: team.code,
-    name: team.name,
-    slug: team.slug,
-    wins: team.wins,
-    losses: team.losses,
-    points_for: team.points_for,
-    points_against: team.points_against,
-    recent_games: list.map(team.recent_games, to_wire_summary),
-  )
-}
-
-pub fn from_wire_detail(team: wire.TeamDetail) -> TeamDetail {
-  let wire.PublicTeamDetailTeamDetail(
-    code:,
-    name:,
-    slug:,
-    wins:,
-    losses:,
-    points_for:,
-    points_against:,
-    recent_games:,
-  ) = team
-
-  TeamDetail(
-    code:,
-    name:,
-    slug:,
-    wins:,
-    losses:,
-    points_for:,
-    points_against:,
-    recent_games: list.map(recent_games, from_wire_summary),
-  )
-}
-
-fn to_wire_summary(game: GameSummary) -> wire.GameSummary {
-  wire.PublicTeamDetailGameSummary(
-    id: game.id,
-    home: to_wire_team(game.home),
-    away: to_wire_team(game.away),
-    home_score: game.home_score,
-    away_score: game.away_score,
-    status: to_wire_status(game.status),
-  )
-}
-
-fn from_wire_summary(game: wire.GameSummary) -> GameSummary {
-  let wire.PublicTeamDetailGameSummary(
-    id:,
-    home:,
-    away:,
-    home_score:,
-    away_score:,
-    status:,
-  ) = game
-
-  GameSummary(
-    id:,
-    home: from_wire_team(home),
-    away: from_wire_team(away),
-    home_score:,
-    away_score:,
-    status: from_wire_status(status),
-  )
-}
-
-fn to_wire_team(team: Team) -> wire.Team {
-  wire.PublicTeamDetailTeam(code: team.code, name: team.name, slug: team.slug)
-}
-
-fn from_wire_team(team: wire.Team) -> Team {
-  let wire.PublicTeamDetailTeam(code:, name:, slug:) = team
-  Team(code:, name:, slug:)
-}
-
-fn to_wire_status(status: GameStatus) -> wire.GameStatus {
-  case status {
-    Scheduled -> wire.PublicTeamDetailScheduled
-    Live(period) -> wire.PublicTeamDetailLive(period)
-    Final -> wire.PublicTeamDetailFinal
-  }
-}
-
-fn from_wire_status(status: wire.GameStatus) -> GameStatus {
-  case status {
-    wire.PublicTeamDetailScheduled -> Scheduled
-    wire.PublicTeamDetailLive(period) -> Live(period)
-    wire.PublicTeamDetailFinal -> Final
   }
 }
 

@@ -1,3 +1,8 @@
+@target(javascript)
+pub fn ensure() -> Nil {
+  Nil
+}
+
 @target(erlang)
 import admin/pages/games as admin_games_wire
 @target(erlang)
@@ -11,22 +16,13 @@ import gleam/option.{type Option}
 @target(erlang)
 import mist.{type WebsocketConnection}
 @target(erlang)
-import public/pages/games/id_/wire as public_game_detail_wire
+import public/pages/games as public_games_wire
 @target(erlang)
-import public/pages/games/wire as public_games_wire
+import public/pages/games/id_ as public_game_detail_wire
 @target(erlang)
-import public/pages/standings/wire as public_standings_wire
+import public/pages/standings as public_standings_wire
 @target(erlang)
-import public/pages/teams/slug_/wire as public_team_detail_wire
-
-@target(erlang)
-import public/pages/games as public_games_page
-@target(erlang)
-import public/pages/games/id_ as public_game_detail_page
-@target(erlang)
-import public/pages/standings as public_standings_page
-@target(erlang)
-import public/pages/teams/slug_ as public_team_detail_page
+import public/pages/teams/slug_ as public_team_detail_wire
 
 @target(erlang)
 import sqlight as load_context
@@ -314,7 +310,7 @@ fn send_public_game_detail_load_result(
   game_id game_id: Int,
 ) -> Nil {
   let result =
-    public_game_detail_page.load_wire(handlers.load_context(state), game_id)
+    public_game_detail_wire.load_wire(handlers.load_context(state), game_id)
     |> map_page_load_result
     |> map_load_result
 
@@ -337,7 +333,7 @@ fn send_public_games_load_result(
   handlers handlers: Handlers(state),
 ) -> Nil {
   let result =
-    public_games_page.load_wire(handlers.load_context(state))
+    public_games_wire.load_wire(handlers.load_context(state))
     |> map_page_load_result
     |> map_load_result
 
@@ -360,7 +356,7 @@ fn send_public_standings_load_result(
   handlers handlers: Handlers(state),
 ) -> Nil {
   let result =
-    public_standings_page.load_wire(handlers.load_context(state))
+    public_standings_wire.load_wire(handlers.load_context(state))
     |> map_page_load_result
     |> map_load_result
 
@@ -384,7 +380,7 @@ fn send_public_team_detail_load_result(
   slug slug: String,
 ) -> Nil {
   let result =
-    public_team_detail_page.load_wire(handlers.load_context(state), slug)
+    public_team_detail_wire.load_wire(handlers.load_context(state), slug)
     |> map_page_load_result
     |> map_load_result
 

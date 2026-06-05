@@ -18,7 +18,6 @@ import lustre/event
 import sqlight
 
 import page_context.{type PageContext}
-import public/pages/standings/wire
 
 // TYPES
 
@@ -61,6 +60,14 @@ pub type StandingRow {
 
 pub type LoadError {
   LoadError(message: String)
+}
+
+pub type ServerMsg {
+  PublicStandingsLoad
+}
+
+pub type LoadResult {
+  PublicStandingsLoaded(games: List(GameSummary))
 }
 
 pub type Model {
@@ -317,9 +324,10 @@ fn section_head(title: String) -> Element(msg) {
 
 @target(javascript)
 fn init_effect() -> Effect(Message) {
-  server.load_public_standings(on_result: fn(result) {
-    Loaded(map_load_result(result))
-  })
+  server.load_public_standings(
+    message: PublicStandingsLoad,
+    on_result: fn(result) { Loaded(map_load_result(result)) },
+  )
 }
 
 @target(erlang)
@@ -329,11 +337,10 @@ fn init_effect() -> Effect(Message) {
 
 @target(javascript)
 fn map_load_result(
-  result: Result(wire.LoadResult, List(server.LoadError)),
+  result: Result(LoadResult, List(server.LoadError)),
 ) -> Result(List(GameSummary), LoadError) {
   case result {
-    Ok(wire.PublicStandingsLoaded(games)) ->
-      Ok(list.map(games, from_wire_summary))
+    Ok(PublicStandingsLoaded(games)) -> Ok(games)
     Error([server.LoadError(message: message), ..]) ->
       Error(LoadError(message: message))
     Error([]) -> Error(LoadError(message: "Could not load standings."))
@@ -341,81 +348,19 @@ fn map_load_result(
 }
 
 @target(erlang)
-pub fn load_wire(
-  db: sqlight.Connection,
-) -> Result(wire.LoadResult, List(String)) {
+pub fn load_wire(db: sqlight.Connection) -> Result(LoadResult, List(String)) {
   case load(db) {
-    Ok(games) ->
-      Ok(wire.PublicStandingsLoaded(list.map(games, to_wire_summary)))
+    Ok(games) -> Ok(PublicStandingsLoaded(games))
     Error(LoadError(message: message)) -> Error([message])
   }
 }
 
 @target(erlang)
-pub fn loaded_from_wire(
-  result: Result(wire.LoadResult, List(String)),
-) -> Message {
+pub fn loaded_from_wire(result: Result(LoadResult, List(String))) -> Message {
   case result {
-    Ok(wire.PublicStandingsLoaded(games)) ->
-      Loaded(Ok(list.map(games, from_wire_summary)))
+    Ok(PublicStandingsLoaded(games)) -> Loaded(Ok(games))
     Error([message, ..]) -> Loaded(Error(LoadError(message: message)))
     Error([]) -> Loaded(Error(LoadError(message: "Could not load standings.")))
-  }
-}
-
-pub fn to_wire_summary(game: GameSummary) -> wire.GameSummary {
-  wire.PublicStandingsGameSummary(
-    id: game.id,
-    home: to_wire_team(game.home),
-    away: to_wire_team(game.away),
-    home_score: game.home_score,
-    away_score: game.away_score,
-    status: to_wire_status(game.status),
-  )
-}
-
-pub fn from_wire_summary(game: wire.GameSummary) -> GameSummary {
-  let wire.PublicStandingsGameSummary(
-    id:,
-    home:,
-    away:,
-    home_score:,
-    away_score:,
-    status:,
-  ) = game
-
-  GameSummary(
-    id:,
-    home: from_wire_team(home),
-    away: from_wire_team(away),
-    home_score:,
-    away_score:,
-    status: from_wire_status(status),
-  )
-}
-
-fn to_wire_team(team: Team) -> wire.Team {
-  wire.PublicStandingsTeam(code: team.code, name: team.name, slug: team.slug)
-}
-
-fn from_wire_team(team: wire.Team) -> Team {
-  let wire.PublicStandingsTeam(code:, name:, slug:) = team
-  Team(code:, name:, slug:)
-}
-
-fn to_wire_status(status: GameStatus) -> wire.GameStatus {
-  case status {
-    Scheduled -> wire.PublicStandingsScheduled
-    Live(period) -> wire.PublicStandingsLive(period)
-    Final -> wire.PublicStandingsFinal
-  }
-}
-
-fn from_wire_status(status: wire.GameStatus) -> GameStatus {
-  case status {
-    wire.PublicStandingsScheduled -> Scheduled
-    wire.PublicStandingsLive(period) -> Live(period)
-    wire.PublicStandingsFinal -> Final
   }
 }
 
