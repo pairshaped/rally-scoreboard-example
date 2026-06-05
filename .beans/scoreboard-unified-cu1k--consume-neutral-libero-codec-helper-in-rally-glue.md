@@ -1,14 +1,14 @@
 ---
 # scoreboard-unified-cu1k
 title: Consume neutral Libero codec helper in Rally glue
-status: todo
+status: completed
 type: task
 priority: high
 tags:
     - rally
     - chase
 created_at: 2026-06-04T17:10:02Z
-updated_at: 2026-06-04T17:10:02Z
+updated_at: 2026-06-05T04:01:24Z
 parent: scoreboard-unified-wm8p
 blocked_by:
     - scoreboard-unified-58jn
@@ -29,3 +29,19 @@ Update Rally load-rpc generation so generated/rally/server_protocol calls the ne
 ## Non-goals
 
 Do not generate Libero-owned codec files from Rally. Do not move app-owned SSR result mapping or broadcast policy into Rally.
+
+
+
+Completed by the current generated Rally glue. generated/rally/server_protocol.gleam imports generated/libero/etf and uses local decode_any/encode_any helpers. It does not import generated/libero/to_client_codec, generated/libero/to_server_codec, api/to_client, or api/to_server. The obsolete root API directory and root codec wrappers are absent after clean regeneration.
+
+Verified with:
+
+• rg found no generated/libero/to_client_codec, generated/libero/to_server_codec, api/to_client, or api/to_server references
+• generated/rally/server_protocol.gleam still decodes page-local requests and encodes load/save result and push frames
+• Clean regeneration after deleting src/generated/rally and src/generated/libero
+• gleam build --target erlang
+• gleam build --target javascript
+• gleam test --target erlang
+• node test/boundary_guard_test.mjs
+• node test/ws_result_smoke.mjs
+• SCOREBOARD_BASE_URL=http://localhost:8107 node test/browser_smoke.mjs
