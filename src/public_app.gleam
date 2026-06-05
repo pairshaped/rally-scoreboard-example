@@ -38,8 +38,6 @@ import public/pages/standings as standings_page
 import public/pages/teams/slug_ as teams_slug_page
 @target(javascript)
 import public_boot
-@target(javascript)
-import to_client_application
 
 // TYPES
 
@@ -62,6 +60,11 @@ type Msg {
 @target(javascript)
 pub fn main() -> Nil {
   browser_app.start(init, update, view)
+}
+
+@target(erlang)
+pub fn ensure() -> Nil {
+  Nil
 }
 
 @target(javascript)
@@ -131,9 +134,7 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
         browser_app.server_frame_effect(
           page: model.page,
           bytes: bytes,
-          apply_frame: fn(page, bytes) {
-            to_client_application.decode_and_apply_public(page: page, bytes:)
-          },
+          apply_push: public_boot.apply_push,
           on_page: PageMsg,
         )
       #(Model(..model, page: page), page_effect)

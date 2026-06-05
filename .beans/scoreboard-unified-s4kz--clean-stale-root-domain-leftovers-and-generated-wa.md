@@ -104,6 +104,18 @@ Validated with:
 
 
 
+Eleventh cleanup pass moved browser server-frame decoding into generated/rally/browser_app.gleam. Deleted root `src/to_client_application.gleam`; public/admin app roots now call generated `server_frame_effect` with app-owned push callbacks from public_boot/admin_boot. Broadcast meaning and page update decisions remain app-owned.
+
+Validated with:
+
+• gleam run -m rally -- load-rpc
+• gleam build --target erlang
+• gleam build --target javascript
+• node test/boundary_guard_test.mjs
+• node test/ws_result_smoke.mjs
+
+
+
 Sixth cleanup pass removed public SSR load handler callbacks from app_ssr.gleam. Scoreboard now passes only load_context into generated/rally/server_ssr.gleam for public SSR loads; generated SSR glue calls page-owned load_wire functions directly for String/Int route args. Route-to-message selection remains app-owned for now.
 
 Validated with:

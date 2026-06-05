@@ -217,6 +217,17 @@ pub fn apply_broadcast(
   }
 }
 
+pub fn apply_push(
+  page page: pages.Page,
+  module module: String,
+  message message: broadcasts.Event,
+) -> #(pages.Page, Effect(pages.Message)) {
+  case module {
+    "app" -> apply_broadcast(page: page, message: message)
+    _ -> #(page, effect.none())
+  }
+}
+
 fn public_game_update(game: broadcasts.GameSnapshot) -> games_page.GameUpdate {
   let broadcasts.BroadcastGameSnapshot(
     id:,

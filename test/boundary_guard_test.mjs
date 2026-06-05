@@ -163,6 +163,7 @@ for (const staleFrameworkModule of [
   "src/app_topics.gleam",
   "src/app_topics_ffi.erl",
   "src/server_context.gleam",
+  "src/to_client_application.gleam",
 ]) {
   assert.equal(
     existsSync(path.join(root, staleFrameworkModule)),
