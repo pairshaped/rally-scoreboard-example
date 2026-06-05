@@ -1,17 +1,15 @@
 ---
 # scoreboard-unified-gy49
 title: Add boundary diagnostics for invalid wire crossings
-status: todo
+status: in-progress
 type: feature
 priority: normal
 tags:
     - rally
     - chase
 created_at: 2026-06-04T03:38:31Z
-updated_at: 2026-06-04T03:38:31Z
+updated_at: 2026-06-05T00:00:00Z
 parent: scoreboard-unified-wm8p
-blocked_by:
-    - scoreboard-unified-v4f9
 ---
 
 ## What to build
@@ -37,6 +35,14 @@ This should enforce the chase rule: wire-crossing types may reference page-local
 - [ ] Valid page-local types, primitives, containers, and approved shared wire types pass.
 - [ ] Tests cover at least one transitive violation.
 
-## Blocked by
+## Progress
 
-- Public games page-local load tracer bullet.
+- Added the first Rally diagnostic slice for direct type references in Rally-managed `ServerMsg`, `LoadResult`, and page-owned `GameUpdate` contracts.
+- The diagnostic reports the contract, field path, and offending type reference.
+- Valid page-local types, primitives, containers, `src/wire/**`, and `src/broadcasts.gleam` references are allowed.
+
+Still open:
+
+- Walk transitive type definitions.
+- Diagnose invalid imports that cross client/server boundaries.
+- Add negative tests for query row, display helper, and target-specific import leaks.
