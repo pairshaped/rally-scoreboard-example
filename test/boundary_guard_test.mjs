@@ -304,6 +304,20 @@ assertNoPatterns("src/app_auth_http.gleam", [
   },
 ]);
 
+assertNoPatterns("src/app_config.gleam", [
+  {
+    pattern: /SCOREBOARD_SECRET_KEY_BASE|SecretKey|base64|bit_array/,
+    reason: "auth session secret parsing belongs in Rally runtime session helpers",
+  },
+]);
+
+assertNoPatterns("src/scoreboard_unified.gleam", [
+  {
+    pattern: /new_auth_session|strong_random_bytes|base64_url_decode|SecretKeyError|secret_key_error/,
+    reason: "server startup should ask Rally for auth session configuration instead of owning session-key mechanics",
+  },
+]);
+
 assertNoPatterns("src/browser_mount.gleam", [
   {
     pattern: /device_dark_mode|dark_mode_changed_effects|persist_dark_mode/,

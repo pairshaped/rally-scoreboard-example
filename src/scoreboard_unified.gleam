@@ -7,8 +7,6 @@ import app_document
 @target(erlang)
 import app_ws
 @target(erlang)
-import gleam/crypto
-@target(erlang)
 import gleam/http
 @target(erlang)
 import gleam/http/request.{type Request, Request}
@@ -48,8 +46,7 @@ pub type AppContext {
 /// rally/runtime/http_server.
 pub fn main() -> Nil {
   let assert Ok(db) = sqlight.open(db_path)
-  let assert Ok(key) = session_key()
-  let session = session.new_auth_session(key)
+  let assert Ok(session) = auth_session()
   let port = app_config.http_port(default: 8080)
   let context = AppContext(db:, session:)
 
@@ -67,18 +64,16 @@ pub fn main() -> Nil {
 }
 
 @target(erlang)
-fn session_key() -> Result(BitArray, app_config.SecretKeyError) {
-  case app_config.secret_key() {
-    Ok(key) -> Ok(key)
-    Error(app_config.MissingSecret) -> {
-      io.println_error(
-        app_config.secret_key_error_message(app_config.MissingSecret)
-        <> "; using an in-memory development key",
-      )
-      Ok(crypto.strong_random_bytes(32))
-    }
+fn auth_session() -> Result(session.AuthSession, session.AuthSessionConfigError) {
+  case
+    session.auth_session_from_env(
+      env_var: "SCOREBOARD_SECRET_KEY_BASE",
+      allow_missing_development_key: True,
+    )
+  {
+    Ok(auth_session) -> Ok(auth_session)
     Error(error) -> {
-      io.println_error(app_config.secret_key_error_message(error))
+      io.println_error(session.auth_session_config_error_message(error))
       Error(error)
     }
   }
