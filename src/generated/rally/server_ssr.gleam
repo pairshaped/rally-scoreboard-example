@@ -1,5 +1,15 @@
 @target(erlang)
-import admin/pages/games as admin_games_wire
+import generated/proute/admin/page_input as admin_page_input
+@target(erlang)
+import generated/proute/admin/pages as admin_pages
+@target(erlang)
+import generated/proute/admin/routes as admin_routes
+@target(erlang)
+import generated/proute/public/page_input as public_page_input
+@target(erlang)
+import generated/proute/public/pages as public_pages
+@target(erlang)
+import generated/proute/public/routes as public_routes
 @target(erlang)
 import generated/rally/result as transport_result
 @target(erlang)
@@ -8,6 +18,13 @@ import generated/rally/server_protocol
 import gleam/bit_array
 @target(erlang)
 import gleam/list
+@target(erlang)
+import lustre/effect.{type Effect}
+@target(erlang)
+import page_context.{type PageContext}
+
+@target(erlang)
+import admin/pages/games as admin_games_wire
 @target(erlang)
 import public/pages/games/id_/wire as public_game_detail_wire
 @target(erlang)
@@ -18,13 +35,144 @@ import public/pages/standings/wire as public_standings_wire
 import public/pages/teams/slug_/wire as public_team_detail_wire
 
 @target(erlang)
-pub type LoadError {
-  LoadError(message: String)
+pub type AdminLoadRoute {
+  AdminNoLoad
+  AdminGamesLoad(
+    to_message: fn(Result(admin_games_wire.LoadResult, List(String))) ->
+      admin_pages.Message,
+  )
+}
+
+@target(erlang)
+pub type PublicLoadRoute {
+  PublicNoLoad
+  PublicGameDetailLoad(
+    to_message: fn(Result(public_game_detail_wire.LoadResult, List(String))) ->
+      public_pages.Message,
+  )
+  PublicGamesLoad(
+    to_message: fn(Result(public_games_wire.LoadResult, List(String))) ->
+      public_pages.Message,
+  )
+  PublicStandingsLoad(
+    to_message: fn(Result(public_standings_wire.LoadResult, List(String))) ->
+      public_pages.Message,
+  )
+  PublicTeamDetailLoad(
+    to_message: fn(Result(public_team_detail_wire.LoadResult, List(String))) ->
+      public_pages.Message,
+  )
+}
+
+@target(erlang)
+pub type AdminLoadHandlers {
+  AdminLoadHandlers(
+    admin_games_load: fn(admin_routes.Route) ->
+      Result(admin_games_wire.LoadResult, List(String)),
+  )
+}
+
+@target(erlang)
+pub type PublicLoadHandlers {
+  PublicLoadHandlers(
+    public_game_detail_load: fn(public_routes.Route) ->
+      Result(public_game_detail_wire.LoadResult, List(String)),
+    public_games_load: fn(public_routes.Route) ->
+      Result(public_games_wire.LoadResult, List(String)),
+    public_standings_load: fn(public_routes.Route) ->
+      Result(public_standings_wire.LoadResult, List(String)),
+    public_team_detail_load: fn(public_routes.Route) ->
+      Result(public_team_detail_wire.LoadResult, List(String)),
+  )
+}
+
+@target(erlang)
+pub fn admin_boot_page(
+  page_context page_context: PageContext,
+  query_params query_params: admin_page_input.QueryParams,
+  route route: admin_routes.Route,
+  select_load select_load: fn(admin_routes.Route) -> AdminLoadRoute,
+  handlers handlers: AdminLoadHandlers,
+  update_page update_page: fn(admin_pages.Page, admin_pages.Message) ->
+    #(admin_pages.Page, Effect(admin_pages.Message)),
+) -> #(admin_pages.Page, List(String)) {
+  let page = admin_pages.load_sync(page_context, query_params, route)
+
+  case select_load(route) {
+    AdminNoLoad -> #(page, [])
+    AdminGamesLoad(to_message:) -> {
+      let result = handlers.admin_games_load(route)
+      boot_loaded_page(
+        page: page,
+        result: result,
+        hydration_payload: admin_games_hydration_payload,
+        to_message: to_message,
+        update_page: update_page,
+      )
+    }
+  }
+}
+
+@target(erlang)
+pub fn public_boot_page(
+  page_context page_context: PageContext,
+  query_params query_params: public_page_input.QueryParams,
+  route route: public_routes.Route,
+  select_load select_load: fn(public_routes.Route) -> PublicLoadRoute,
+  handlers handlers: PublicLoadHandlers,
+  update_page update_page: fn(public_pages.Page, public_pages.Message) ->
+    #(public_pages.Page, Effect(public_pages.Message)),
+) -> #(public_pages.Page, List(String)) {
+  let page = public_pages.load_sync(page_context, query_params, route)
+
+  case select_load(route) {
+    PublicNoLoad -> #(page, [])
+    PublicGameDetailLoad(to_message:) -> {
+      let result = handlers.public_game_detail_load(route)
+      boot_loaded_page(
+        page: page,
+        result: result,
+        hydration_payload: public_game_detail_hydration_payload,
+        to_message: to_message,
+        update_page: update_page,
+      )
+    }
+    PublicGamesLoad(to_message:) -> {
+      let result = handlers.public_games_load(route)
+      boot_loaded_page(
+        page: page,
+        result: result,
+        hydration_payload: public_games_hydration_payload,
+        to_message: to_message,
+        update_page: update_page,
+      )
+    }
+    PublicStandingsLoad(to_message:) -> {
+      let result = handlers.public_standings_load(route)
+      boot_loaded_page(
+        page: page,
+        result: result,
+        hydration_payload: public_standings_hydration_payload,
+        to_message: to_message,
+        update_page: update_page,
+      )
+    }
+    PublicTeamDetailLoad(to_message:) -> {
+      let result = handlers.public_team_detail_load(route)
+      boot_loaded_page(
+        page: page,
+        result: result,
+        hydration_payload: public_team_detail_hydration_payload,
+        to_message: to_message,
+        update_page: update_page,
+      )
+    }
+  }
 }
 
 @target(erlang)
 pub fn admin_games_hydration_payload(
-  result result: Result(admin_games_wire.LoadResult, List(LoadError)),
+  result result: Result(admin_games_wire.LoadResult, List(String)),
 ) -> String {
   server_protocol.ensure()
   result
@@ -35,7 +183,7 @@ pub fn admin_games_hydration_payload(
 
 @target(erlang)
 pub fn public_game_detail_hydration_payload(
-  result result: Result(public_game_detail_wire.LoadResult, List(LoadError)),
+  result result: Result(public_game_detail_wire.LoadResult, List(String)),
 ) -> String {
   server_protocol.ensure()
   result
@@ -46,7 +194,7 @@ pub fn public_game_detail_hydration_payload(
 
 @target(erlang)
 pub fn public_games_hydration_payload(
-  result result: Result(public_games_wire.LoadResult, List(LoadError)),
+  result result: Result(public_games_wire.LoadResult, List(String)),
 ) -> String {
   server_protocol.ensure()
   result
@@ -57,7 +205,7 @@ pub fn public_games_hydration_payload(
 
 @target(erlang)
 pub fn public_standings_hydration_payload(
-  result result: Result(public_standings_wire.LoadResult, List(LoadError)),
+  result result: Result(public_standings_wire.LoadResult, List(String)),
 ) -> String {
   server_protocol.ensure()
   result
@@ -68,7 +216,7 @@ pub fn public_standings_hydration_payload(
 
 @target(erlang)
 pub fn public_team_detail_hydration_payload(
-  result result: Result(public_team_detail_wire.LoadResult, List(LoadError)),
+  result result: Result(public_team_detail_wire.LoadResult, List(String)),
 ) -> String {
   server_protocol.ensure()
   result
@@ -79,16 +227,28 @@ pub fn public_team_detail_hydration_payload(
 
 @target(erlang)
 fn map_load_result(
-  result: Result(a, List(LoadError)),
+  result: Result(a, List(String)),
 ) -> Result(a, List(transport_result.ApiLoadError)) {
   case result {
     Ok(value) -> Ok(value)
     Error(errors) ->
       Error(
         list.map(errors, fn(error) {
-          let LoadError(message:) = error
-          transport_result.ApiLoadError(message:)
+          transport_result.ApiLoadError(message: error)
         }),
       )
   }
+}
+
+@target(erlang)
+fn boot_loaded_page(
+  page page: page,
+  result result: Result(load_result, List(String)),
+  hydration_payload hydration_payload: fn(Result(load_result, List(String))) ->
+    String,
+  to_message to_message: fn(Result(load_result, List(String))) -> message,
+  update_page update_page: fn(page, message) -> #(page, Effect(message)),
+) -> #(page, List(String)) {
+  let #(page, _) = update_page(page, to_message(result))
+  #(page, [hydration_payload(result)])
 }

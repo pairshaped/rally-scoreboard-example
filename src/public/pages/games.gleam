@@ -231,6 +231,28 @@ fn map_load_result(
   }
 }
 
+@target(erlang)
+pub fn load_wire(
+  db: sqlight.Connection,
+) -> Result(wire.LoadResult, List(String)) {
+  case load(db) {
+    Ok(games) -> Ok(wire.PublicGamesLoaded(list.map(games, to_wire_summary)))
+    Error(LoadError(message: message)) -> Error([message])
+  }
+}
+
+@target(erlang)
+pub fn loaded_from_wire(
+  result: Result(wire.LoadResult, List(String)),
+) -> Message {
+  case result {
+    Ok(wire.PublicGamesLoaded(games)) ->
+      Loaded(Ok(list.map(games, from_wire_summary)))
+    Error([message, ..]) -> Loaded(Error(LoadError(message: message)))
+    Error([]) -> Loaded(Error(LoadError(message: "Could not load games.")))
+  }
+}
+
 pub fn to_wire_summary(game: GameSummary) -> wire.GameSummary {
   wire.PublicGamesGameSummary(
     id: game.id,

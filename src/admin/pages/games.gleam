@@ -295,6 +295,24 @@ fn map_load_result(
   }
 }
 
+@target(erlang)
+pub fn load_wire(db: sqlight.Connection) -> Result(LoadResult, List(String)) {
+  case load(db) {
+    Ok(games) -> Ok(AdminGamesLoadResult(games: games))
+    Error(LoadError(message: message)) -> Error([message])
+  }
+}
+
+@target(erlang)
+pub fn loaded_from_wire(result: Result(LoadResult, List(String))) -> Message {
+  case result {
+    Ok(AdminGamesLoadResult(games)) -> Loaded(Ok(games))
+    Error([message, ..]) -> Loaded(Error(LoadError(message: message)))
+    Error([]) ->
+      Loaded(Error(LoadError(message: "Could not load admin games.")))
+  }
+}
+
 @target(javascript)
 fn message_effect(msg: Message) -> Effect(Message) {
   case msg {

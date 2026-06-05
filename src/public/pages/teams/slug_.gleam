@@ -377,6 +377,28 @@ fn map_load_result(
   }
 }
 
+@target(erlang)
+pub fn load_wire(
+  db: sqlight.Connection,
+  slug: String,
+) -> Result(wire.LoadResult, List(String)) {
+  case load(db, slug) {
+    Ok(team) -> Ok(wire.PublicTeamDetailLoaded(to_wire_detail(team)))
+    Error(LoadError(message: message)) -> Error([message])
+  }
+}
+
+@target(erlang)
+pub fn loaded_from_wire(
+  result: Result(wire.LoadResult, List(String)),
+) -> Message {
+  case result {
+    Ok(wire.PublicTeamDetailLoaded(team)) -> Loaded(Ok(from_wire_detail(team)))
+    Error([message, ..]) -> Loaded(Error(LoadError(message: message)))
+    Error([]) -> Loaded(Error(LoadError(message: "Could not load team.")))
+  }
+}
+
 pub fn to_wire_detail(team: TeamDetail) -> wire.TeamDetail {
   wire.PublicTeamDetailTeamDetail(
     code: team.code,
