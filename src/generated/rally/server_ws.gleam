@@ -20,6 +20,18 @@ import public/pages/standings/wire as public_standings_wire
 import public/pages/teams/slug_/wire as public_team_detail_wire
 
 @target(erlang)
+import public/pages/games as public_games_page
+@target(erlang)
+import public/pages/games/id_ as public_game_detail_page
+@target(erlang)
+import public/pages/standings as public_standings_page
+@target(erlang)
+import public/pages/teams/slug_ as public_team_detail_page
+
+@target(erlang)
+import sqlight as load_context
+
+@target(erlang)
 import broadcasts as push_payload
 
 @target(erlang)
@@ -35,16 +47,9 @@ pub type SaveError {
 @target(erlang)
 pub type Handlers(state) {
   Handlers(
+    load_context: fn(state) -> load_context.Connection,
     admin_games_load: fn(state) ->
       Result(admin_games_wire.LoadResult, List(LoadError)),
-    public_game_detail_load: fn(state, Int) ->
-      Result(public_game_detail_wire.LoadResult, List(LoadError)),
-    public_games_load: fn(state) ->
-      Result(public_games_wire.LoadResult, List(LoadError)),
-    public_standings_load: fn(state) ->
-      Result(public_standings_wire.LoadResult, List(LoadError)),
-    public_team_detail_load: fn(state, String) ->
-      Result(public_team_detail_wire.LoadResult, List(LoadError)),
     admin_games_save: fn(state, admin_games_wire.ServerMsg) ->
       Result(admin_games_wire.GameUpdate, List(SaveError)),
     after_admin_games_save: fn(
@@ -309,7 +314,8 @@ fn send_public_game_detail_load_result(
   game_id game_id: Int,
 ) -> Nil {
   let result =
-    handlers.public_game_detail_load(state, game_id)
+    public_game_detail_page.load_wire(handlers.load_context(state), game_id)
+    |> map_page_load_result
     |> map_load_result
 
   let _sent =
@@ -331,7 +337,8 @@ fn send_public_games_load_result(
   handlers handlers: Handlers(state),
 ) -> Nil {
   let result =
-    handlers.public_games_load(state)
+    public_games_page.load_wire(handlers.load_context(state))
+    |> map_page_load_result
     |> map_load_result
 
   let _sent =
@@ -353,7 +360,8 @@ fn send_public_standings_load_result(
   handlers handlers: Handlers(state),
 ) -> Nil {
   let result =
-    handlers.public_standings_load(state)
+    public_standings_page.load_wire(handlers.load_context(state))
+    |> map_page_load_result
     |> map_load_result
 
   let _sent =
@@ -376,7 +384,8 @@ fn send_public_team_detail_load_result(
   slug slug: String,
 ) -> Nil {
   let result =
-    handlers.public_team_detail_load(state, slug)
+    public_team_detail_page.load_wire(handlers.load_context(state), slug)
+    |> map_page_load_result
     |> map_load_result
 
   let _sent =
@@ -412,6 +421,17 @@ fn send_admin_games_save_result(
   case result {
     Ok(value) -> handlers.after_admin_games_save(state, message, value)
     Error(_) -> Nil
+  }
+}
+
+@target(erlang)
+fn map_page_load_result(
+  result: Result(a, List(String)),
+) -> Result(a, List(LoadError)) {
+  case result {
+    Ok(value) -> Ok(value)
+    Error(errors) ->
+      Error(list.map(errors, fn(message) { LoadError(message:) }))
   }
 }
 

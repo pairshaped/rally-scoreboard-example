@@ -78,6 +78,10 @@ assertNoPatterns("src/app_ws.gleam", [
     pattern: /\bencode_[a-z_]+_(?:load|save)_result\b/,
     reason: "request result encoding belongs in server_ws",
   },
+  {
+    pattern: /\bfn load_public_[a-z_]+\b/,
+    reason: "public websocket page load adapters belong in generated server_ws",
+  },
 ]);
 
 assertNoPatterns("src/app_api.gleam", [

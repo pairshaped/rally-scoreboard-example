@@ -33,3 +33,7 @@ output = "src/generated/sql"
 [tools.rally.load_rpc.push]
 module = "broadcasts"
 type = "Event"
+
+[tools.rally.load_rpc.context]
+module = "sqlight"
+type = "Connection"

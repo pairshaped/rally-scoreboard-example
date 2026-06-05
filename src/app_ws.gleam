@@ -18,22 +18,6 @@ import sqlight
 import admin/pages/games as admin_games_page
 @target(erlang)
 import app_api
-@target(erlang)
-import public/pages/games as public_games_page
-@target(erlang)
-import public/pages/games/id_ as public_game_detail_page
-@target(erlang)
-import public/pages/games/id_/wire as public_game_detail_wire
-@target(erlang)
-import public/pages/games/wire as public_games_wire
-@target(erlang)
-import public/pages/standings as public_standings_page
-@target(erlang)
-import public/pages/standings/wire as public_standings_wire
-@target(erlang)
-import public/pages/teams/slug_ as public_team_detail_page
-@target(erlang)
-import public/pages/teams/slug_/wire as public_team_detail_wire
 
 // TYPES
 
@@ -93,11 +77,8 @@ pub fn handler(
 @target(erlang)
 fn handlers() -> server_ws.Handlers(State) {
   server_ws.Handlers(
+    load_context: fn(state: State) { state.db },
     admin_games_load: load_admin_games,
-    public_game_detail_load: load_public_game_detail,
-    public_games_load: load_public_games,
-    public_standings_load: load_public_standings,
-    public_team_detail_load: load_public_team_detail,
     admin_games_save: save_admin_games,
     after_admin_games_save: after_admin_games_save,
   )
@@ -166,37 +147,6 @@ fn admin_games_request_game_id(
     admin_games_page.AdminGamesMarkFinal(game_id) -> Ok(game_id)
     admin_games_page.AdminGamesLoad -> Error(Nil)
   }
-}
-
-@target(erlang)
-fn load_public_games(
-  state: State,
-) -> Result(public_games_wire.LoadResult, List(server_ws.LoadError)) {
-  public_games_page.load_wire(state.db) |> map_load_wire_result
-}
-
-@target(erlang)
-fn load_public_game_detail(
-  state: State,
-  game_id: Int,
-) -> Result(public_game_detail_wire.LoadResult, List(server_ws.LoadError)) {
-  public_game_detail_page.load_wire(state.db, game_id)
-  |> map_load_wire_result
-}
-
-@target(erlang)
-fn load_public_standings(
-  state: State,
-) -> Result(public_standings_wire.LoadResult, List(server_ws.LoadError)) {
-  public_standings_page.load_wire(state.db) |> map_load_wire_result
-}
-
-@target(erlang)
-fn load_public_team_detail(
-  state: State,
-  slug: String,
-) -> Result(public_team_detail_wire.LoadResult, List(server_ws.LoadError)) {
-  public_team_detail_page.load_wire(state.db, slug) |> map_load_wire_result
 }
 
 @target(erlang)
