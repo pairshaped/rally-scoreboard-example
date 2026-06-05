@@ -13,15 +13,7 @@ import authentication_context.{type AuthenticationContext}
 @target(erlang)
 import generated/proute/admin/page_input as admin_page_input
 @target(erlang)
-import generated/proute/admin/pages as admin_pages
-@target(erlang)
-import generated/proute/admin/routes as admin_routes
-@target(erlang)
 import generated/proute/public/page_input as public_page_input
-@target(erlang)
-import generated/proute/public/pages as public_pages
-@target(erlang)
-import generated/proute/public/routes as public_routes
 @target(erlang)
 import generated/rally/server_ssr
 @target(erlang)
@@ -92,20 +84,25 @@ pub fn public_render(
   authentication_context authentication_context: Option(AuthenticationContext),
   can_access_admin can_access_admin: Bool,
 ) -> SsrApp {
-  let route = public_routes.parse_path(path)
-  let #(page, hydration) = public_boot_page(db, query_params, route)
+  let page =
+    server_ssr.public_render_path(
+      page_context: PageContext,
+      query_params:,
+      path:,
+      handlers: public_load_handlers(db),
+    )
 
   SsrApp(
     html: app_shell.public(
-      current_path: public_routes.route_to_path(route),
+      current_path: page.current_path,
       dark_mode: dark_mode,
       authentication_context: authentication_context,
       can_access_admin: can_access_admin,
       on_dark_mode_change: fn(_) { Nil },
-      content: public_pages.view(page) |> element.map(fn(_) { Nil }),
+      content: page.content,
     )
       |> element.to_string,
-    hydration: hydration,
+    hydration: page.hydration,
   )
 }
 
@@ -139,55 +136,28 @@ pub fn admin_render(
   dark_mode dark_mode: Bool,
   authentication_context authentication_context: Option(AuthenticationContext),
 ) -> SsrApp {
-  let route = admin_routes.parse_path(path)
-  let #(page, hydration) = admin_boot_page(db, query_params, route)
+  let page =
+    server_ssr.admin_render_path(
+      page_context: PageContext,
+      query_params:,
+      path:,
+      handlers: admin_load_handlers(db),
+    )
 
   SsrApp(
     html: app_shell.admin(
-      current_path: admin_routes.route_to_path(route),
+      current_path: page.current_path,
       dark_mode: dark_mode,
       authentication_context: authentication_context,
       on_dark_mode_change: fn(_) { Nil },
-      content: admin_pages.view(page) |> element.map(fn(_) { Nil }),
+      content: page.content,
     )
       |> element.to_string,
-    hydration: hydration,
+    hydration: page.hydration,
   )
 }
 
 // HELPERS
-
-@target(erlang)
-fn public_boot_page(
-  db db: sqlight.Connection,
-  query_params query_params: public_page_input.QueryParams,
-  route route: public_routes.Route,
-) -> #(public_pages.Page, List(String)) {
-  server_ssr.public_boot_page(
-    page_context: PageContext,
-    query_params:,
-    route:,
-    handlers: public_load_handlers(db),
-    update_page: public_pages.update,
-  )
-}
-
-@target(erlang)
-fn admin_boot_page(
-  db db: sqlight.Connection,
-  query_params query_params: admin_page_input.QueryParams,
-  route route: admin_routes.Route,
-) -> #(admin_pages.Page, List(String)) {
-  server_ssr.admin_boot_page(
-    page_context: PageContext,
-    query_params:,
-    route:,
-    handlers: admin_load_handlers(db),
-    update_page: fn(page, message) {
-      admin_pages.update(PageContext, page, message)
-    },
-  )
-}
 
 @target(erlang)
 fn public_load_handlers(

@@ -30,6 +30,8 @@ import gleam/list
 @target(erlang)
 import lustre/effect.{type Effect}
 @target(erlang)
+import lustre/element.{type Element}
+@target(erlang)
 import page_context.{type PageContext}
 @target(erlang)
 import public/pages/games as public_games_wire
@@ -41,6 +43,24 @@ import public/pages/standings as public_standings_wire
 import public/pages/teams/slug_ as public_team_detail_wire
 @target(erlang)
 import sqlight as load_context
+
+@target(erlang)
+pub type AdminSsrOutput {
+  AdminSsrOutput(
+    current_path: String,
+    content: Element(Nil),
+    hydration: List(String),
+  )
+}
+
+@target(erlang)
+pub type PublicSsrOutput {
+  PublicSsrOutput(
+    current_path: String,
+    content: Element(Nil),
+    hydration: List(String),
+  )
+}
 
 @target(erlang)
 pub type AdminLoadRoute {
@@ -127,6 +147,56 @@ pub type AdminLoadHandlers {
 @target(erlang)
 pub type PublicLoadHandlers {
   PublicLoadHandlers(load_context: fn() -> load_context.Connection)
+}
+
+@target(erlang)
+pub fn admin_render_path(
+  page_context page_context: PageContext,
+  query_params query_params: admin_page_input.QueryParams,
+  path path: String,
+  handlers handlers: AdminLoadHandlers,
+) -> AdminSsrOutput {
+  let route = admin_routes.parse_path(path)
+  let #(page, hydration) =
+    admin_boot_page(
+      page_context:,
+      query_params:,
+      route:,
+      handlers:,
+      update_page: fn(page, message) {
+        admin_pages.update(page_context, page, message)
+      },
+    )
+
+  AdminSsrOutput(
+    current_path: admin_routes.route_to_path(route),
+    content: admin_pages.view(page) |> element.map(fn(_) { Nil }),
+    hydration:,
+  )
+}
+
+@target(erlang)
+pub fn public_render_path(
+  page_context page_context: PageContext,
+  query_params query_params: public_page_input.QueryParams,
+  path path: String,
+  handlers handlers: PublicLoadHandlers,
+) -> PublicSsrOutput {
+  let route = public_routes.parse_path(path)
+  let #(page, hydration) =
+    public_boot_page(
+      page_context:,
+      query_params:,
+      route:,
+      handlers:,
+      update_page: fn(page, message) { public_pages.update(page, message) },
+    )
+
+  PublicSsrOutput(
+    current_path: public_routes.route_to_path(route),
+    content: public_pages.view(page) |> element.map(fn(_) { Nil }),
+    hydration:,
+  )
 }
 
 @target(erlang)
