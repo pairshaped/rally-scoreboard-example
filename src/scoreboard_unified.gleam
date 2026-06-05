@@ -1,4 +1,6 @@
 @target(erlang)
+import app_auth
+@target(erlang)
 import app_auth_http
 @target(erlang)
 import app_config
@@ -108,10 +110,15 @@ fn handle_auth_path(
     context: context,
     routes: auth_http.StandardAuthRoutes(
       sign_in_post: fn(req, context: AppContext) {
-        app_auth_http.handle_sign_in_post(
+        auth_http.sign_in_with_code(
           req: req,
-          db: context.db,
           session: context.session,
+          verify_code: fn(code) {
+            app_auth.verify_sign_in_code(db: context.db, code: code)
+          },
+          default_return_to: "/admin/games",
+          return_to: app_auth_http.admin_return_to,
+          secure: False,
         )
       },
       sign_out: fn(req, _context) {

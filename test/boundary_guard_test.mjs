@@ -310,6 +310,10 @@ assertNoPatterns("src/app_auth_http.gleam", [
     pattern: /response\.(?:new|set_header|set_body|set_cookie|expire_cookie)/,
     reason: "standard auth redirect and session-cookie responses belong in Rally runtime auth HTTP helpers",
   },
+  {
+    pattern: /read_sign_in_form|issue_user_session|invalid_sign_in_redirect/,
+    reason: "standard sign-in POST workflow belongs in Rally runtime auth HTTP helpers",
+  },
 ]);
 
 assertNoPatterns("src/app_config.gleam", [

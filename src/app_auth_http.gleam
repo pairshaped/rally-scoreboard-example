@@ -1,12 +1,6 @@
 @target(erlang)
 import app_auth
 @target(erlang)
-import gleam/http/request.{type Request}
-@target(erlang)
-import gleam/http/response
-@target(erlang)
-import mist.{type Connection, type ResponseData}
-@target(erlang)
 import rally/runtime/auth_http
 @target(erlang)
 import rally/runtime/session
@@ -16,20 +10,6 @@ import sqlight
 @target(javascript)
 pub fn ensure() -> Nil {
   Nil
-}
-
-@target(erlang)
-/// HTTP handler for POST /sign_in.
-/// scoreboard_unified routes auth requests here before normal document routing.
-pub fn handle_sign_in_post(
-  req req: Request(Connection),
-  db db: sqlight.Connection,
-  session session: session.AuthSession,
-) -> response.Response(ResponseData) {
-  case auth_http.read_sign_in_form(req, invalid_return_to: "/admin/games") {
-    Ok(pairs) -> verify_credentials(db: db, session: session, pairs: pairs)
-    Error(response) -> response
-  }
 }
 
 @target(erlang)
@@ -48,36 +28,13 @@ pub fn request_auth(
 }
 
 @target(erlang)
-fn verify_credentials(
-  db db: sqlight.Connection,
-  session session: session.AuthSession,
-  pairs pairs: List(#(String, String)),
-) -> response.Response(ResponseData) {
-  let return_to =
-    auth_http.form_value(pairs, "return_to")
-    |> safe_admin_return_to
-
-  case auth_http.form_value(pairs, "code") {
-    Ok(code) ->
-      case app_auth.verify_sign_in_code(db: db, code: code) {
-        Ok(user_id) ->
-          auth_http.issue_user_session(
-            session: session,
-            return_to: return_to,
-            user_id: user_id,
-            secure: False,
-          )
-        Error(Nil) -> auth_http.invalid_sign_in_redirect(return_to)
-      }
-    Error(Nil) -> auth_http.invalid_sign_in_redirect(return_to)
-  }
-}
-
-@target(erlang)
-fn safe_admin_return_to(path: Result(String, Nil)) -> String {
+/// Return-path policy for the admin sign-in flow.
+/// Rally owns safe local URL handling; Scoreboard narrows successful sign-ins
+/// to admin routes.
+pub fn admin_return_to(path: String) -> String {
   case path {
-    Ok("/admin") -> "/admin"
-    Ok("/admin/" <> rest) -> "/admin/" <> rest
+    "/admin" -> "/admin"
+    "/admin/" <> rest -> "/admin/" <> rest
     _ -> "/admin/games"
   }
 }
