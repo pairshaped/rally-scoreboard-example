@@ -7,6 +7,8 @@ import generated/proute/public/routes
 @target(javascript)
 import generated/rally/browser
 @target(javascript)
+import generated/rally/browser_app
+@target(javascript)
 import generated/rally/browser_mount
 @target(javascript)
 import generated/rally/hydration
@@ -20,8 +22,6 @@ import gleam/int
 @target(javascript)
 import gleam/option.{type Option, None, Some}
 
-@target(javascript)
-import lustre
 @target(javascript)
 import lustre/effect.{type Effect}
 @target(javascript)
@@ -64,9 +64,7 @@ type Msg {
 
 @target(javascript)
 pub fn main() -> Nil {
-  let app = lustre.application(init, update, view)
-  let _started = lustre.start(app, "#app", Nil)
-  Nil
+  browser_app.start(init, update, view)
 }
 
 @target(javascript)
@@ -88,15 +86,14 @@ fn init(_flags: Nil) -> #(Model, Effect(Msg)) {
 
   #(
     Model(page: page, shared_state:),
-    effect.batch([
-      effect.map(page_effect, PageMsg),
-      browser_mount.startup_effects(
-        dark_mode: dark_mode,
-        on_frame: ServerFrame,
-        on_shell_navigation: ShellNavigate,
-        on_browser_navigation: BrowserPathChanged,
-      ),
-    ]),
+    browser_app.startup_effects(
+      page_effect: page_effect,
+      dark_mode: dark_mode,
+      on_page: PageMsg,
+      on_frame: ServerFrame,
+      on_shell_navigation: ShellNavigate,
+      on_browser_navigation: BrowserPathChanged,
+    ),
   )
 }
 
@@ -268,14 +265,15 @@ fn navigate(
     public_boot.load_client(PageContext, page_input.empty_query_params(), route)
   let shared_state =
     PublicClientSharedState(..model.shared_state, active_section: path)
-  let history_effect = case push_history {
-    True -> browser_mount.push_path(path)
-    False -> effect.none()
-  }
 
   #(
     Model(page: page, shared_state:),
-    effect.batch([history_effect, effect.map(page_effect, PageMsg)]),
+    browser_app.navigation_effects(
+      path: path,
+      push_history: push_history,
+      page_effect: page_effect,
+      on_page: PageMsg,
+    ),
   )
 }
 
