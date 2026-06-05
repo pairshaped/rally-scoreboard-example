@@ -7,48 +7,40 @@ import app_shell
 @target(javascript)
 import browser_mount
 @target(javascript)
-import generated/proute/admin/page_input
-@target(javascript)
 import generated/proute/admin/pages
-@target(javascript)
-import generated/rally/browser
 @target(javascript)
 import generated/rally/browser_app
 @target(javascript)
-import generated/rally/browser_mount as rally_browser_mount
-@target(javascript)
-import gleam/option.{None, Some}
-@target(javascript)
-import lustre/effect.{type Effect}
+import gleam/option.{None}
 @target(javascript)
 import lustre/element.{type Element}
 @target(javascript)
 import page_context.{PageContext}
 
-// TYPES
-
-@target(javascript)
-type Model {
-  Model(page: pages.Page, shared_state: AdminClientSharedState)
-}
-
-@target(javascript)
-type Msg {
-  PageMsg(pages.Message)
-  ServerFrame(BitArray)
-  DarkModeChanged(Bool)
-  ShellNavigate(String)
-  BrowserPathChanged(String)
-}
-
-// INIT
-
 @target(javascript)
 /// Browser entrypoint for the admin mount.
-/// The admin browser bundle calls this and hands Lustre the app init, update,
-/// and view functions.
+/// The app configures shared state and shell rendering; Rally owns lifecycle.
 pub fn main() -> Nil {
-  browser_app.start(init, update, view)
+  browser_app.start_admin_mount(browser_app.AdminMountConfig(
+    page_context: PageContext,
+    shared_state: fn(current_path, dark_mode) {
+      AdminClientSharedState(
+        authentication_context: browser_mount.boot_authentication_context(),
+        league_name: "Scoreboard",
+        dark_mode:,
+        active_section: current_path,
+        toast: None,
+      )
+    },
+    set_active_path: fn(shared_state, path) {
+      AdminClientSharedState(..shared_state, active_section: path)
+    },
+    set_dark_mode: fn(shared_state, dark_mode) {
+      AdminClientSharedState(..shared_state, dark_mode:)
+    },
+    update_page: fn(page, message) { pages.update(PageContext, page, message) },
+    view: view,
+  ))
 }
 
 @target(erlang)
@@ -59,140 +51,17 @@ pub fn ensure() -> Nil {
 }
 
 @target(javascript)
-fn init(_flags: Nil) -> #(Model, Effect(Msg)) {
-  let current_path = browser.path()
-  let dark_mode = rally_browser_mount.device_dark_mode()
-  let #(page, page_effect) =
-    browser_app.admin_initial_page_from_path(
-      page_context: PageContext,
-      query_params: page_input.empty_query_params(),
-      path: current_path,
-      update_page: fn(page, message) {
-        pages.update(PageContext, page, message)
-      },
-    )
-  let shared_state =
-    AdminClientSharedState(
-      authentication_context: browser_mount.boot_authentication_context(),
-      league_name: "Scoreboard",
-      dark_mode:,
-      active_section: current_path,
-      toast: None,
-    )
-
-  #(
-    Model(page: page, shared_state:),
-    effect.batch([
-      browser_app.startup_effects(
-        page_effect: page_effect,
-        dark_mode: dark_mode,
-        on_page: PageMsg,
-        on_frame: ServerFrame,
-        on_shell_navigation: ShellNavigate,
-        on_browser_navigation: BrowserPathChanged,
-      ),
-      browser_app.sync_topics(browser_app.admin_page_topics(page)),
-    ]),
-  )
-}
-
-// UPDATE
-
-@target(javascript)
-fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
-  case msg {
-    PageMsg(inner) -> {
-      case browser_app.admin_message_path(inner) {
-        Some(path) -> navigate(model: model, path: path, push_history: True)
-        None -> {
-          let #(page, page_effect) =
-            browser_app.map_page_effect(
-              pages.update(PageContext, model.page, inner),
-              PageMsg,
-            )
-          #(
-            Model(..model, page: page),
-            effect.batch([
-              page_effect,
-              browser_app.sync_topics(browser_app.admin_page_topics(page)),
-            ]),
-          )
-        }
-      }
-    }
-    ServerFrame(bytes) -> {
-      let #(page, page_effect) =
-        browser_app.server_frame_effect(
-          page: model.page,
-          bytes: bytes,
-          apply_push: browser_app.admin_apply_push,
-          on_page: PageMsg,
-        )
-      #(
-        Model(..model, page: page),
-        effect.batch([
-          page_effect,
-          browser_app.sync_topics(browser_app.admin_page_topics(page)),
-        ]),
-      )
-    }
-    DarkModeChanged(dark_mode) -> {
-      let shared_state =
-        AdminClientSharedState(..model.shared_state, dark_mode: dark_mode)
-      #(
-        Model(..model, shared_state:),
-        rally_browser_mount.dark_mode_changed_effects(dark_mode),
-      )
-    }
-    ShellNavigate(path) -> {
-      navigate(model: model, path: path, push_history: True)
-    }
-    BrowserPathChanged(path) -> {
-      navigate(model: model, path: path, push_history: False)
-    }
-  }
-}
-
-// VIEW
-
-@target(javascript)
-fn view(model: Model) -> Element(Msg) {
+fn view(
+  model: browser_app.AdminMountModel(AdminClientSharedState),
+  on_page: fn(pages.Message) -> browser_app.AdminMountMsg,
+  on_dark_mode_change: fn(Bool) -> browser_app.AdminMountMsg,
+  _on_navigate: fn(String) -> browser_app.AdminMountMsg,
+) -> Element(browser_app.AdminMountMsg) {
   app_shell.admin(
     current_path: model.shared_state.active_section,
     dark_mode: model.shared_state.dark_mode,
     authentication_context: model.shared_state.authentication_context,
-    on_dark_mode_change: DarkModeChanged,
-    content: pages.view(model.page) |> element.map(PageMsg),
-  )
-}
-
-// HELPERS
-
-@target(javascript)
-fn navigate(
-  model model: Model,
-  path path: String,
-  push_history push_history: Bool,
-) -> #(Model, Effect(Msg)) {
-  let #(canonical_path, page, page_effect) =
-    browser_app.admin_load_path(
-      page_context: PageContext,
-      query_params: page_input.empty_query_params(),
-      path:,
-    )
-  let shared_state =
-    AdminClientSharedState(..model.shared_state, active_section: canonical_path)
-
-  #(
-    Model(page: page, shared_state:),
-    effect.batch([
-      browser_app.navigation_effects(
-        path: canonical_path,
-        push_history: push_history,
-        page_effect: page_effect,
-        on_page: PageMsg,
-      ),
-      browser_app.sync_topics(browser_app.admin_page_topics(page)),
-    ]),
+    on_dark_mode_change: on_dark_mode_change,
+    content: pages.view(model.page) |> element.map(on_page),
   )
 }

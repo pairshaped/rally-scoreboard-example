@@ -236,6 +236,18 @@ assertNoPatterns("src/app_ssr.gleam", [
 for (const browserApp of ["src/admin_app.gleam", "src/public_app.gleam"]) {
   assertNoPatterns(browserApp, [
     {
+      pattern: /\btype\s+(?:Model|Msg)\b|\bfn\s+(?:init|update|navigate)\b/,
+      reason: "standard browser Model/Msg/init/update/navigation lifecycle belongs in browser_app",
+    },
+    {
+      pattern: /PageMsg|ServerFrame|ShellNavigate|BrowserPathChanged/,
+      reason: "browser lifecycle message variants belong in generated browser_app",
+    },
+    {
+      pattern: /browser\.path|device_dark_mode|initial_page_from_path|load_path|message_path|server_frame_effect|navigation_effects|startup_effects|sync_topics|page_topics/,
+      reason: "current-path boot, loads, navigation, server frames, and topic sync belong in browser_app",
+    },
+    {
       pattern: /\blustre\.application\b/,
       reason: "browser app startup belongs in browser_app",
     },
