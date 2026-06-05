@@ -1,3 +1,4 @@
+import broadcasts
 import generated/proute/public/page_input
 import gleam/int
 import gleam/option.{type Option, None, Some}
@@ -45,13 +46,6 @@ pub type GameDetail {
     away_score: Int,
     status: GameStatus,
   )
-}
-
-/// Page-local broadcast projection.
-/// public_boot converts broadcasts.GameSnapshot into this type before calling the
-/// page-owned game_updated hook.
-pub type GameUpdate {
-  GameUpdate(id: Int, home_score: Int, away_score: Int, status: GameStatus)
 }
 
 /// Page-local load error carried by Message.Loaded.
@@ -195,10 +189,11 @@ pub fn update(
 /// is decoded, then wraps the returned effect back into pages.Message.
 pub fn game_updated(
   model model: Model,
-  game game: GameUpdate,
+  game game: broadcasts.GameSnapshot,
 ) -> #(Model, Effect(Message)) {
+  let broadcasts.BroadcastGameSnapshot(id:, ..) = game
   case model.game {
-    Some(detail) if detail.id == game.id -> #(
+    Some(detail) if detail.id == id -> #(
       Model(game: Some(update_detail(detail, game))),
       effect.none(),
     )
@@ -263,13 +258,26 @@ fn view_game_detail(
   }
 }
 
-fn update_detail(detail: GameDetail, game: GameUpdate) -> GameDetail {
+fn update_detail(
+  detail: GameDetail,
+  game: broadcasts.GameSnapshot,
+) -> GameDetail {
+  let broadcasts.BroadcastGameSnapshot(home_score:, away_score:, status:, ..) =
+    game
   GameDetail(
     ..detail,
-    home_score: game.home_score,
-    away_score: game.away_score,
-    status: game.status,
+    home_score:,
+    away_score:,
+    status: broadcast_game_status(status),
   )
+}
+
+fn broadcast_game_status(status: broadcasts.GameStatus) -> GameStatus {
+  case status {
+    broadcasts.BroadcastScheduled -> Scheduled
+    broadcasts.BroadcastLive(period) -> Live(period)
+    broadcasts.BroadcastFinal -> Final
+  }
 }
 
 fn section_head(title: String) -> Element(msg) {

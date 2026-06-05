@@ -10,6 +10,8 @@ Rally may orchestrate Libero generation for Rally-managed surfaces. The generate
 
 Rally must not generate Proute-owned files. Rally can consume Proute output, but it should not rediscover routes, define route params, generate page enums, or decide page dispatch shape.
 
+Rally consuming Proute output should reduce authored routing code. User-authored modules should not import generated route modules just to perform page load, hydration, browser navigation, SSR, or push dispatch. When those workflows need route or page identity, generated Rally glue should consume the generated Proute route and page modules directly.
+
 Rally is not a Lustre server-components generator. Rally keeps browser TEA in the browser and sends typed domain messages over Rally-managed transport. Server-components examples can inform ergonomics, but Rally should not generate server-side VDOM runtimes, DOM-event forwarding, VDOM patch protocols, or server-component route mounts.
 
 Route roots are page roots, not aliases. A root file such as `home_.gleam` represents the route Proute discovers. If that page delegates its model, load, update, or view to another page, the delegation belongs in the page or in a page-owned adapter. Rally should generate around the page identity Proute provides rather than adding a separate alias convention.

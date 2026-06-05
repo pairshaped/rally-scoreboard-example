@@ -4,6 +4,8 @@ Whole modules where every import and declaration is target annotated are framewo
 
 Browser boot, hydration, client transport, per-page server dispatch, SSR handlers, page protocol adapters, route composition glue, and build metadata are generator-owned. User-owned modules should not be files that exist only to wrap target-specific generated plumbing.
 
+Generated glue should also own mechanical page dispatch around routing, loads, hydration, and push delivery. Moving that dispatch into a different user-authored root module is not a simplification; it only hides page behavior behind another handwritten adapter.
+
 Generated Rally code should be thin glue. Rally should not generate a full client app from server-shaped source. Client-side application behavior is authored in Gleam, with JS or TS reserved for tiny FFI modules around browser APIs.
 
 Rally-generated glue must respect the library boundaries in [0009: Separate Libero Proute And Rally Roles](0009-separate-libero-proute-and-rally-roles.md). Libero owns ETF codecs and contract output. Proute owns routing and page glue. Rally composes those outputs under `src/generated/rally/**`.

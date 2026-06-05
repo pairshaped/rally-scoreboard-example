@@ -1,3 +1,4 @@
+import broadcasts
 import generated/proute/public/page_input
 import gleam/bool
 import gleam/int
@@ -45,20 +46,6 @@ pub type GameSummary {
     id: Int,
     home: Team,
     away: Team,
-    home_score: Int,
-    away_score: Int,
-    status: GameStatus,
-  )
-}
-
-/// Page-local broadcast projection.
-/// public_boot converts broadcasts.GameSnapshot into this type before calling the
-/// page-owned game_updated hook.
-pub type GameUpdate {
-  GameUpdate(
-    id: Int,
-    home_code: String,
-    away_code: String,
     home_score: Int,
     away_score: Int,
     status: GameStatus,
@@ -218,7 +205,7 @@ pub fn update(
 /// is decoded, then wraps the returned effect back into pages.Message.
 pub fn game_updated(
   model model: Model,
-  game game: GameUpdate,
+  game game: broadcasts.GameSnapshot,
 ) -> #(Model, Effect(Message)) {
   case model.team {
     Some(team) -> #(
@@ -244,25 +231,38 @@ pub fn view(model model: Model) -> Element(Message) {
 
 // HELPERS
 
-fn apply_game_updated(team: TeamDetail, snapshot: GameUpdate) -> TeamDetail {
+fn apply_game_updated(
+  team: TeamDetail,
+  snapshot: broadcasts.GameSnapshot,
+) -> TeamDetail {
   use <- bool.guard(!game_belongs_to_team(team.code, snapshot), team)
   apply_team_game_update(team, snapshot)
 }
 
-fn game_belongs_to_team(team_code: String, snapshot: GameUpdate) -> Bool {
-  snapshot.home_code == team_code || snapshot.away_code == team_code
+fn game_belongs_to_team(
+  team_code: String,
+  snapshot: broadcasts.GameSnapshot,
+) -> Bool {
+  let broadcasts.BroadcastGameSnapshot(
+    home: broadcasts.BroadcastTeam(code: home_code, ..),
+    away: broadcasts.BroadcastTeam(code: away_code, ..),
+    ..,
+  ) = snapshot
+
+  home_code == team_code || away_code == team_code
 }
 
 fn apply_team_game_update(
   team: TeamDetail,
-  snapshot: GameUpdate,
+  snapshot: broadcasts.GameSnapshot,
 ) -> TeamDetail {
-  case list.find(team.recent_games, fn(game) { game.id == snapshot.id }) {
+  let broadcasts.BroadcastGameSnapshot(id:, ..) = snapshot
+  case list.find(team.recent_games, fn(game) { game.id == id }) {
     Error(Nil) -> team
     Ok(existing) -> {
       let updated_games =
         list.map(team.recent_games, fn(game) {
-          case game.id == snapshot.id {
+          case game.id == id {
             True -> update_game_summary(game, snapshot)
             False -> game
           }
@@ -284,13 +284,26 @@ fn apply_team_game_update(
   }
 }
 
-fn update_game_summary(game: GameSummary, snapshot: GameUpdate) -> GameSummary {
+fn update_game_summary(
+  game: GameSummary,
+  snapshot: broadcasts.GameSnapshot,
+) -> GameSummary {
+  let broadcasts.BroadcastGameSnapshot(home_score:, away_score:, status:, ..) =
+    snapshot
   GameSummary(
     ..game,
-    home_score: snapshot.home_score,
-    away_score: snapshot.away_score,
-    status: snapshot.status,
+    home_score:,
+    away_score:,
+    status: broadcast_game_status(status),
   )
+}
+
+fn broadcast_game_status(status: broadcasts.GameStatus) -> GameStatus {
+  case status {
+    broadcasts.BroadcastScheduled -> Scheduled
+    broadcasts.BroadcastLive(period) -> Live(period)
+    broadcasts.BroadcastFinal -> Final
+  }
 }
 
 fn record_contribution(

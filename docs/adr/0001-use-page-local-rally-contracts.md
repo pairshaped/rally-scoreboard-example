@@ -2,6 +2,8 @@
 
 Scoreboard Unified is the chase target for the next Rally page model: one root Gleam package, no generated client app, and page modules that look like ordinary TEA SPA pages with server handlers added at the bottom. Page modules own their local `Model`, browser `Msg`, page-local `ServerMsg`, shared `view`, JavaScript-only `init` and `update`, and Erlang-only `load` and `handle` functions.
 
+Page modules are also the author-facing routing surface. The page filename and path decide the route. Authored page code should not match generated route constructors, parse route params from strings, or wrap itself in generated page enums. Route params arrive through the generated page input shape, and generated Proute/Rally glue owns route dispatch around the page.
+
 The source model is one authored `src/` tree with target annotations, not separate generated client and server packages.
 
 The default page shape is:

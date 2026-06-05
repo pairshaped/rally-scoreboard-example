@@ -196,28 +196,23 @@ pub fn apply_broadcast(
 ) -> #(pages.Page, Effect(pages.Message)) {
   case page, message {
     pages.HomePage(model), broadcasts.BroadcastGameUpdated(game) -> {
-      let #(model, page_effect) =
-        games_page.game_updated(model, public_game_update(game))
+      let #(model, page_effect) = games_page.game_updated(model, game)
       #(pages.HomePage(model), effect.map(page_effect, pages.HomeMsg))
     }
     pages.GamesPage(model), broadcasts.BroadcastGameUpdated(game) -> {
-      let #(model, page_effect) =
-        games_page.game_updated(model, public_game_update(game))
+      let #(model, page_effect) = games_page.game_updated(model, game)
       #(pages.GamesPage(model), effect.map(page_effect, pages.GamesMsg))
     }
     pages.GamesIdPage(model), broadcasts.BroadcastGameUpdated(game) -> {
-      let #(model, page_effect) =
-        games_id_page.game_updated(model, detail_game_update(game))
+      let #(model, page_effect) = games_id_page.game_updated(model, game)
       #(pages.GamesIdPage(model), effect.map(page_effect, pages.GamesIdMsg))
     }
     pages.StandingsPage(model), broadcasts.BroadcastGameUpdated(game) -> {
-      let #(model, page_effect) =
-        standings_page.game_updated(model, standings_game_update(game))
+      let #(model, page_effect) = standings_page.game_updated(model, game)
       #(pages.StandingsPage(model), effect.map(page_effect, pages.StandingsMsg))
     }
     pages.TeamsSlugPage(model), broadcasts.BroadcastGameUpdated(game) -> {
-      let #(model, page_effect) =
-        teams_slug_page.game_updated(model, team_game_update(game))
+      let #(model, page_effect) = teams_slug_page.game_updated(model, game)
       #(pages.TeamsSlugPage(model), effect.map(page_effect, pages.TeamsSlugMsg))
     }
     _, _ -> #(page, effect.none())
@@ -235,120 +230,5 @@ pub fn apply_push(
   case module {
     "app" -> apply_broadcast(page: page, message: message)
     _ -> #(page, effect.none())
-  }
-}
-
-fn public_game_update(game: broadcasts.GameSnapshot) -> games_page.GameUpdate {
-  let broadcasts.BroadcastGameSnapshot(
-    id:,
-    home_score:,
-    away_score:,
-    status:,
-    ..,
-  ) = game
-
-  games_page.GameUpdate(
-    id:,
-    home_score:,
-    away_score:,
-    status: public_game_status(status),
-  )
-}
-
-fn public_game_status(status: broadcasts.GameStatus) -> games_page.GameStatus {
-  case status {
-    broadcasts.BroadcastScheduled -> games_page.Scheduled
-    broadcasts.BroadcastLive(period) -> games_page.Live(period)
-    broadcasts.BroadcastFinal -> games_page.Final
-  }
-}
-
-fn detail_game_update(
-  game: broadcasts.GameSnapshot,
-) -> games_id_page.GameUpdate {
-  let broadcasts.BroadcastGameSnapshot(
-    id:,
-    home_score:,
-    away_score:,
-    status:,
-    ..,
-  ) = game
-
-  games_id_page.GameUpdate(
-    id:,
-    home_score:,
-    away_score:,
-    status: detail_game_status(status),
-  )
-}
-
-fn detail_game_status(
-  status: broadcasts.GameStatus,
-) -> games_id_page.GameStatus {
-  case status {
-    broadcasts.BroadcastScheduled -> games_id_page.Scheduled
-    broadcasts.BroadcastLive(period) -> games_id_page.Live(period)
-    broadcasts.BroadcastFinal -> games_id_page.Final
-  }
-}
-
-fn standings_game_update(
-  game: broadcasts.GameSnapshot,
-) -> standings_page.GameUpdate {
-  let broadcasts.BroadcastGameSnapshot(
-    id:,
-    home_score:,
-    away_score:,
-    status:,
-    ..,
-  ) = game
-
-  standings_page.GameUpdate(
-    id:,
-    home_score:,
-    away_score:,
-    status: standings_game_status(status),
-  )
-}
-
-fn standings_game_status(
-  status: broadcasts.GameStatus,
-) -> standings_page.GameStatus {
-  case status {
-    broadcasts.BroadcastScheduled -> standings_page.Scheduled
-    broadcasts.BroadcastLive(period) -> standings_page.Live(period)
-    broadcasts.BroadcastFinal -> standings_page.Final
-  }
-}
-
-fn team_game_update(
-  game: broadcasts.GameSnapshot,
-) -> teams_slug_page.GameUpdate {
-  let broadcasts.BroadcastGameSnapshot(
-    id:,
-    home: broadcasts.BroadcastTeam(code: home_code, ..),
-    away: broadcasts.BroadcastTeam(code: away_code, ..),
-    home_score:,
-    away_score:,
-    status:,
-  ) = game
-
-  teams_slug_page.GameUpdate(
-    id:,
-    home_code:,
-    away_code:,
-    home_score:,
-    away_score:,
-    status: team_game_status(status),
-  )
-}
-
-fn team_game_status(
-  status: broadcasts.GameStatus,
-) -> teams_slug_page.GameStatus {
-  case status {
-    broadcasts.BroadcastScheduled -> teams_slug_page.Scheduled
-    broadcasts.BroadcastLive(period) -> teams_slug_page.Live(period)
-    broadcasts.BroadcastFinal -> teams_slug_page.Final
   }
 }
