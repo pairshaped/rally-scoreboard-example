@@ -4,12 +4,7 @@ pub fn ensure() -> Nil {
 }
 
 @target(erlang)
-import generated/rally/result as transport_result
-@target(erlang)
-import generated/rally/server_protocol
-@target(erlang)
-import gleam/bit_array
-
+import admin/pages/games as admin_games_wire
 @target(erlang)
 import generated/proute/admin/page_input as admin_page_input
 @target(erlang)
@@ -23,6 +18,12 @@ import generated/proute/public/pages as public_pages
 @target(erlang)
 import generated/proute/public/routes as public_routes
 @target(erlang)
+import generated/rally/result as transport_result
+@target(erlang)
+import generated/rally/server_protocol
+@target(erlang)
+import gleam/bit_array
+@target(erlang)
 import gleam/int
 @target(erlang)
 import gleam/list
@@ -30,9 +31,6 @@ import gleam/list
 import lustre/effect.{type Effect}
 @target(erlang)
 import page_context.{type PageContext}
-
-@target(erlang)
-import admin/pages/games as admin_games_wire
 @target(erlang)
 import public/pages/games as public_games_wire
 @target(erlang)
@@ -41,7 +39,6 @@ import public/pages/games/id_ as public_game_detail_wire
 import public/pages/standings as public_standings_wire
 @target(erlang)
 import public/pages/teams/slug_ as public_team_detail_wire
-
 @target(erlang)
 import sqlight as load_context
 

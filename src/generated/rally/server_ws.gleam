@@ -6,6 +6,8 @@ pub fn ensure() -> Nil {
 @target(erlang)
 import admin/pages/games as admin_games_wire
 @target(erlang)
+import broadcasts as push_payload
+@target(erlang)
 import generated/rally/result as transport_result
 @target(erlang)
 import generated/rally/server_protocol
@@ -23,12 +25,8 @@ import public/pages/games/id_ as public_game_detail_wire
 import public/pages/standings as public_standings_wire
 @target(erlang)
 import public/pages/teams/slug_ as public_team_detail_wire
-
 @target(erlang)
 import sqlight as load_context
-
-@target(erlang)
-import broadcasts as push_payload
 
 @target(erlang)
 pub type LoadError {

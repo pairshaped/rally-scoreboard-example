@@ -1,5 +1,12 @@
+@target(javascript)
+pub fn ensure() -> Nil {
+  Nil
+}
+
 @target(erlang)
 import admin/pages/games as admin_games_wire
+@target(erlang)
+import broadcasts as push_payload
 @target(erlang)
 import generated/libero/etf as libero_etf
 @target(erlang)
@@ -12,9 +19,6 @@ import public/pages/games/id_ as public_game_detail_wire
 import public/pages/standings as public_standings_wire
 @target(erlang)
 import public/pages/teams/slug_ as public_team_detail_wire
-
-@target(erlang)
-import broadcasts as push_payload
 
 @target(erlang)
 pub fn ensure() -> Nil {

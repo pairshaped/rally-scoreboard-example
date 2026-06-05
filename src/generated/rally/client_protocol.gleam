@@ -1,10 +1,14 @@
+@target(erlang)
+pub fn ensure() -> Nil {
+  Nil
+}
+
+@target(javascript)
+import broadcasts as push_payload
 @target(javascript)
 import generated/libero/etf as libero_etf
 @target(javascript)
 import generated/rally/result.{type ApiLoadError, type ApiSaveError}
-
-@target(javascript)
-import broadcasts as push_payload
 
 @target(javascript)
 pub type ServerFrame {

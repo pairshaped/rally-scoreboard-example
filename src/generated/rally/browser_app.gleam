@@ -4,7 +4,25 @@ pub fn ensure() -> Nil {
 }
 
 @target(javascript)
+import admin/pages/games as admin_games_wire
+@target(javascript)
+import broadcasts as push_payload
+@target(javascript)
+import generated/proute/admin/page_input as admin_page_input
+@target(javascript)
+import generated/proute/admin/pages as admin_pages
+@target(javascript)
+import generated/proute/admin/routes as admin_routes
+@target(javascript)
+import generated/proute/public/page_input as public_page_input
+@target(javascript)
+import generated/proute/public/pages as public_pages
+@target(javascript)
+import generated/proute/public/routes as public_routes
+@target(javascript)
 import generated/rally/browser_mount
+@target(javascript)
+import generated/rally/client_protocol
 @target(javascript)
 import generated/rally/client_transport
 @target(javascript)
@@ -19,28 +37,6 @@ import lustre/effect.{type Effect}
 import lustre/element.{type Element}
 @target(javascript)
 import page_context.{type PageContext}
-
-@target(javascript)
-import generated/rally/client_protocol
-
-@target(javascript)
-import broadcasts as push_payload
-
-@target(javascript)
-import generated/proute/admin/page_input as admin_page_input
-@target(javascript)
-import generated/proute/admin/pages as admin_pages
-@target(javascript)
-import generated/proute/admin/routes as admin_routes
-@target(javascript)
-import generated/proute/public/page_input as public_page_input
-@target(javascript)
-import generated/proute/public/pages as public_pages
-@target(javascript)
-import generated/proute/public/routes as public_routes
-
-@target(javascript)
-import admin/pages/games as admin_games_wire
 @target(javascript)
 import public/pages/games as public_games_wire
 @target(javascript)
