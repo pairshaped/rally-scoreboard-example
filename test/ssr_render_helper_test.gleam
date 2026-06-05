@@ -1,6 +1,4 @@
 @target(erlang)
-import admin/pages/games as admin_games_page
-@target(erlang)
 import generated/proute/admin/page_input as admin_page_input
 @target(erlang)
 import generated/proute/public/page_input as public_page_input
@@ -58,9 +56,7 @@ pub fn generated_admin_render_path_returns_shell_inputs_test() -> Nil {
       page_context: PageContext,
       query_params: admin_page_input.empty_query_params(),
       path: "/admin/games/",
-      handlers: server_ssr.AdminLoadHandlers(admin_games_load: fn(_route) {
-        admin_games_page.load_wire(db)
-      }),
+      handlers: server_ssr.AdminLoadHandlers(load_context: fn() { db }),
     )
 
   output.current_path

@@ -1,6 +1,4 @@
 @target(erlang)
-import app_assets
-@target(erlang)
 import app_auth
 @target(erlang)
 import app_auth_http
@@ -32,6 +30,13 @@ import gleam/string
 import mist.{type Connection, type ResponseData}
 @target(erlang)
 import sqlight
+
+@target(javascript)
+/// JavaScript-side compile anchor for the document module.
+/// Browser builds can import this module without pulling in Erlang-only code.
+pub fn ensure() -> Nil {
+  Nil
+}
 
 @target(erlang)
 /// HTTP document response for public and admin app routes.
@@ -98,9 +103,7 @@ fn html(
   <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">
   <title>Scoreboard</title>
   <link rel=\"stylesheet\" href=\"https://unpkg.com/@knadh/oat/oat.min.css\">
-  <style>
-" <> app_assets.css() <> "
-  </style>
+  <link rel=\"stylesheet\" href=\"/assets/app.css\">
 </head>
 <body>
   <div id=\"app\"" <> app_attrs <> ">" <> ssr_app.html <> "</div>

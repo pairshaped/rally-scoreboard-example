@@ -1,7 +1,7 @@
 ---
 # scoreboard-unified-css1
 title: Investigate moving inline CSS to a static asset
-status: todo
+status: completed
 type: task
 priority: normal
 tags:
@@ -9,7 +9,7 @@ tags:
     - assets
     - dx
 created_at: 2026-06-05T18:00:00Z
-updated_at: 2026-06-05T18:00:00Z
+updated_at: 2026-06-05T18:51:58Z
 parent: scoreboard-unified-r0ut
 ---
 
@@ -40,3 +40,14 @@ The likely destination is a normal static CSS file that the document links or em
 - `gleam build --target erlang`
 - `gleam build --target javascript`
 - `npm run test:browser`
+
+## Decision
+
+Move the app stylesheet to `priv/static/app.css` and serve it at `/assets/app.css` from Scoreboard using Rally's existing `rally/runtime/static.serve_asset` helper. The document links the stylesheet instead of embedding CSS text. This keeps CSS authored as CSS, keeps `app_document.gleam` simple, and does not require new Rally generator or runtime work.
+
+## Summary of Changes
+
+- Replaced `src/app_assets.gleam` with `priv/static/app.css`.
+- Updated `app_document.gleam` to link `/assets/app.css`.
+- Updated `scoreboard_unified.gleam` to serve `/assets/*` from `priv/static`.
+- Added browser smoke coverage that fetches `/assets/app.css`, checks its CSS content type, and verifies Scoreboard CSS is present.

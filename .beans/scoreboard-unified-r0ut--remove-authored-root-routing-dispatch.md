@@ -1,7 +1,7 @@
 ---
 # scoreboard-unified-r0ut
 title: Remove authored root routing dispatch
-status: todo
+status: completed
 type: epic
 priority: high
 tags:
@@ -9,7 +9,7 @@ tags:
     - routing
     - chase
 created_at: 2026-06-05T18:00:00Z
-updated_at: 2026-06-05T18:00:00Z
+updated_at: 2026-06-05T19:02:20Z
 ---
 
 ## What to build
@@ -41,3 +41,30 @@ Root authored modules should keep app policy and shell behavior: auth/session lo
 - `scoreboard-unified-p5sh`: Move broadcast interest to page topics.
 - `scoreboard-unified-ssr2`: Remove SSR route composition from app root.
 - `scoreboard-unified-grd1`: Add guards against authored root routing dispatch.
+
+## Summary of Changes
+
+Completed the routing-dispatch cleanup epic. Rally/Proute-generated glue now owns the route, load, SSR, browser navigation, hydration, and push dispatch mechanics, while Scoreboard root modules keep app-owned policy, shell, auth/session, database setup, and broadcast meaning. Added guard coverage to keep authored root/page modules from reintroducing generated route imports or generated route/page constructor dispatch.
+
+## Validation
+
+- `gleam build --target erlang`
+- `gleam build --target javascript`
+- `TEMP=./tmp gleam test --target erlang`
+- `node test/boundary_guard_test.mjs`
+- `node test/ws_result_smoke.mjs`
+- `npm run test:browser`
+- Clean regeneration in `../.tmp-rally-scoreboard-regen`: removed `src/generated`, ran `gleam run -m marmot`, `gleam run -m proute`, `gleam run -m rally load-rpc`, then built Erlang and JavaScript targets.
+
+## Follow-up Fix
+
+Regenerated Rally SSR after removing the remaining admin load callback leak. `src/app_ssr.gleam` now passes `AdminLoadHandlers(load_context: ...)`, and generated `server_ssr` owns the admin route-to-page load call. The boundary guard now rejects both public and admin SSR page-load callback adapters in app root code.
+
+Validation:
+
+- `gleam build --target erlang`
+- `gleam build --target javascript`
+- `TEMP=./tmp gleam test --target erlang`
+- `node test/boundary_guard_test.mjs`
+- `node test/ws_result_smoke.mjs`
+- `npm run test:browser`

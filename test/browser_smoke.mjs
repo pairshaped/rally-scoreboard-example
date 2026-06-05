@@ -18,10 +18,12 @@ let browser = null;
 try {
   await step("start server", ensureServer);
   await step("assert /games SSR document", () => assertSsrDocument("/games", [
+    "/assets/app.css",
     "data-hydration=",
     "Toronto Towers",
     "Montreal Meteors",
   ]));
+  await step("assert app stylesheet asset", assertAppStylesheet);
 
   browser = await step("launch browser", () => chromium.launch());
   const context = await browser.newContext();
@@ -403,6 +405,22 @@ async function assertSsrDocument(route, expected) {
       `SSR document for ${route} should contain ${JSON.stringify(text)}`,
     );
   }
+}
+
+async function assertAppStylesheet() {
+  const response = await fetch(url("/assets/app.css"));
+  assert.equal(response.status, 200);
+  assert.match(
+    response.headers.get("content-type") ?? "",
+    /^text\/css\b/,
+    "app stylesheet should be served as CSS",
+  );
+
+  const css = await response.text();
+  assert.ok(
+    css.includes("--score-ink") && css.includes(".scoreboard-app"),
+    "app stylesheet should contain the Scoreboard CSS",
+  );
 }
 
 function url(route) {

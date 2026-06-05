@@ -1,6 +1,4 @@
 @target(erlang)
-import admin/pages/games as admin_games_page
-@target(erlang)
 import app_auth
 @target(erlang)
 import app_auth_http
@@ -168,9 +166,7 @@ fn public_load_handlers(
 
 @target(erlang)
 fn admin_load_handlers(db: sqlight.Connection) -> server_ssr.AdminLoadHandlers {
-  server_ssr.AdminLoadHandlers(admin_games_load: fn(_route) {
-    admin_games_page.load_wire(db)
-  })
+  server_ssr.AdminLoadHandlers(load_context: fn() { db })
 }
 
 @target(erlang)

@@ -21,9 +21,13 @@ import gleam/io
 @target(erlang)
 import gleam/result
 @target(erlang)
+import gleam/string
+@target(erlang)
 import mist.{type Connection, type ResponseData}
 @target(erlang)
 import rally/runtime/http_server
+@target(erlang)
+import rally/runtime/static
 @target(erlang)
 import sqlight
 
@@ -148,12 +152,20 @@ fn handle_public_path(
   req req: Request(Connection),
   context context: AppContext,
 ) -> Response(ResponseData) {
-  app_document.response(
-    req: req,
-    path: req.path,
-    db: context.db,
-    session: context.session,
-  )
+  case string.starts_with(req.path, "/assets/") {
+    True ->
+      static.serve_asset(
+        root: "priv/static",
+        path: string.drop_start(req.path, 8),
+      )
+    False ->
+      app_document.response(
+        req: req,
+        path: req.path,
+        db: context.db,
+        session: context.session,
+      )
+  }
 }
 
 @target(javascript)

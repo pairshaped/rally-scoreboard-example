@@ -223,8 +223,8 @@ assertNoPatterns("src/app_ssr.gleam", [
     reason: "hydration payload helper functions should be generated",
   },
   {
-    pattern: /public_[a-z_]+_load:\s*fn/,
-    reason: "public SSR page load adapters belong in generated server_ssr",
+    pattern: /(?:admin|public)_[a-z_]+_load:\s*fn/,
+    reason: "SSR page load adapters belong in generated server_ssr",
   },
 ]);
 
