@@ -8,11 +8,8 @@ tags:
     - rally
     - chase
 created_at: 2026-06-04T03:38:31Z
-updated_at: 2026-06-05T04:45:53Z
+updated_at: 2026-06-05T00:00:00Z
 parent: scoreboard-unified-wm8p
-blocked_by:
-    - scoreboard-unified-qf1q
-    - scoreboard-unified-4pk9
 ---
 
 ## What to build
@@ -32,16 +29,11 @@ This is not cosmetic. Warning churn and stale generated shapes make the framewor
 
 ## Acceptance criteria
 
-- [ ] Stale root-domain fields are gone.
-- [ ] Obsolete root API/domain modules are removed or reduced to only still-needed temporary bridge types.
-- [ ] Generated-code warnings that are in scope are fixed.
+- [x] Stale root-domain fields are gone.
+- [x] Obsolete root API/domain modules are removed or reduced to only still-needed temporary bridge types.
+- [x] Generated-code warnings that are in scope are fixed.
 - [ ] `gleam build --target javascript`, `gleam build --target erlang`, `gleam test`, and browser smoke pass.
-- [ ] No generated/import-format churn remains beyond what `gleam format` produces.
-
-## Blocked by
-
-- Remaining public load migration.
-- Admin load/save migration.
+- [x] No generated/import-format churn remains beyond what `gleam format` produces.
 
 
 
@@ -101,6 +93,8 @@ Validated with:
 • gleam test --target erlang
 • node test/boundary_guard_test.mjs
 • node test/ws_result_smoke.mjs
+
+Browser smoke caveat: `SCOREBOARD_BASE_URL=http://localhost:8106 node test/browser_smoke.mjs` is blocked in this workspace because Playwright is not installed.
 
 
 
