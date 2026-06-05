@@ -13,7 +13,7 @@ import gleam/http/response.{type Response}
 @target(erlang)
 import gleam/io
 @target(erlang)
-import gleam/result
+import gleam/option.{None, Some}
 @target(erlang)
 import gleam/string
 @target(erlang)
@@ -126,16 +126,19 @@ fn handle_websocket_path(
   req req: Request(Connection),
   context context: AppContext,
 ) -> Response(ResponseData) {
-  let admin_authorized =
+  let admin_user = case
     auth_http.authorized_user(
       req: req,
       auth: app_auth_http.request_auth(db: context.db, session: context.session),
     )
-    |> result.is_ok
+  {
+    Ok(user) -> Some(user)
+    Error(Nil) -> None
+  }
   mist.websocket(
     req,
     app_ws.handler,
-    fn(conn) { app_ws.on_init(conn, context.db, admin_authorized) },
+    fn(conn) { app_ws.on_init(conn, context.db, admin_user) },
     app_ws.on_close,
   )
 }

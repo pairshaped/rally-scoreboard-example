@@ -1,11 +1,13 @@
 @target(erlang)
+import app_auth
+@target(erlang)
 import generated/rally/server_ws
 @target(erlang)
 import gleam/erlang/process.{type Selector}
 @target(erlang)
 import gleam/list
 @target(erlang)
-import gleam/option.{type Option, Some}
+import gleam/option.{type Option, None, Some}
 @target(erlang)
 import mist.{type Next, type WebsocketConnection, type WebsocketMessage}
 @target(erlang)
@@ -25,9 +27,13 @@ pub fn ensure() -> Nil {
 @target(erlang)
 /// Per-connection websocket state.
 /// Mist threads this through on_init, handler, and on_close while generated Rally
-/// server_ws handlers use it to reach the database and auth flag.
+/// server_ws handlers use it to reach the database and auth context.
 pub type State {
-  State(db: sqlight.Connection, admin_authorized: Bool, topics: List(String))
+  State(
+    db: sqlight.Connection,
+    admin_user: Option(app_auth.AuthenticatedUser),
+    topics: List(String),
+  )
 }
 
 // INIT
@@ -39,10 +45,10 @@ pub type State {
 pub fn on_init(
   _conn: WebsocketConnection,
   db: sqlight.Connection,
-  admin_authorized: Bool,
+  admin_user: Option(app_auth.AuthenticatedUser),
 ) -> #(State, Option(Selector(BitArray))) {
   topics.start()
-  #(State(db: db, admin_authorized:, topics: []), Some(topics.frame_selector()))
+  #(State(db: db, admin_user:, topics: []), Some(topics.frame_selector()))
 }
 
 @target(erlang)
@@ -96,6 +102,11 @@ pub fn handler(
 fn handlers() -> server_ws.Handlers(State) {
   server_ws.Handlers(
     load_context: fn(state: State) { state.db },
-    admin_authorized: fn(state: State) { state.admin_authorized },
+    admin_authorized: fn(state: State) {
+      case state.admin_user {
+        Some(_) -> True
+        None -> False
+      }
+    },
   )
 }

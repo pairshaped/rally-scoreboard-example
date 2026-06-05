@@ -196,6 +196,10 @@ assertNoPatterns("src/app_ws.gleam", [
     pattern: /\bafter_(?:admin|public)_[a-z_]+_save\b/,
     reason: "websocket after-save broadcast plumbing belongs in generated server_ws",
   },
+  {
+    pattern: /admin_authorized:\s*Bool/,
+    reason: "app websocket state should keep request auth context, not collapse auth to a root-owned Bool",
+  },
 ]);
 
 assertNoPatterns("src/app_ssr.gleam", [
