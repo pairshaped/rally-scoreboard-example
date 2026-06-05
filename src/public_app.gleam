@@ -116,15 +116,18 @@ fn initial_public_games_page(
   route route: routes.Route,
   query_params query_params: page_input.QueryParams,
 ) -> #(pages.Page, Effect(pages.Message)) {
-  case hydration.public_games_load_result() {
-    Ok(result) -> {
+  browser_app.initial_page(
+    hydration: hydration.public_games_load_result(),
+    load_hydrated: fn(result) {
       let page = pages.load_sync(PageContext, query_params, route)
       let message = public_boot.public_games_load_result_message(route, result)
       let #(page, _) = pages.update(page, message)
-      #(page, effect.none())
-    }
-    Error(Nil) -> public_boot.load_client(PageContext, query_params, route)
-  }
+      page
+    },
+    load_client: fn() {
+      public_boot.load_client(PageContext, query_params, route)
+    },
+  )
 }
 
 @target(javascript)
@@ -132,16 +135,19 @@ fn initial_public_team_detail_page(
   route route: routes.Route,
   query_params query_params: page_input.QueryParams,
 ) -> #(pages.Page, Effect(pages.Message)) {
-  case hydration.public_team_detail_load_result() {
-    Ok(result) -> {
+  browser_app.initial_page(
+    hydration: hydration.public_team_detail_load_result(),
+    load_hydrated: fn(result) {
       let page = pages.load_sync(PageContext, query_params, route)
       let message =
         public_boot.public_team_detail_load_result_message(route, result)
       let #(page, _) = pages.update(page, message)
-      #(page, effect.none())
-    }
-    Error(Nil) -> public_boot.load_client(PageContext, query_params, route)
-  }
+      page
+    },
+    load_client: fn() {
+      public_boot.load_client(PageContext, query_params, route)
+    },
+  )
 }
 
 @target(javascript)
@@ -149,16 +155,19 @@ fn initial_public_game_detail_page(
   route route: routes.Route,
   query_params query_params: page_input.QueryParams,
 ) -> #(pages.Page, Effect(pages.Message)) {
-  case hydration.public_game_detail_load_result() {
-    Ok(result) -> {
+  browser_app.initial_page(
+    hydration: hydration.public_game_detail_load_result(),
+    load_hydrated: fn(result) {
       let page = pages.load_sync(PageContext, query_params, route)
       let message =
         public_boot.public_game_detail_load_result_message(route, result)
       let #(page, _) = pages.update(page, message)
-      #(page, effect.none())
-    }
-    Error(Nil) -> public_boot.load_client(PageContext, query_params, route)
-  }
+      page
+    },
+    load_client: fn() {
+      public_boot.load_client(PageContext, query_params, route)
+    },
+  )
 }
 
 @target(javascript)
@@ -166,16 +175,19 @@ fn initial_public_standings_page(
   route route: routes.Route,
   query_params query_params: page_input.QueryParams,
 ) -> #(pages.Page, Effect(pages.Message)) {
-  case hydration.public_standings_load_result() {
-    Ok(result) -> {
+  browser_app.initial_page(
+    hydration: hydration.public_standings_load_result(),
+    load_hydrated: fn(result) {
       let page = pages.load_sync(PageContext, query_params, route)
       let message =
         public_boot.public_standings_load_result_message(route, result)
       let #(page, _) = pages.update(page, message)
-      #(page, effect.none())
-    }
-    Error(Nil) -> public_boot.load_client(PageContext, query_params, route)
-  }
+      page
+    },
+    load_client: fn() {
+      public_boot.load_client(PageContext, query_params, route)
+    },
+  )
 }
 
 // UPDATE
@@ -187,18 +199,26 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
       case page_navigation(inner) {
         Some(route) -> navigate(model: model, route: route, push_history: True)
         None -> {
-          let #(page, page_effect) = pages.update(model.page, inner)
-          #(Model(..model, page: page), effect.map(page_effect, PageMsg))
+          let #(page, page_effect) =
+            browser_app.map_page_effect(
+              pages.update(model.page, inner),
+              PageMsg,
+            )
+          #(Model(..model, page: page), page_effect)
         }
       }
     }
     ServerFrame(bytes) -> {
       let #(page, page_effect) =
-        to_client_application.decode_and_apply_public(
+        browser_app.server_frame_effect(
           page: model.page,
           bytes: bytes,
+          apply_frame: fn(page, bytes) {
+            to_client_application.decode_and_apply_public(page: page, bytes:)
+          },
+          on_page: PageMsg,
         )
-      #(Model(..model, page: page), effect.map(page_effect, PageMsg))
+      #(Model(..model, page: page), page_effect)
     }
     DarkModeChanged(dark_mode) -> {
       let shared_state =

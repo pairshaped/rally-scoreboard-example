@@ -91,14 +91,21 @@ fn initial_page(
 ) -> #(pages.Page, Effect(pages.Message)) {
   let query_params = page_input.empty_query_params()
 
-  case route, hydration.admin_games_load_result() {
-    routes.AdminHome, Ok(result) | routes.AdminGames, Ok(result) -> {
-      let page = pages.load_sync(PageContext, query_params, route)
-      let message = admin_boot.load_result_message(route, result)
-      let #(page, _) = pages.update(PageContext, page, message)
-      #(page, effect.none())
-    }
-    _, _ -> admin_boot.load_client(PageContext, query_params, route)
+  case route {
+    routes.AdminHome | routes.AdminGames ->
+      browser_app.initial_page(
+        hydration: hydration.admin_games_load_result(),
+        load_hydrated: fn(result) {
+          let page = pages.load_sync(PageContext, query_params, route)
+          let message = admin_boot.load_result_message(route, result)
+          let #(page, _) = pages.update(PageContext, page, message)
+          page
+        },
+        load_client: fn() {
+          admin_boot.load_client(PageContext, query_params, route)
+        },
+      )
+    routes.NotFound -> admin_boot.load_client(PageContext, query_params, route)
   }
 }
 
@@ -108,16 +115,24 @@ fn initial_page(
 fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
   case msg {
     PageMsg(inner) -> {
-      let #(page, page_effect) = pages.update(PageContext, model.page, inner)
-      #(Model(..model, page: page), effect.map(page_effect, PageMsg))
+      let #(page, page_effect) =
+        browser_app.map_page_effect(
+          pages.update(PageContext, model.page, inner),
+          PageMsg,
+        )
+      #(Model(..model, page: page), page_effect)
     }
     ServerFrame(bytes) -> {
       let #(page, page_effect) =
-        to_client_application.decode_and_apply_admin(
+        browser_app.server_frame_effect(
           page: model.page,
           bytes: bytes,
+          apply_frame: fn(page, bytes) {
+            to_client_application.decode_and_apply_admin(page: page, bytes:)
+          },
+          on_page: PageMsg,
         )
-      #(Model(..model, page: page), effect.map(page_effect, PageMsg))
+      #(Model(..model, page: page), page_effect)
     }
     DarkModeChanged(dark_mode) -> {
       let shared_state =
