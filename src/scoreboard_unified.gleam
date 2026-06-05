@@ -3,8 +3,6 @@ import app_auth
 @target(erlang)
 import app_auth_http
 @target(erlang)
-import app_config
-@target(erlang)
 import app_document
 @target(erlang)
 import app_ws
@@ -13,78 +11,38 @@ import gleam/http/request.{type Request}
 @target(erlang)
 import gleam/http/response.{type Response}
 @target(erlang)
-import gleam/io
-@target(erlang)
 import gleam/option.{None, Some}
-@target(erlang)
-import gleam/string
 @target(erlang)
 import mist.{type Connection, type ResponseData}
 @target(erlang)
 import rally/runtime/auth_http
 @target(erlang)
-import rally/runtime/http_server
-@target(erlang)
-import rally/runtime/session
-@target(erlang)
-import rally/runtime/static
-@target(erlang)
-import sqlight
-
-@target(erlang)
-const db_path = "db/scoreboard.db"
-
-@target(erlang)
-/// HTTP server context shared by route handlers.
-/// rally/runtime/http_server passes this to auth, websocket, admin, and public
-/// handlers on every request.
-pub type AppContext {
-  AppContext(db: sqlight.Connection, session: session.AuthSession)
-}
+import rally/runtime/bootstrap
 
 @target(erlang)
 /// Server entrypoint.
-/// The Erlang release starts here, then this wires app handlers into
-/// rally/runtime/http_server.
+/// Rally owns standard bootstrap. The app supplies product-specific handlers.
 pub fn main() -> Nil {
-  let assert Ok(db) = sqlight.open(db_path)
-  let assert Ok(session) = auth_session()
-  let port = app_config.http_port(default: 8080)
-  let context = AppContext(db:, session:)
-
-  http_server.listen(
-    port:,
-    context:,
-    config: http_server.default_config(),
-    handlers: http_server.Handlers(
-      auth: handle_auth_path,
-      websocket: handle_websocket_path,
-      admin: handle_admin_path,
-      public: handle_public_path,
-    ),
-  )
-}
-
-@target(erlang)
-fn auth_session() -> Result(session.AuthSession, session.AuthSessionConfigError) {
   case
-    session.auth_session_from_env(
-      env_var: "SCOREBOARD_SECRET_KEY_BASE",
-      allow_missing_development_key: True,
+    bootstrap.start(
+      default_port: 8080,
+      handlers: bootstrap.Handlers(
+        auth: handle_auth_path,
+        websocket: handle_websocket_path,
+        admin: handle_admin_path,
+        public: handle_public_path,
+      ),
     )
   {
-    Ok(auth_session) -> Ok(auth_session)
-    Error(error) -> {
-      io.println_error(session.auth_session_config_error_message(error))
-      Error(error)
-    }
+    Ok(Nil) -> Nil
+    Error(error) -> panic as bootstrap.start_error_message(error)
   }
 }
 
 @target(erlang)
 fn handle_admin_path(
   req req: Request(Connection),
-  context context: AppContext,
+  context context: bootstrap.Context,
 ) -> Response(ResponseData) {
   auth_http.protect(
     req: req,
@@ -103,14 +61,14 @@ fn handle_admin_path(
 @target(erlang)
 fn handle_auth_path(
   req req: Request(Connection),
-  context context: AppContext,
+  context context: bootstrap.Context,
 ) -> Result(Response(ResponseData), Nil) {
   auth_http.route_code_auth(
     req: req,
     context: context,
     routes: auth_http.CodeAuthRoutes(
-      session: fn(context: AppContext) { context.session },
-      verify_code: fn(code, context: AppContext) {
+      session: fn(context: bootstrap.Context) { context.session },
+      verify_code: fn(code, context: bootstrap.Context) {
         app_auth.verify_sign_in_code(db: context.db, code: code)
       },
       sign_in_default_return_to: "/admin/games",
@@ -124,7 +82,7 @@ fn handle_auth_path(
 @target(erlang)
 fn handle_websocket_path(
   req req: Request(Connection),
-  context context: AppContext,
+  context context: bootstrap.Context,
 ) -> Response(ResponseData) {
   let admin_user = case
     auth_http.authorized_user(
@@ -146,22 +104,14 @@ fn handle_websocket_path(
 @target(erlang)
 fn handle_public_path(
   req req: Request(Connection),
-  context context: AppContext,
+  context context: bootstrap.Context,
 ) -> Response(ResponseData) {
-  case string.starts_with(req.path, "/assets/") {
-    True ->
-      static.serve_asset(
-        root: "priv/static",
-        path: string.drop_start(req.path, 8),
-      )
-    False ->
-      app_document.response(
-        req: req,
-        path: req.path,
-        db: context.db,
-        session: context.session,
-      )
-  }
+  app_document.response(
+    req: req,
+    path: req.path,
+    db: context.db,
+    session: context.session,
+  )
 }
 
 @target(javascript)

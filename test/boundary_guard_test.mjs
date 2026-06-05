@@ -267,6 +267,8 @@ for (const staleGeneratedFile of [
 }
 
 for (const staleFrameworkModule of [
+  "src/app_config.gleam",
+  "src/app_config_ffi.erl",
   "src/app_session.gleam",
   "src/app_session_crypto_ffi.erl",
   "src/app_topics.gleam",
@@ -316,14 +318,15 @@ assertNoPatterns("src/app_auth_http.gleam", [
   },
 ]);
 
-assertNoPatterns("src/app_config.gleam", [
-  {
-    pattern: /SCOREBOARD_SECRET_KEY_BASE|SecretKey|base64|bit_array/,
-    reason: "auth session secret parsing belongs in Rally runtime session helpers",
-  },
-]);
-
 assertNoPatterns("src/scoreboard_unified.gleam", [
+  {
+    pattern: /import\s+app_config\b|db_path|sqlight\.open|auth_session_from_env|SCOREBOARD_SECRET_KEY_BASE|SECRET_KEY_BASE|DATABASE_PATH|PORT/,
+    reason: "server startup config, DB opening, and auth session lookup belong in Rally runtime bootstrap",
+  },
+  {
+    pattern: /import\s+rally\/runtime\/static\b|static\.serve_asset|"\/assets\/"|"priv\/static"|string\.starts_with\(req\.path,\s*"\/assets\/"\)/,
+    reason: "standard static asset routing belongs in Rally runtime bootstrap",
+  },
   {
     pattern: /new_auth_session|strong_random_bytes|base64_url_decode|SecretKeyError|secret_key_error/,
     reason: "server startup should ask Rally for auth session configuration instead of owning session-key mechanics",
