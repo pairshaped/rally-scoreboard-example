@@ -8,7 +8,7 @@ tags:
     - rally
     - chase
 created_at: 2026-06-04T03:38:31Z
-updated_at: 2026-06-05T04:42:58Z
+updated_at: 2026-06-05T04:45:53Z
 parent: scoreboard-unified-wm8p
 blocked_by:
     - scoreboard-unified-qf1q
@@ -140,3 +140,16 @@ Validated with:
 • node test/ws_result_smoke.mjs
 
 Validation caveat: gleam test --target erlang is blocked in this workspace by stale /tmp/scoreboard-unified-*.db files owned by debian. The test helper hardcodes /tmp, so TEMP/TMPDIR cannot redirect it.
+
+
+
+Ninth cleanup pass moved SSR load-route message callbacks from app_ssr.gleam into public_boot.gleam and admin_boot.gleam. app_ssr.gleam now handles request/session identity, document shell rendering, and server_ssr composition, while page boot adapters own route-to-page-message choices. Added a JavaScript target placeholder to app_ssr.gleam to remove the empty-module warning during JavaScript builds.
+
+Validated with:
+
+• gleam build --target erlang
+• gleam build --target javascript
+• node test/boundary_guard_test.mjs
+• node test/ws_result_smoke.mjs
+
+Validation caveat: gleam test --target erlang remains blocked by stale /tmp/scoreboard-unified-*.db files owned by debian.

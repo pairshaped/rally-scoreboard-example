@@ -28,6 +28,8 @@ import sqlight
 @target(erlang)
 import admin/pages/games as admin_games_page
 @target(erlang)
+import admin_boot
+@target(erlang)
 import app_auth
 @target(erlang)
 import app_auth_http
@@ -40,13 +42,12 @@ import authentication_context.{type AuthenticationContext}
 @target(erlang)
 import page_context.{PageContext}
 @target(erlang)
-import public/pages/games as public_games_page
-@target(erlang)
-import public/pages/games/id_ as public_game_detail_page
-@target(erlang)
-import public/pages/standings as public_standings_page
-@target(erlang)
-import public/pages/teams/slug_ as public_team_detail_page
+import public_boot
+
+@target(javascript)
+pub fn ensure() -> Nil {
+  Nil
+}
 
 // TYPES
 
@@ -158,7 +159,7 @@ fn public_boot_page(
     page_context: PageContext,
     query_params:,
     route:,
-    select_load: public_load_route,
+    select_load: public_boot.ssr_load_route,
     handlers: public_load_handlers(db),
     update_page: public_pages.update,
   )
@@ -174,7 +175,7 @@ fn admin_boot_page(
     page_context: PageContext,
     query_params:,
     route:,
-    select_load: admin_load_route,
+    select_load: admin_boot.ssr_load_route,
     handlers: admin_load_handlers(db),
     update_page: fn(page, message) {
       admin_pages.update(PageContext, page, message)
@@ -183,54 +184,10 @@ fn admin_boot_page(
 }
 
 @target(erlang)
-fn public_load_route(route: public_routes.Route) -> server_ssr.PublicLoadRoute {
-  case route {
-    public_routes.Home ->
-      server_ssr.PublicGamesLoad(to_message: fn(result) {
-        public_pages.HomeMsg(public_games_page.loaded_from_wire(result))
-      })
-    public_routes.Games ->
-      server_ssr.PublicGamesLoad(to_message: fn(result) {
-        public_pages.GamesMsg(public_games_page.loaded_from_wire(result))
-      })
-    public_routes.GamesId(_) ->
-      server_ssr.PublicGameDetailLoad(to_message: fn(result) {
-        public_pages.GamesIdMsg(public_game_detail_page.loaded_from_wire(result))
-      })
-    public_routes.Standings ->
-      server_ssr.PublicStandingsLoad(to_message: fn(result) {
-        public_pages.StandingsMsg(public_standings_page.loaded_from_wire(result))
-      })
-    public_routes.TeamsSlug(_) ->
-      server_ssr.PublicTeamDetailLoad(to_message: fn(result) {
-        public_pages.TeamsSlugMsg(public_team_detail_page.loaded_from_wire(
-          result,
-        ))
-      })
-    public_routes.SignIn | public_routes.NotFound -> server_ssr.PublicNoLoad
-  }
-}
-
-@target(erlang)
 fn public_load_handlers(
   db: sqlight.Connection,
 ) -> server_ssr.PublicLoadHandlers {
   server_ssr.PublicLoadHandlers(load_context: fn() { db })
-}
-
-@target(erlang)
-fn admin_load_route(route: admin_routes.Route) -> server_ssr.AdminLoadRoute {
-  case route {
-    admin_routes.AdminHome ->
-      server_ssr.AdminGamesLoad(to_message: fn(result) {
-        admin_pages.AdminHomeMsg(admin_games_page.loaded_from_wire(result))
-      })
-    admin_routes.AdminGames ->
-      server_ssr.AdminGamesLoad(to_message: fn(result) {
-        admin_pages.AdminGamesMsg(admin_games_page.loaded_from_wire(result))
-      })
-    admin_routes.NotFound -> server_ssr.AdminNoLoad
-  }
 }
 
 @target(erlang)

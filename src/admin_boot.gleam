@@ -1,12 +1,13 @@
 import admin/pages/games as admin_games_page
 import broadcasts
 import generated/proute/admin/pages
-@target(javascript)
 import generated/proute/admin/routes
 @target(javascript)
 import generated/rally/browser_app
 @target(javascript)
 import generated/rally/result as wire_result
+@target(erlang)
+import generated/rally/server_ssr
 import lustre/effect.{type Effect}
 
 @target(javascript)
@@ -18,6 +19,21 @@ pub fn load_route(route: routes.Route) -> browser_app.AdminLoadRoute {
         to_message: fn(result) { load_result_message(route, result) },
       )
     routes.NotFound -> browser_app.AdminNoLoad
+  }
+}
+
+@target(erlang)
+pub fn ssr_load_route(route: routes.Route) -> server_ssr.AdminLoadRoute {
+  case route {
+    routes.AdminHome ->
+      server_ssr.AdminGamesLoad(to_message: fn(result) {
+        pages.AdminHomeMsg(admin_games_page.loaded_from_wire(result))
+      })
+    routes.AdminGames ->
+      server_ssr.AdminGamesLoad(to_message: fn(result) {
+        pages.AdminGamesMsg(admin_games_page.loaded_from_wire(result))
+      })
+    routes.NotFound -> server_ssr.AdminNoLoad
   }
 }
 

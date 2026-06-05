@@ -1,11 +1,12 @@
 import broadcasts
 import generated/proute/public/pages
-@target(javascript)
 import generated/proute/public/routes
 @target(javascript)
 import generated/rally/browser_app
 @target(javascript)
 import generated/rally/result as wire_result
+@target(erlang)
+import generated/rally/server_ssr
 @target(javascript)
 import gleam/list
 import lustre/effect.{type Effect}
@@ -42,6 +43,33 @@ pub fn load_route(route: routes.Route) -> browser_app.PublicLoadRoute {
         public_team_detail_load_result_message(route, result)
       })
     routes.SignIn | routes.NotFound -> browser_app.PublicNoLoad
+  }
+}
+
+@target(erlang)
+pub fn ssr_load_route(route: routes.Route) -> server_ssr.PublicLoadRoute {
+  case route {
+    routes.Home ->
+      server_ssr.PublicGamesLoad(to_message: fn(result) {
+        pages.HomeMsg(games_page.loaded_from_wire(result))
+      })
+    routes.Games ->
+      server_ssr.PublicGamesLoad(to_message: fn(result) {
+        pages.GamesMsg(games_page.loaded_from_wire(result))
+      })
+    routes.GamesId(_) ->
+      server_ssr.PublicGameDetailLoad(to_message: fn(result) {
+        pages.GamesIdMsg(games_id_page.loaded_from_wire(result))
+      })
+    routes.Standings ->
+      server_ssr.PublicStandingsLoad(to_message: fn(result) {
+        pages.StandingsMsg(standings_page.loaded_from_wire(result))
+      })
+    routes.TeamsSlug(_) ->
+      server_ssr.PublicTeamDetailLoad(to_message: fn(result) {
+        pages.TeamsSlugMsg(teams_slug_page.loaded_from_wire(result))
+      })
+    routes.SignIn | routes.NotFound -> server_ssr.PublicNoLoad
   }
 }
 
