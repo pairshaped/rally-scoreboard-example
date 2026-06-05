@@ -167,7 +167,7 @@ fn broadcast_admin_game_update(
         Ok(event) ->
           app_topics.broadcast_except_self(
             "app",
-            app_api.push(module: "app", message: event),
+            server_ws.push_frame(module: "app", message: event),
           )
         Error(Nil) -> Nil
       }

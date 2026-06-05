@@ -1,6 +1,8 @@
 @target(erlang)
 import admin/pages/games as admin_games_wire
 @target(erlang)
+import broadcasts
+@target(erlang)
 import generated/rally/result as transport_result
 @target(erlang)
 import generated/rally/server_protocol
@@ -115,6 +117,14 @@ pub fn handle_client_frame(
           }
       }
   }
+}
+
+@target(erlang)
+pub fn push_frame(
+  module module: String,
+  message message: broadcasts.Event,
+) -> BitArray {
+  server_protocol.encode_push(module, message)
 }
 
 @target(erlang)

@@ -1,19 +1,9 @@
 @target(erlang)
 import broadcasts
 @target(erlang)
-import generated/rally/server_protocol
-@target(erlang)
 import generated/sql/public/pages/games/id__sql as game_detail_sql
 @target(erlang)
 import sqlight
-
-@target(erlang)
-pub fn push(
-  module module: String,
-  message message: broadcasts.Event,
-) -> BitArray {
-  server_protocol.encode_push(module, message)
-}
 
 @target(erlang)
 pub fn game_updated_broadcast(

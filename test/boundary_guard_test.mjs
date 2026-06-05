@@ -80,6 +80,17 @@ assertNoPatterns("src/app_ws.gleam", [
   },
 ]);
 
+assertNoPatterns("src/app_api.gleam", [
+  {
+    pattern: /generated\/rally\/server_protocol/,
+    reason: "app_api should construct domain broadcasts, not encode Rally frames",
+  },
+  {
+    pattern: /\bencode_push\b|\bpush\s*\(/,
+    reason: "push-frame encoding belongs behind generated Rally websocket APIs",
+  },
+]);
+
 assertNoPatterns("src/app_ssr.gleam", [
   {
     pattern: /generated\/rally\/result/,
