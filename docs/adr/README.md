@@ -21,3 +21,4 @@ The ADRs describe the intended design.
 - [0009: Separate Libero Proute And Rally Roles](0009-separate-libero-proute-and-rally-roles.md)
 - [0010: Separate Mutation Results From Broadcast Events](0010-separate-mutation-results-from-broadcast-events.md)
 - [0011: Keep Codec Runtime Dependencies](0011-keep-codec-runtime-dependencies.md)
+- [0012: Use Convention Driven Rally App Surface](0012-use-convention-driven-rally-app-surface.md)
