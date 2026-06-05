@@ -104,6 +104,18 @@ Validated with:
 
 
 
+Twelfth cleanup pass moved test databases out of hardcoded `/tmp` and into `./tmp/test-db`, with `simplifile` declared as a dev dependency for directory setup. This removes the local stale-owned `/tmp/scoreboard-unified-*.db` blocker and restores full Erlang test validation when Birdie's temp file is also pointed at the repo tmp directory.
+
+Validated with:
+
+• gleam build --target erlang
+• gleam build --target javascript
+• TEMP=/home/daverapin/projects/gleam/rally-scoreboard-example/tmp gleam test --target erlang
+• node test/boundary_guard_test.mjs
+• node test/ws_result_smoke.mjs
+
+
+
 Eleventh cleanup pass moved browser server-frame decoding into generated/rally/browser_app.gleam. Deleted root `src/to_client_application.gleam`; public/admin app roots now call generated `server_frame_effect` with app-owned push callbacks from public_boot/admin_boot. Broadcast meaning and page update decisions remain app-owned.
 
 Validated with:
