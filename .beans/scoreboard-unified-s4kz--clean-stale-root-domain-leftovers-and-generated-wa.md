@@ -153,3 +153,14 @@ Validated with:
 • node test/ws_result_smoke.mjs
 
 Validation caveat: gleam test --target erlang remains blocked by stale /tmp/scoreboard-unified-*.db files owned by debian.
+
+
+
+Tenth cleanup pass moved `/_build/*` static asset file serving from Scoreboard's `app_assets.gleam` into `rally/runtime/static.gleam`. `app_assets.gleam` now owns only the app CSS string, and `scoreboard_unified.gleam` calls the Rally runtime helper for generated JavaScript/CSS files. Added JavaScript placeholders to the touched server-only modules to remove the empty-module warnings during JavaScript builds.
+
+Validated with:
+
+• gleam build --target erlang
+• gleam build --target javascript
+• node test/boundary_guard_test.mjs
+• node test/ws_result_smoke.mjs

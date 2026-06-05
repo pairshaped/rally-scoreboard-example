@@ -1,49 +1,3 @@
-@target(erlang)
-import gleam/bytes_tree
-@target(erlang)
-import gleam/http/response.{type Response}
-@target(erlang)
-import gleam/io
-@target(erlang)
-import gleam/option.{None}
-@target(erlang)
-import gleam/string
-
-@target(erlang)
-import mist.{type ResponseData}
-
-// STATIC
-
-@target(erlang)
-pub fn serve_static(path: String) -> Response(ResponseData) {
-  let content_type = case string.ends_with(path, ".mjs") {
-    True -> "application/javascript; charset=utf-8"
-    False ->
-      case string.ends_with(path, ".css") {
-        True -> "text/css; charset=utf-8"
-        False -> "application/octet-stream"
-      }
-  }
-
-  case mist.send_file("build/dev/javascript/" <> path, offset: 0, limit: None) {
-    Ok(data) ->
-      response.new(200)
-      |> response.set_header("content-type", content_type)
-      |> response.set_body(data)
-    Error(reason) -> {
-      io.println(
-        "Static file not found: "
-        <> path
-        <> " ("
-        <> string.inspect(reason)
-        <> ")",
-      )
-      response.new(404)
-      |> response.set_body(mist.Bytes(bytes_tree.from_string("Not found")))
-    }
-  }
-}
-
 // CSS
 
 @target(erlang)
@@ -467,4 +421,9 @@ input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='
   }
 }
 "
+}
+
+@target(javascript)
+pub fn ensure() -> Nil {
+  Nil
 }

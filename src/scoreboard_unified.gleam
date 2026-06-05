@@ -1,6 +1,4 @@
 @target(erlang)
-import app_assets
-@target(erlang)
 import app_auth_http
 @target(erlang)
 import app_config
@@ -30,6 +28,8 @@ import gleam/result
 import gleam/string
 @target(erlang)
 import mist.{type Connection, type ResponseData}
+@target(erlang)
+import rally/runtime/static
 @target(erlang)
 import sqlight
 
@@ -63,7 +63,7 @@ pub fn main() -> Nil {
       }
       _, _ ->
         case string.starts_with(path, "/_build/") {
-          True -> app_assets.serve_static(string.drop_start(path, 8))
+          True -> static.serve_javascript_build(string.drop_start(path, 8))
           False ->
             case string.starts_with(path, "/admin") {
               True -> handle_admin_path(req: req, db: db, session: session)
@@ -116,4 +116,9 @@ fn handle_admin_path(
       app_document.response(req: req, path: req.path, db: db, session: session)
     Error(Nil) -> app_auth_http.sign_in_redirect(req.path)
   }
+}
+
+@target(javascript)
+pub fn ensure() -> Nil {
+  Nil
 }
