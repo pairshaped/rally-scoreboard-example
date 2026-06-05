@@ -35,4 +35,16 @@ This epic is done when the chase app no longer depends on hand-edited generated 
 
 ## Blocked by
 
-None - can start immediately.
+Clean regeneration from empty `src/generated` is blocked outside Scoreboard.
+
+On 2026-06-05, deleting `src/generated` and running:
+
+- `gleam run -m marmot`
+- `gleam run -m proute`
+- `gleam run -m rally load-rpc`
+
+failed during `proute`. Proute discovered page-local `wire.gleam` modules under `src/public/pages/**` as page modules and reported missing `Model`, `Message`, `init`, `update`, and `view`.
+
+Scoreboard should not move those modules as a local workaround: the current Rally page-local wire convention maps `public/pages/foo/wire.gleam` to `public/pages/foo.gleam`. Proute needs an ignore/exclude rule for page-local support modules, or the Proute/Rally boundary needs a deliberate design change.
+
+Template auth is also deliberately last and tracked in Rally as `rally-mhn4`.
