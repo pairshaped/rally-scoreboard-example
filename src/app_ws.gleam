@@ -2,20 +2,15 @@
 import generated/rally/server_ws
 
 @target(erlang)
-import gleam/dynamic/decode
-@target(erlang)
-import gleam/erlang/atom
-@target(erlang)
 import gleam/erlang/process.{type Selector}
 @target(erlang)
 import gleam/list
 @target(erlang)
 import gleam/option.{type Option, None, Some}
 @target(erlang)
-import gleam/result
-
-@target(erlang)
 import mist.{type Next, type WebsocketConnection, type WebsocketMessage}
+@target(erlang)
+import rally/runtime/topics
 @target(erlang)
 import sqlight
 
@@ -23,8 +18,6 @@ import sqlight
 import admin/pages/games as admin_games_page
 @target(erlang)
 import app_api
-@target(erlang)
-import app_topics
 @target(erlang)
 import public/pages/games as public_games_page
 @target(erlang)
@@ -57,20 +50,9 @@ pub fn on_init(
   db: sqlight.Connection,
   admin_authorized: Bool,
 ) -> #(State, Option(Selector(BitArray))) {
-  app_topics.start()
-  app_topics.join("app")
-  let selector =
-    process.new_selector()
-    |> process.select_record(
-      tag: atom.create("scoreboard_frame"),
-      fields: 1,
-      mapping: fn(msg) {
-        msg
-        |> decode.run(decode.at([1], decode.bit_array))
-        |> result.unwrap(<<>>)
-      },
-    )
-  #(State(db: db, admin_authorized:), Some(selector))
+  topics.start()
+  topics.join("app")
+  #(State(db: db, admin_authorized:), Some(topics.frame_selector()))
 }
 
 @target(erlang)
@@ -165,7 +147,7 @@ fn broadcast_admin_game_update(
     Ok(game_id) ->
       case app_api.game_updated_broadcast(state.db, game_id) {
         Ok(event) ->
-          app_topics.broadcast_except_self(
+          topics.broadcast_except_self(
             "app",
             server_ws.push_frame(module: "app", message: event),
           )

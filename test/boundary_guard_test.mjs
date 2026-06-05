@@ -151,6 +151,17 @@ for (const staleGeneratedFile of [
   );
 }
 
+for (const staleFrameworkModule of [
+  "src/app_topics.gleam",
+  "src/app_topics_ffi.erl",
+]) {
+  assert.equal(
+    existsSync(path.join(root, staleFrameworkModule)),
+    false,
+    `${staleFrameworkModule} is generic Rally topic plumbing and must not live in app code`,
+  );
+}
+
 assertNoPatterns("src/generated/rally/browser_mount.gleam", [
   {
     pattern: /authentication_context/,

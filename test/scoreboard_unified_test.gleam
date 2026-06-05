@@ -2,26 +2,20 @@
 import admin/pages/games as admin_games_page
 @target(erlang)
 import app_api
-@target(erlang)
-import app_topics
 import authentication_context
 @target(erlang)
 import broadcasts
-@target(erlang)
-import gleam/dynamic/decode
-@target(erlang)
-import gleam/erlang/atom
 @target(erlang)
 import gleam/erlang/process
 @target(erlang)
 import gleam/list
 import gleam/option.{None, Some}
-@target(erlang)
-import gleam/result
 import gleeunit
 import gleeunit/should
 @target(erlang)
 import public/pages/standings as public_standings_page
+@target(erlang)
+import rally/runtime/topics
 @target(erlang)
 import sqlight
 
@@ -90,53 +84,45 @@ pub fn update_score_returns_save_ack_payload_and_game_update_test() {
 }
 
 @target(erlang)
-pub fn app_topics_broadcasts_to_self_test() {
+pub fn rally_topics_exclude_origin_connection_test() {
   process.flush_messages()
-  app_topics.start()
-  app_topics.join("self-test")
+  topics.start()
+  topics.join("origin-excluded-test")
 
   let frame = <<"hello">>
-  let selector =
-    process.new_selector()
-    |> process.select_record(
-      tag: atom.create("scoreboard_frame"),
-      fields: 1,
-      mapping: fn(msg) {
-        msg
-        |> decode.run(decode.at([1], decode.bit_array))
-        |> result.unwrap(<<>>)
-      },
-    )
+  let selector = topics.frame_selector()
 
-  app_topics.broadcast("self-test", frame)
-
-  process.selector_receive(selector, within: 1000)
-  |> should.equal(Ok(frame))
-}
-
-@target(erlang)
-pub fn app_topics_can_exclude_self_test() {
-  process.flush_messages()
-  app_topics.start()
-  app_topics.join("self-excluded-test")
-
-  let frame = <<"hello">>
-  let selector =
-    process.new_selector()
-    |> process.select_record(
-      tag: atom.create("scoreboard_frame"),
-      fields: 1,
-      mapping: fn(msg) {
-        msg
-        |> decode.run(decode.at([1], decode.bit_array))
-        |> result.unwrap(<<>>)
-      },
-    )
-
-  app_topics.broadcast_except_self("self-excluded-test", frame)
+  topics.broadcast_except_self("origin-excluded-test", frame)
 
   process.selector_receive(selector, within: 100)
   |> should.equal(Error(Nil))
+}
+
+@target(erlang)
+pub fn rally_topics_deliver_to_peer_connection_test() {
+  topics.start()
+  let topic = "peer-delivery-test"
+  let frame = <<"hello peer">>
+  let joined_subject = process.new_subject()
+  let result_subject = process.new_subject()
+
+  let _pid =
+    process.spawn(fn() {
+      topics.join(topic)
+      process.send(joined_subject, Nil)
+      case process.selector_receive(topics.frame_selector(), within: 1000) {
+        Ok(received) -> process.send(result_subject, received)
+        Error(_) -> process.send(result_subject, <<>>)
+      }
+    })
+
+  let assert Ok(Nil) = process.receive(joined_subject, 1000)
+
+  topics.join(topic)
+  topics.broadcast_except_self(topic, frame)
+
+  process.receive(result_subject, 1000)
+  |> should.equal(Ok(frame))
 }
 
 @target(erlang)
