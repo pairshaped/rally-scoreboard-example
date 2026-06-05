@@ -12,11 +12,11 @@ import public/pages/standings/wire as public_standings_wire
 import public/pages/teams/slug_/wire as public_team_detail_wire
 
 @target(javascript)
-import broadcasts
+import broadcasts as push_payload
 
 @target(javascript)
 pub type ServerFrame {
-  Push(module: String, message: broadcasts.Event)
+  Push(module: String, message: push_payload.Event)
 }
 
 @target(javascript)

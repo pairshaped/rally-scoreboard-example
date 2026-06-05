@@ -29,3 +29,7 @@ scan_paths = ["src"]
 [tools.marmot]
 database = "db/scoreboard.db"
 output = "src/generated/sql"
+
+[tools.rally.load_rpc.push]
+module = "broadcasts"
+type = "Event"

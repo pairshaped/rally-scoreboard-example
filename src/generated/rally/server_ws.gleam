@@ -1,8 +1,6 @@
 @target(erlang)
 import admin/pages/games as admin_games_wire
 @target(erlang)
-import broadcasts
-@target(erlang)
 import generated/rally/result as transport_result
 @target(erlang)
 import generated/rally/server_protocol
@@ -20,6 +18,9 @@ import public/pages/games/wire as public_games_wire
 import public/pages/standings/wire as public_standings_wire
 @target(erlang)
 import public/pages/teams/slug_/wire as public_team_detail_wire
+
+@target(erlang)
+import broadcasts as push_payload
 
 @target(erlang)
 pub type LoadError {
@@ -122,7 +123,7 @@ pub fn handle_client_frame(
 @target(erlang)
 pub fn push_frame(
   module module: String,
-  message message: broadcasts.Event,
+  message message: push_payload.Event,
 ) -> BitArray {
   server_protocol.encode_push(module, message)
 }
