@@ -1,7 +1,5 @@
 @target(erlang)
 import admin/pages/games as admin_games_page
-@target(erlang)
-import app_api
 import authentication_context
 @target(erlang)
 import broadcasts
@@ -46,7 +44,7 @@ pub fn mark_final_returns_save_ack_payload_and_game_update_test() {
 
   let result =
     admin_games_page.handle(db, admin_games_page.AdminGamesMarkFinal(1))
-  let broadcast = app_api.game_updated_broadcast(db, 1)
+  let broadcast = broadcasts.game_updated_broadcast(db, 1)
 
   case result, broadcast {
     Ok(admin_games_page.AdminGamesUpdate(
@@ -55,11 +53,11 @@ pub fn mark_final_returns_save_ack_payload_and_game_update_test() {
     )),
       Ok(broadcasts.TargetedEvent(
         topics: [
-          "games",
-          "admin:games",
-          "game:1",
-          "team:toronto-towers",
-          "team:montreal-meteors",
+          broadcasts.AllGames,
+          broadcasts.AdminGames,
+          broadcasts.Game(1),
+          broadcasts.Team("toronto-towers"),
+          broadcasts.Team("montreal-meteors"),
         ],
         event: broadcasts.BroadcastGameUpdated(updated),
       ))
@@ -80,7 +78,7 @@ pub fn update_score_returns_save_ack_payload_and_game_update_test() {
       db,
       admin_games_page.AdminGamesUpdateScore(1, 5, 2, "Live"),
     )
-  let broadcast = app_api.game_updated_broadcast(db, 1)
+  let broadcast = broadcasts.game_updated_broadcast(db, 1)
 
   case result, broadcast {
     Ok(admin_games_page.AdminGamesUpdate(
@@ -89,11 +87,11 @@ pub fn update_score_returns_save_ack_payload_and_game_update_test() {
     )),
       Ok(broadcasts.TargetedEvent(
         topics: [
-          "games",
-          "admin:games",
-          "game:1",
-          "team:toronto-towers",
-          "team:montreal-meteors",
+          broadcasts.AllGames,
+          broadcasts.AdminGames,
+          broadcasts.Game(1),
+          broadcasts.Team("toronto-towers"),
+          broadcasts.Team("montreal-meteors"),
         ],
         event: broadcasts.BroadcastGameUpdated(updated),
       ))
@@ -172,7 +170,7 @@ pub fn page_topics_follow_loaded_page_state_test() {
     )),
   )
   |> public_game_detail_page.topics
-  |> should.equal(["game:1"])
+  |> should.equal([broadcasts.Game(1)])
 
   public_team_detail_page.Model(
     team: Some(
@@ -189,7 +187,7 @@ pub fn page_topics_follow_loaded_page_state_test() {
     ),
   )
   |> public_team_detail_page.topics
-  |> should.equal(["team:toronto-towers"])
+  |> should.equal([broadcasts.Team("toronto-towers")])
 }
 
 @target(erlang)

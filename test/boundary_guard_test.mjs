@@ -184,16 +184,17 @@ assertNoPatterns("src/app_ws.gleam", [
     pattern: /\bfn load_public_[a-z_]+\b/,
     reason: "public websocket page load adapters belong in generated server_ws",
   },
-]);
-
-assertNoPatterns("src/app_api.gleam", [
   {
-    pattern: /generated\/rally\/server_protocol/,
-    reason: "app_api should construct domain broadcasts, not encode Rally frames",
+    pattern: /import\s+(?:admin|public)\/pages\//,
+    reason: "app_ws should pass app policy/context to server_ws, not import page modules",
   },
   {
-    pattern: /\bencode_push\b|\bpush\s*\(/,
-    reason: "push-frame encoding belongs behind generated Rally websocket APIs",
+    pattern: /\b(?:admin|public)_[a-z_]+_(?:load|save):\s*\w/,
+    reason: "websocket page load/save callbacks belong in generated server_ws",
+  },
+  {
+    pattern: /\bafter_(?:admin|public)_[a-z_]+_save\b/,
+    reason: "websocket after-save broadcast plumbing belongs in generated server_ws",
   },
 ]);
 

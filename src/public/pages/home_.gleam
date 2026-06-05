@@ -52,7 +52,7 @@ pub fn apply_push(
   games_page.apply_push(model:, message:)
 }
 
-pub fn topics(model: Model) -> List(String) {
+pub fn topics(model: Model) -> List(broadcasts.Topic) {
   games_page.topics(model)
 }
 

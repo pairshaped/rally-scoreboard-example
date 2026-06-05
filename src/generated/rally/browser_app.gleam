@@ -34,6 +34,8 @@ import generated/rally/result.{type ApiLoadError, ApiLoadError}
 @target(javascript)
 import gleam/int
 @target(javascript)
+import gleam/list
+@target(javascript)
 import gleam/option.{type Option, None, Some}
 @target(javascript)
 import lustre
@@ -292,7 +294,9 @@ pub fn public_message_path(
 }
 
 @target(javascript)
-pub fn admin_page_topics(page page: admin_pages.Page) -> List(String) {
+pub fn admin_page_topics(
+  page page: admin_pages.Page,
+) -> List(push_payload.Topic) {
   case page {
     admin_pages.AdminGamesPage(model) -> admin_games_wire.topics(model)
     admin_pages.AdminHomePage(model) -> admin_pages_home__page.topics(model)
@@ -327,7 +331,9 @@ pub fn admin_apply_push(
 }
 
 @target(javascript)
-pub fn public_page_topics(page page: public_pages.Page) -> List(String) {
+pub fn public_page_topics(
+  page page: public_pages.Page,
+) -> List(push_payload.Topic) {
   case page {
     public_pages.GamesIdPage(model) -> public_game_detail_wire.topics(model)
     public_pages.GamesPage(model) -> public_games_wire.topics(model)
@@ -630,8 +636,8 @@ pub fn startup_effects(
 }
 
 @target(javascript)
-pub fn sync_topics(topics topics: List(String)) -> Effect(msg) {
-  client_transport.sync_topics(topics)
+pub fn sync_topics(topics topics: List(push_payload.Topic)) -> Effect(msg) {
+  client_transport.sync_topics(list.map(topics, push_payload.topic_name))
 }
 
 @target(javascript)

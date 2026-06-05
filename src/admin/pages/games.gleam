@@ -233,7 +233,7 @@ pub fn apply_push(
   }
 }
 
-pub fn topics(_model: Model) -> List(String) {
+pub fn topics(_model: Model) -> List(broadcasts.Topic) {
   [broadcasts.admin_games_topic()]
 }
 
@@ -518,6 +518,14 @@ pub fn handle(
           Error(SaveError(message: "Could not save game."))
       }
   }
+}
+
+@target(erlang)
+pub fn after_save(
+  db: sqlight.Connection,
+  game: GameUpdate,
+) -> Result(broadcasts.TargetedEvent, Nil) {
+  broadcasts.game_updated_broadcast(db, game.id)
 }
 
 @target(erlang)

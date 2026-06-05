@@ -203,7 +203,7 @@ pub fn apply_push(
   }
 }
 
-pub fn topics(_model: Model) -> List(String) {
+pub fn topics(_model: Model) -> List(broadcasts.Topic) {
   [broadcasts.all_games_topic()]
 }
 

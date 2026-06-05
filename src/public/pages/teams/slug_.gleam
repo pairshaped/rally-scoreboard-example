@@ -211,7 +211,7 @@ pub fn apply_push(
   }
 }
 
-pub fn topics(model: Model) -> List(String) {
+pub fn topics(model: Model) -> List(broadcasts.Topic) {
   case model.team {
     Some(team) -> [broadcasts.team_topic(team.slug)]
     None -> []
