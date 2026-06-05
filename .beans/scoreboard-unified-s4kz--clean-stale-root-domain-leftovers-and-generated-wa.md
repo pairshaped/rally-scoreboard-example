@@ -1,14 +1,14 @@
 ---
 # scoreboard-unified-s4kz
 title: Clean stale root-domain leftovers and generated warnings
-status: in-progress
+status: done
 type: task
 priority: normal
 tags:
     - rally
     - chase
 created_at: 2026-06-04T03:38:31Z
-updated_at: 2026-06-05T00:00:00Z
+updated_at: 2026-06-05T01:20:00Z
 parent: scoreboard-unified-wm8p
 ---
 
@@ -32,7 +32,7 @@ This is not cosmetic. Warning churn and stale generated shapes make the framewor
 - [x] Stale root-domain fields are gone.
 - [x] Obsolete root API/domain modules are removed or reduced to only still-needed temporary bridge types.
 - [x] Generated-code warnings that are in scope are fixed.
-- [ ] `gleam build --target javascript`, `gleam build --target erlang`, `gleam test`, and browser smoke pass.
+- [x] `gleam build --target javascript`, `gleam build --target erlang`, `gleam test`, and browser smoke pass.
 - [x] No generated/import-format churn remains beyond what `gleam format` produces.
 
 
@@ -94,7 +94,14 @@ Validated with:
 • node test/boundary_guard_test.mjs
 • node test/ws_result_smoke.mjs
 
-Browser smoke caveat: `SCOREBOARD_BASE_URL=http://localhost:8106 node test/browser_smoke.mjs` is blocked in this workspace because Playwright is not installed.
+Final validation pass added Playwright as the local browser-smoke dev dependency and ignored `node_modules/`. The full cleanup validation now passes in this workspace:
+
+• gleam build --target erlang
+• gleam build --target javascript
+• TEMP=/home/daverapin/projects/gleam/rally-scoreboard-example/tmp gleam test --target erlang
+• node test/boundary_guard_test.mjs
+• node test/ws_result_smoke.mjs
+• npm run test:browser
 
 
 
