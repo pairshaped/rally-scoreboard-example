@@ -23,6 +23,43 @@ function gleamFilesUnder(projectDir) {
   });
 }
 
+function rootGleamFiles() {
+  const srcDir = path.join(root, "src");
+  return readdirSync(srcDir)
+    .map((entry) => path.join("src", entry))
+    .filter((projectPath) => {
+      const absolutePath = path.join(root, projectPath);
+      return statSync(absolutePath).isFile() && projectPath.endsWith(".gleam");
+    });
+}
+
+function sourceWithoutComments(source) {
+  return source.replace(/\/\/.*$/gm, "");
+}
+
+function gleamUnionConstructors(projectPath, typeName) {
+  const source = readProjectFile(projectPath);
+  const union = source.match(
+    new RegExp(`pub\\s+type\\s+${typeName}\\s*\\{([\\s\\S]*?)\\n\\}`),
+  );
+
+  assert.ok(
+    union,
+    `Could not find generated Proute ${typeName} union in ${projectPath}`,
+  );
+
+  return [...union[1].matchAll(/^\s*([A-Z][A-Za-z0-9_]*)\b/gm)].map(
+    (match) => match[1],
+  );
+}
+
+function regexAlternation(values) {
+  return [...new Set(values)]
+    .sort((a, b) => b.length - a.length)
+    .map((value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+    .join("|");
+}
+
 function assertNoPatterns(projectPath, patterns) {
   const source = readProjectFile(projectPath);
 
@@ -35,10 +72,75 @@ function assertNoPatterns(projectPath, patterns) {
   }
 }
 
+function assertNoCodePatterns(projectPath, patterns) {
+  const source = sourceWithoutComments(readProjectFile(projectPath));
+
+  for (const { pattern, reason } of patterns) {
+    assert.doesNotMatch(source, pattern, reason(projectPath));
+  }
+}
+
 const pageModules = [
   ...gleamFilesUnder("src/admin/pages"),
   ...gleamFilesUnder("src/public/pages"),
 ];
+
+const routeConstructors = regexAlternation([
+  ...gleamUnionConstructors("src/generated/proute/admin/routes.gleam", "Route"),
+  ...gleamUnionConstructors("src/generated/proute/public/routes.gleam", "Route"),
+]);
+const pageConstructors = regexAlternation([
+  ...gleamUnionConstructors("src/generated/proute/admin/pages.gleam", "Page"),
+  ...gleamUnionConstructors("src/generated/proute/public/pages.gleam", "Page"),
+]);
+const routingDispatchExceptionReasons = new Map();
+
+function assertNoAuthoredRoutingDispatch(projectPath) {
+  if (routingDispatchExceptionReasons.has(projectPath)) {
+    const exceptionReason = routingDispatchExceptionReasons.get(projectPath);
+    assert.notEqual(
+      exceptionReason.trim(),
+      "",
+      `${projectPath} routing guard exception must document the app-policy reason`,
+    );
+    return;
+  }
+
+  const routingAdr =
+    "ADR 0003 says page filenames are the author-facing routing surface; " +
+    "generated Proute/Rally glue owns route and page dispatch.";
+
+  assertNoCodePatterns(projectPath, [
+    {
+      pattern: /import\s+generated\/proute\/(?:admin|public)\/routes\b/,
+      reason: (file) =>
+        `${file} violates the ADR 0003 routing rule: authored modules must not import generated route modules. ${routingAdr}`,
+    },
+    {
+      pattern: new RegExp(
+        `\\b(?:admin_routes|public_routes|routes)\\.(?:${routeConstructors})\\b`,
+      ),
+      reason: (file) =>
+        `${file} violates the ADR 0003 routing rule: authored modules must not match generated route constructors. ${routingAdr}`,
+    },
+    {
+      pattern: new RegExp(
+        `\\b(?:admin_pages|public_pages|pages)\\.(?:${pageConstructors})\\s*\\(`,
+      ),
+      reason: (file) =>
+        `${file} violates the ADR 0003 routing rule: authored modules must not match generated page constructors. ${routingAdr}`,
+    },
+    {
+      pattern: new RegExp(`\\b(?:${pageConstructors})\\s*\\(`),
+      reason: (file) =>
+        `${file} violates the ADR 0003 routing rule: authored modules must not construct generated page wrappers. ${routingAdr}`,
+    },
+  ]);
+}
+
+for (const projectPath of [...rootGleamFiles(), ...pageModules]) {
+  assertNoAuthoredRoutingDispatch(projectPath);
+}
 
 for (const pageModule of pageModules) {
   assertNoPatterns(pageModule, [

@@ -1,7 +1,7 @@
 ---
 # scoreboard-unified-grd1
 title: Add guards against authored root routing dispatch
-status: todo
+status: completed
 type: task
 priority: normal
 tags:
@@ -9,7 +9,7 @@ tags:
     - routing
     - diagnostics
 created_at: 2026-06-05T18:00:00Z
-updated_at: 2026-06-05T18:00:00Z
+updated_at: 2026-06-05T18:41:10Z
 parent: scoreboard-unified-r0ut
 ---
 
@@ -32,3 +32,7 @@ The guard should encode the authoring rule from the ADRs: routes are expressed t
 - `node test/boundary_guard_test.mjs`
 - `gleam build --target erlang`
 - `gleam build --target javascript`
+
+## Summary of Changes
+
+Added boundary guard coverage for the ADR 0003 routing rule. The guard now checks authored root and page modules for generated route imports and generated route/page constructor dispatch while ignoring explanatory comments and allowing documented app-policy exceptions.
