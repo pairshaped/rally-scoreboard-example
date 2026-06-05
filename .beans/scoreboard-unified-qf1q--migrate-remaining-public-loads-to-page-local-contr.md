@@ -8,7 +8,7 @@ tags:
     - rally
     - chase
 created_at: 2026-06-04T03:38:31Z
-updated_at: 2026-06-04T04:14:48Z
+updated_at: 2026-06-05T12:00:00Z
 parent: scoreboard-unified-wm8p
 blocked_by:
     - scoreboard-unified-adc2
@@ -16,7 +16,7 @@ blocked_by:
 
 ## What to build
 
-Move the remaining public page load paths to page-local server handlers and page-local wire payloads: game detail, standings, team detail, and home-as-games if it remains an alias.
+Move the remaining public page load paths to page-local server handlers and page-local wire payloads: game detail, standings, team detail, and the root `home_.gleam` page if it delegates to the games workflow.
 
 Each page should own its own domain model, even when the shapes look similar. A list page, detail page, and form/workflow page should be free to evolve independently.
 
@@ -27,6 +27,7 @@ Each page should own its own domain model, even when the shapes look similar. A 
 - Keep generated SQL modules under generated SQL output.
 - Remove root API/domain references from each migrated load path.
 - Keep route-first, decode-second behavior so two pages can define same-named local types.
+- Treat root routes as real pages. If `home_.gleam` reuses another page's load/model/update/view, that delegation is page-owned behavior, not a Rally route alias.
 - Update SSR and browser smoke coverage as each route moves.
 
 ## Acceptance criteria
