@@ -123,9 +123,9 @@ pub fn update(
 }
 
 /// Page-owned broadcast hook.
-/// Generated Rally browser push dispatch calls this after a game update frame
+/// Generated Rally browser broadcast dispatch calls this after a game update frame
 /// is decoded for the admin games topic.
-pub fn apply_push(
+pub fn apply_broadcast(
   model model: Model,
   message message: broadcasts.Event,
 ) -> #(Model, Effect(Message)) {

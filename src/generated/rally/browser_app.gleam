@@ -293,14 +293,15 @@ pub fn admin_page_topics(
 }
 
 @target(javascript)
-pub fn admin_apply_push(
+pub fn admin_apply_broadcast(
   page page: admin_pages.Page,
   module _module: String,
   message message: push_payload.Event,
 ) -> #(admin_pages.Page, Effect(admin_pages.Message)) {
   case page {
     admin_pages.AdminGamesPage(model) -> {
-      let #(model, page_effect) = admin_games_wire.apply_push(model, message)
+      let #(model, page_effect) =
+        admin_games_wire.apply_broadcast(model, message)
       #(
         admin_pages.AdminGamesPage(model),
         effect.map(page_effect, admin_pages.AdminGamesMsg),
@@ -308,7 +309,7 @@ pub fn admin_apply_push(
     }
     admin_pages.AdminHomePage(model) -> {
       let #(model, page_effect) =
-        admin_pages_home__page.apply_push(model, message)
+        admin_pages_home__page.apply_broadcast(model, message)
       #(
         admin_pages.AdminHomePage(model),
         effect.map(page_effect, admin_pages.AdminHomeMsg),
@@ -335,7 +336,7 @@ pub fn public_page_topics(
 }
 
 @target(javascript)
-pub fn public_apply_push(
+pub fn public_apply_broadcast(
   page page: public_pages.Page,
   module _module: String,
   message message: push_payload.Event,
@@ -343,14 +344,15 @@ pub fn public_apply_push(
   case page {
     public_pages.GamesIdPage(route_params:, model:) -> {
       let #(model, page_effect) =
-        public_game_detail_wire.apply_push(model, message)
+        public_game_detail_wire.apply_broadcast(model, message)
       #(
         public_pages.GamesIdPage(route_params:, model: model),
         effect.map(page_effect, public_pages.GamesIdMsg),
       )
     }
     public_pages.GamesPage(model) -> {
-      let #(model, page_effect) = public_games_wire.apply_push(model, message)
+      let #(model, page_effect) =
+        public_games_wire.apply_broadcast(model, message)
       #(
         public_pages.GamesPage(model),
         effect.map(page_effect, public_pages.GamesMsg),
@@ -358,7 +360,7 @@ pub fn public_apply_push(
     }
     public_pages.HomePage(model) -> {
       let #(model, page_effect) =
-        public_pages_home__page.apply_push(model, message)
+        public_pages_home__page.apply_broadcast(model, message)
       #(
         public_pages.HomePage(model),
         effect.map(page_effect, public_pages.HomeMsg),
@@ -366,7 +368,7 @@ pub fn public_apply_push(
     }
     public_pages.StandingsPage(model) -> {
       let #(model, page_effect) =
-        public_standings_wire.apply_push(model, message)
+        public_standings_wire.apply_broadcast(model, message)
       #(
         public_pages.StandingsPage(model),
         effect.map(page_effect, public_pages.StandingsMsg),
@@ -374,7 +376,7 @@ pub fn public_apply_push(
     }
     public_pages.TeamsSlugPage(route_params:, model:) -> {
       let #(model, page_effect) =
-        public_team_detail_wire.apply_push(model, message)
+        public_team_detail_wire.apply_broadcast(model, message)
       #(
         public_pages.TeamsSlugPage(route_params:, model: model),
         effect.map(page_effect, public_pages.TeamsSlugMsg),
@@ -754,7 +756,7 @@ fn admin_mount_update(
         server_frame_effect(
           page: model.page,
           bytes: bytes,
-          apply_push: admin_apply_push,
+          apply_broadcast: admin_apply_broadcast,
           on_page: AdminPageMsg,
         )
       #(
@@ -955,7 +957,7 @@ fn public_mount_update(
         server_frame_effect(
           page: model.page,
           bytes: bytes,
-          apply_push: public_apply_push,
+          apply_broadcast: public_apply_broadcast,
           on_page: PublicPageMsg,
         )
       #(
@@ -1088,13 +1090,13 @@ pub fn map_page_effect(
 pub fn server_frame_effect(
   page page: page,
   bytes bytes: BitArray,
-  apply_push apply_push: fn(page, String, push_payload.Event) ->
+  apply_broadcast apply_broadcast: fn(page, String, push_payload.Event) ->
     #(page, Effect(page_msg)),
   on_page on_page: fn(page_msg) -> msg,
 ) -> #(page, Effect(msg)) {
   case client_protocol.decode_server_frame(bytes) {
     Ok(client_protocol.Push(module:, message:)) ->
-      map_page_effect(apply_push(page, module, message), on_page)
+      map_page_effect(apply_broadcast(page, module, message), on_page)
     Error(Nil) -> #(page, effect.none())
   }
 }

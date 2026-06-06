@@ -31,11 +31,11 @@ pub fn update(
   games_page.update(page_shared_state, model, msg)
 }
 
-pub fn apply_push(
+pub fn apply_broadcast(
   model model: Model,
   message message: broadcasts.Event,
 ) -> #(Model, Effect(Message)) {
-  games_page.apply_push(model:, message:)
+  games_page.apply_broadcast(model:, message:)
 }
 
 pub fn topics(model: Model) -> List(broadcasts.Topic) {
