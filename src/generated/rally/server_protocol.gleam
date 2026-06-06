@@ -199,7 +199,7 @@ fn encode_admin_games_load_result_payload(
 }
 
 @target(erlang)
-@external(erlang, "generated@rpc_wire", "encode_admin_pages_games__load_result")
+@external(erlang, "generated@libero_wire", "encode_admin_pages_games__load_result")
 fn encode_admin_games_load_result_value(
   _value: admin_games_wire.LoadResult,
 ) -> a {
@@ -214,7 +214,7 @@ fn encode_public_game_detail_load_result_payload(
 }
 
 @target(erlang)
-@external(erlang, "generated@rpc_wire", "encode_public_pages_games_id___load_result")
+@external(erlang, "generated@libero_wire", "encode_public_pages_games_id___load_result")
 fn encode_public_game_detail_load_result_value(
   _value: public_game_detail_wire.LoadResult,
 ) -> a {
@@ -229,7 +229,7 @@ fn encode_public_games_load_result_payload(
 }
 
 @target(erlang)
-@external(erlang, "generated@rpc_wire", "encode_public_pages_games__load_result")
+@external(erlang, "generated@libero_wire", "encode_public_pages_games__load_result")
 fn encode_public_games_load_result_value(
   _value: public_games_wire.LoadResult,
 ) -> a {
@@ -244,7 +244,7 @@ fn encode_public_standings_load_result_payload(
 }
 
 @target(erlang)
-@external(erlang, "generated@rpc_wire", "encode_public_pages_standings__load_result")
+@external(erlang, "generated@libero_wire", "encode_public_pages_standings__load_result")
 fn encode_public_standings_load_result_value(
   _value: public_standings_wire.LoadResult,
 ) -> a {
@@ -259,7 +259,7 @@ fn encode_public_team_detail_load_result_payload(
 }
 
 @target(erlang)
-@external(erlang, "generated@rpc_wire", "encode_public_pages_teams_slug___load_result")
+@external(erlang, "generated@libero_wire", "encode_public_pages_teams_slug___load_result")
 fn encode_public_team_detail_load_result_value(
   _value: public_team_detail_wire.LoadResult,
 ) -> a {
@@ -274,7 +274,7 @@ fn encode_admin_games_save_result_payload(
 }
 
 @target(erlang)
-@external(erlang, "generated@rpc_wire", "encode_admin_pages_games__game_update")
+@external(erlang, "generated@libero_wire", "encode_admin_pages_games__game_update")
 fn encode_admin_games_save_result_value(
   _value: admin_games_wire.GameUpdate,
 ) -> a {
@@ -282,7 +282,7 @@ fn encode_admin_games_save_result_value(
 }
 
 @target(erlang)
-@external(erlang, "generated@rpc_wire", "encode_broadcasts__event")
+@external(erlang, "generated@libero_wire", "encode_broadcasts__event")
 fn encode_push_payload(_message: push_payload.Event) -> a {
   panic as "generated/rally/server_protocol.encode_push_payload external missing"
 }

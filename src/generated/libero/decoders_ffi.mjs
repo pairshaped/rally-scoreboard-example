@@ -7,7 +7,6 @@ import { Ok, Error as ResultError, Empty, NonEmpty } from "../../../gleam_stdlib
 import { Some, None } from "../../../gleam_stdlib/gleam/option.mjs";
 import { from_list as dictFromList } from "../../../gleam_stdlib/gleam/dict.mjs";
 import { registerAtomDecoder } from "../../../libero/libero/etf/wire_ffi.mjs";
-import * as _m_generated_libero_dispatch from "./dispatch.mjs";
 import * as _m_broadcasts from "../../../scoreboard_unified/broadcasts.mjs";
 import * as _m_admin_pages_games from "../../../scoreboard_unified/admin/pages/games.mjs";
 import * as _m_public_pages_games_id_ from "../../../scoreboard_unified/public/pages/games/id_.mjs";
@@ -343,8 +342,6 @@ export function decode_public_pages_teams_slug__team(term) {
     decode_string(term[3])
   );
 }
-
-
 
 let _decodersReady = false;
 

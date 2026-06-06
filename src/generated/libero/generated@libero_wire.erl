@@ -9,7 +9,7 @@
 %% module path so types with the same name in different Gleam modules
 %% do not collide in this Erlang module's function table.
 
--module(generated@rpc_wire).
+-module(generated@libero_wire).
 -export([
     encode_broadcasts__event/1,
     decode_broadcasts__event/1,

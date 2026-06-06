@@ -9,7 +9,7 @@
 %% ensure/0 uses persistent_term as a one-shot guard so the
 %% binary_to_atom calls only run once per VM lifetime.
 
--module(generated@rpc_atoms).
+-module(generated@libero_atoms).
 -export([ensure/0]).
 
 ensure() ->
@@ -106,6 +106,6 @@ do_ensure() ->
         <<"true">>,
         <<"unknown_function">>
     ]),
-    persistent_term:put({libero, wire_module}, 'generated@rpc_wire'),
+    persistent_term:put({libero, wire_module}, 'generated@libero_wire'),
     persistent_term:put({?MODULE, done}, true),
     nil.

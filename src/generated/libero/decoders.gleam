@@ -4,5 +4,5 @@
 //// triggers constructor and decoder registration on the JavaScript target.
 
 @external(erlang, "libero_ffi", "ensure_decoders")
-@external(javascript, "./rpc_decoders_ffi.mjs", "ensure_decoders")
+@external(javascript, "./decoders_ffi.mjs", "ensure_decoders")
 pub fn ensure_decoders() -> Bool
