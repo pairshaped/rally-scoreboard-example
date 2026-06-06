@@ -1,6 +1,6 @@
 # Rally Chase Goal Plan
 
-Scoreboard Unified should become the app shape Rally chases: one authored `src/` tree, Proute-owned routing, target annotations for client/server code, page-local contracts, page-local domain data, and generated Rally glue under `src/generated/rally`.
+Rally Scoreboard should become the app shape Rally chases: one authored `src/` tree, Proute-owned routing, target annotations for client/server code, page-local contracts, page-local domain data, and generated Rally glue under `src/generated/rally`.
 
 The target is not to make the current app prettier in place. The target is to make the desired Rally app obvious from the code.
 

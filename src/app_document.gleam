@@ -32,7 +32,7 @@ pub fn ensure() -> Nil {
 
 @target(erlang)
 /// HTTP document response for public and admin app routes.
-/// scoreboard_unified calls this after routing/auth, and this module chooses the
+/// The app calls this after routing/auth, and this module chooses the
 /// matching SSR mount and browser entrypoint.
 pub fn response(
   req req: Request(Connection),

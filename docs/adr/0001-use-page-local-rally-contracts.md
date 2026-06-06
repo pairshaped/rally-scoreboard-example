@@ -1,6 +1,6 @@
 # Use Page Local Rally Contracts
 
-Scoreboard Unified is the chase target for the next Rally page model: one root Gleam package, no generated client app, and page modules that look like ordinary TEA SPA pages with server handlers added at the bottom. Page modules own their local `Model`, browser `Msg`, page-local `ServerMsg`, pure `initial_model`, shared `view`, browser `update`, optional `init`, and Erlang-only `load` and `handle` functions.
+Rally Scoreboard is the chase target for the next Rally page model: one root Gleam package, no generated client app, and page modules that look like ordinary TEA SPA pages with server handlers added at the bottom. Page modules own their local `Model`, browser `Msg`, page-local `ServerMsg`, pure `initial_model`, shared `view`, browser `update`, optional `init`, and Erlang-only `load` and `handle` functions.
 
 Page modules are also the author-facing routing surface. The page filename and path decide the route. Authored page code should not match generated route constructors, parse route params from strings, or wrap itself in generated page enums. Route params arrive through the generated page input shape, and generated Proute/Rally glue owns route dispatch around the page.
 
@@ -14,6 +14,7 @@ import generated/proute/public/page_input
 import lustre/effect.{type Effect}
 import lustre/element.{type Element}
 import public/page_shared_state.{type PublicPageSharedState}
+import rally/runtime/load as runtime_load
 
 @target(erlang)
 import generated/sql/games_sql
@@ -27,7 +28,7 @@ pub type Model {
 
 pub type Msg {
   AdjustHome(id: Int, delta: Int)
-  Loaded(Result(List(Game), LoadError))
+  Loaded(Result(List(Game), runtime_load.LoadError))
   Saved(Result(Game, SaveError))
 }
 
@@ -81,7 +82,7 @@ pub fn update(msg: Msg, model: Model) -> #(Model, Effect(Msg)) {
 // SERVER
 
 @target(erlang)
-pub fn load(ctx, params) -> Result(List(Game), LoadError) {
+pub fn load(ctx, params) -> Result(List(Game), runtime_load.LoadError) {
   todo
 }
 
@@ -95,6 +96,8 @@ Shared declarations appear before `// SERVER` and `// CLIENT`. Erlang declaratio
 
 `initial_model` is the normal starting point for a page. `init` is optional. A page should define `init` only when it needs page-local browser startup work that cannot be represented as loaded page data or normal update behavior. Rally-generated browser glue calls `init` when it exists; otherwise it constructs the page with `initial_model` and no effect. Rally-generated SSR glue uses `initial_model` so server rendering never depends on browser-only effects.
 
-`Loaded(Result(data, LoadError))` and `Saved(Result(data, SaveError))` are normal browser `Msg` constructors. The server returns page data directly inside `Result`; wrapper types such as `LoadData` or `SaveData` are optional and should only exist when the page needs a named multi-field payload.
+`Loaded(Result(data, runtime_load.LoadError))` and `Saved(Result(data, SaveError))` are normal browser `Msg` constructors. The standard load error type comes from Rally runtime. Save errors stay page-local unless Rally grows a standard save boundary. The server returns page data directly inside `Result`; wrapper types such as `LoadData` or `SaveData` are optional and should only exist when the page needs a named multi-field payload.
+
+Pages that care about broadcasts expose `topics(...)` and `apply_broadcast(...)`. `topics` returns typed app topic values, usually from `broadcasts.gleam`; `apply_broadcast` applies decoded broadcast events to the page model after generated Rally glue has handled transport decoding, server-side filtering, and page dispatch.
 
 `ServerMsg` is page local. `server.send` returns a Lustre `Effect(Msg)`, not a separate Rally type. Rally generates the per-page transport, request-result correlation, codecs, hydration, SSR, browser boot, and server dispatch needed to connect the page to the runtime.
