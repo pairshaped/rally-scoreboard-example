@@ -35,7 +35,7 @@ pub fn view(model model: Model) -> Element(Message) {
     html.section([attribute.class("panel")], [
       html.h1([], [html.text(model.title)]),
       html.p([attribute.class("muted")], [
-        html.text("Unified source projection placeholder."),
+        html.text("Rally Scoreboard route placeholder."),
       ]),
     ]),
   ])

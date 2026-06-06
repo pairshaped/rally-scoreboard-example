@@ -1,6 +1,6 @@
 # Unified Target Source
 
-Scoreboard Unified uses one authored Gleam source tree. The source tree compiles directly for JavaScript and Erlang, with target-specific declarations and imports marked where target-specific behavior starts. Rally should not generate a separate client package from server-shaped source.
+Rally Scoreboard uses one authored Gleam source tree. The source tree compiles directly for JavaScript and Erlang, with target-specific declarations and imports marked where target-specific behavior starts. Rally should not generate a separate client package from server-shaped source.
 
 ```text
 src/
@@ -27,6 +27,7 @@ import generated/proute/public/page_input
 import lustre/effect.{type Effect}
 import lustre/element.{type Element}
 import public/page_shared_state.{type PublicPageSharedState}
+import rally/runtime/load as runtime_load
 
 @target(erlang)
 import generated/sql/games_sql
@@ -40,7 +41,7 @@ pub type Model {
 
 pub type Msg {
   AdjustHome(id: Int, delta: Int)
-  Loaded(Result(List(Game), LoadError))
+  Loaded(Result(List(Game), runtime_load.LoadError))
   Saved(Result(Game, SaveError))
 }
 
@@ -94,7 +95,7 @@ pub fn update(msg: Msg, model: Model) -> #(Model, Effect(Msg)) {
 // SERVER
 
 @target(erlang)
-pub fn load(ctx, params) -> Result(List(Game), LoadError) {
+pub fn load(ctx, params) -> Result(List(Game), runtime_load.LoadError) {
   todo
 }
 
@@ -133,7 +134,7 @@ server.send(
 
 Server-originated state events should be delivered to other subscribed clients, excluding the connection that initiated the mutation. Request results manage request lifecycle for the initiating page. Broadcast events carry server-authoritative state for subscribed peers.
 
-Any split helper such as `send_load` or `send_save` is bridge code for the current global app protocol. The target Rally API is `server.send(ServerMsg, on_result: ...)`.
+Generated load/save transport helpers are internal Rally glue. Authored page code uses `server.send(ServerMsg, on_result: ...)` for page-local server commands, while generated Rally browser glue owns standard page data loading.
 
 ## Authoring Style
 

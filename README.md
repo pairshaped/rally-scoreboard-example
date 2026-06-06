@@ -1,6 +1,6 @@
-# Scoreboard Unified
+# Rally Scoreboard
 
-Scoreboard Unified is the unified-source scoreboard app.
+Rally Scoreboard is the unified-source scoreboard app.
 
 The project is testing one authored Gleam source tree that compiles for both supported targets:
 
@@ -46,6 +46,7 @@ gleam run -m marmot migrate
 gleam run -m marmot seed
 gleam run -m marmot
 gleam run -m proute
+gleam run -m rally load-rpc
 gleam check
 gleam build --target javascript
 gleam build --target erlang
