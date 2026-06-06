@@ -1,0 +1,125 @@
+@target(javascript)
+import generated/rally/client_transport
+@target(javascript)
+import generated/rally/result as transport_result
+@target(javascript)
+import gleam/list
+@target(javascript)
+import gleam/option.{type Option}
+@target(javascript)
+import lustre/effect.{type Effect}
+@target(javascript)
+import rally/runtime/load as runtime_load
+
+@target(erlang)
+pub fn ensure() -> Nil {
+  Nil
+}
+
+@target(javascript)
+pub type SaveError {
+  SaveError(field: Option(String), message: String)
+}
+
+@target(javascript)
+pub fn load_admin_games(
+  message message: a,
+  on_result on_result: fn(Result(load_result, List(runtime_load.LoadError))) ->
+    msg,
+) -> Effect(msg) {
+  client_transport.send_admin_games_load(
+    message: message,
+    on_result: fn(result) { on_result(map_load_result(result)) },
+  )
+}
+
+@target(javascript)
+pub fn load_public_game_detail(
+  message message: a,
+  on_result on_result: fn(Result(load_result, List(runtime_load.LoadError))) ->
+    msg,
+) -> Effect(msg) {
+  client_transport.send_public_game_detail_load(
+    message: message,
+    on_result: fn(result) { on_result(map_load_result(result)) },
+  )
+}
+
+@target(javascript)
+pub fn load_public_games(
+  message message: a,
+  on_result on_result: fn(Result(load_result, List(runtime_load.LoadError))) ->
+    msg,
+) -> Effect(msg) {
+  client_transport.send_public_games_load(
+    message: message,
+    on_result: fn(result) { on_result(map_load_result(result)) },
+  )
+}
+
+@target(javascript)
+pub fn load_public_standings(
+  message message: a,
+  on_result on_result: fn(Result(load_result, List(runtime_load.LoadError))) ->
+    msg,
+) -> Effect(msg) {
+  client_transport.send_public_standings_load(
+    message: message,
+    on_result: fn(result) { on_result(map_load_result(result)) },
+  )
+}
+
+@target(javascript)
+pub fn load_public_team_detail(
+  message message: a,
+  on_result on_result: fn(Result(load_result, List(runtime_load.LoadError))) ->
+    msg,
+) -> Effect(msg) {
+  client_transport.send_public_team_detail_load(
+    message: message,
+    on_result: fn(result) { on_result(map_load_result(result)) },
+  )
+}
+
+@target(javascript)
+pub fn save_admin_games(
+  message message: a,
+  on_result on_result: fn(Result(save_result, List(SaveError))) -> msg,
+) -> Effect(msg) {
+  client_transport.send_admin_games_save(
+    message: message,
+    on_result: fn(result) { on_result(map_save_result(result)) },
+  )
+}
+
+@target(javascript)
+fn map_load_result(
+  result: Result(a, List(transport_result.ApiLoadError)),
+) -> Result(a, List(runtime_load.LoadError)) {
+  case result {
+    Ok(value) -> Ok(value)
+    Error(errors) ->
+      Error(
+        list.map(errors, fn(error) {
+          let transport_result.ApiLoadError(message:) = error
+          runtime_load.LoadError(message:)
+        }),
+      )
+  }
+}
+
+@target(javascript)
+fn map_save_result(
+  result: Result(a, List(transport_result.ApiSaveError)),
+) -> Result(a, List(SaveError)) {
+  case result {
+    Ok(value) -> Ok(value)
+    Error(errors) ->
+      Error(
+        list.map(errors, fn(error) {
+          let transport_result.ApiSaveError(field:, message:) = error
+          SaveError(field:, message:)
+        }),
+      )
+  }
+}

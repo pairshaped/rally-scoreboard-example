@@ -12,7 +12,7 @@ import generated/proute/public/page_input
 import generated/proute/public/routes
 import lustre/effect.{type Effect}
 import lustre/element
-import page_context.{type PageContext}
+import public/page_shared_state.{type PublicPageSharedState}
 import public/pages/games as games_page
 import public/pages/games/id_ as games_id_page
 import public/pages/home_ as home_page
@@ -28,10 +28,16 @@ import public/pages/teams/slug_ as teams_slug_page
 pub type Page {
   HomePage(model: home_page.Model)
   GamesPage(model: games_page.Model)
-  GamesIdPage(model: games_id_page.Model)
+  GamesIdPage(
+    route_params: page_input.GamesIdRouteParams,
+    model: games_id_page.Model,
+  )
   SignInPage(model: sign_in_page.Model)
   StandingsPage(model: standings_page.Model)
-  TeamsSlugPage(model: teams_slug_page.Model)
+  TeamsSlugPage(
+    route_params: page_input.TeamsSlugRouteParams,
+    model: teams_slug_page.Model,
+  )
   NotFoundPage(model: not_found_page.Model)
 }
 
@@ -51,98 +57,119 @@ pub type Message {
 
 /// Load the page for a route.
 ///
-/// The mount supplies page context and structured query params. This generated
-/// function forwards those inputs with any route params into the matching page
-/// module's conventional `init` function, then wraps the returned model and
-/// effect.
+/// The mount supplies page shared state and structured query params. This generated
+/// function constructs the matching page and wraps its effect. Pages may expose
+/// `init` for client-side startup effects such as browser APIs or page-local
+/// event listeners. When `init` is absent, generated code uses `initial_model`
+/// and `effect.none()`.
 pub fn load(
-  page_context page_context: PageContext,
+  page_shared_state page_shared_state: PublicPageSharedState,
   query_params query_params: page_input.QueryParams,
   route route: routes.Route,
 ) -> #(Page, Effect(Message)) {
   case route {
     routes.Home -> {
-      let #(page_model, page_effect) =
-        home_page.init(page_context, query_params)
+      let page_model = home_page.initial_model(page_shared_state, query_params)
+      let page_effect = effect.none()
       #(HomePage(page_model), effect.map(page_effect, HomeMsg))
     }
     routes.Games -> {
-      let #(page_model, page_effect) =
-        games_page.init(page_context, query_params)
+      let page_model = games_page.initial_model(page_shared_state, query_params)
+      let page_effect = effect.none()
       #(GamesPage(page_model), effect.map(page_effect, GamesMsg))
     }
     routes.GamesId(id) -> {
       let route_params = page_input.GamesIdRouteParams(id:)
       let #(page_model, page_effect) =
-        games_id_page.init(page_context, route_params, query_params)
-      #(GamesIdPage(page_model), effect.map(page_effect, GamesIdMsg))
+        games_id_page.init(page_shared_state, route_params, query_params)
+      #(
+        GamesIdPage(route_params:, model: page_model),
+        effect.map(page_effect, GamesIdMsg),
+      )
     }
     routes.SignIn -> {
-      let #(page_model, page_effect) =
-        sign_in_page.init(page_context, query_params)
+      let page_model =
+        sign_in_page.initial_model(page_shared_state, query_params)
+      let page_effect = effect.none()
       #(SignInPage(page_model), effect.map(page_effect, SignInMsg))
     }
     routes.Standings -> {
-      let #(page_model, page_effect) =
-        standings_page.init(page_context, query_params)
+      let page_model =
+        standings_page.initial_model(page_shared_state, query_params)
+      let page_effect = effect.none()
       #(StandingsPage(page_model), effect.map(page_effect, StandingsMsg))
     }
     routes.TeamsSlug(slug) -> {
       let route_params = page_input.TeamsSlugRouteParams(slug:)
-      let #(page_model, page_effect) =
-        teams_slug_page.init(page_context, route_params, query_params)
-      #(TeamsSlugPage(page_model), effect.map(page_effect, TeamsSlugMsg))
+      let page_model =
+        teams_slug_page.initial_model(
+          page_shared_state,
+          route_params,
+          query_params,
+        )
+      let page_effect = effect.none()
+      #(
+        TeamsSlugPage(route_params:, model: page_model),
+        effect.map(page_effect, TeamsSlugMsg),
+      )
     }
     routes.NotFound -> {
-      let #(page_model, page_effect) =
-        not_found_page.init(page_context, query_params)
+      let page_model =
+        not_found_page.initial_model(page_shared_state, query_params)
+      let page_effect = effect.none()
       #(NotFoundPage(page_model), effect.map(page_effect, NotFoundMsg))
     }
   }
 }
 
-/// Build the first page model for server rendering.
+/// Build the pure initial page for a route.
 ///
-/// Server-rendered fallback documents cannot wait for Lustre effects, so pages
-/// expose synchronous initial models. The generated dispatcher still chooses the
-/// page from the route; each page decides what model is safe to render before
-/// asynchronous effects have run.
-pub fn load_sync(
-  page_context page_context: PageContext,
+/// SSR and other fallback paths cannot run Lustre effects, so this dispatcher
+/// always calls the page's pure `initial_model`. Use `load` when browser page
+/// startup effects should run.
+pub fn initial_page(
+  page_shared_state page_shared_state: PublicPageSharedState,
   query_params query_params: page_input.QueryParams,
   route route: routes.Route,
 ) -> Page {
   case route {
     routes.Home -> {
-      HomePage(home_page.initial_model(page_context, query_params))
+      HomePage(home_page.initial_model(page_shared_state, query_params))
     }
     routes.Games -> {
-      GamesPage(games_page.initial_model(page_context, query_params))
+      GamesPage(games_page.initial_model(page_shared_state, query_params))
     }
     routes.GamesId(id) -> {
       let route_params = page_input.GamesIdRouteParams(id:)
-      GamesIdPage(games_id_page.initial_model(
-        page_context,
-        route_params,
-        query_params,
-      ))
+      let page_model =
+        games_id_page.initial_model(
+          page_shared_state,
+          route_params,
+          query_params,
+        )
+      GamesIdPage(route_params:, model: page_model)
     }
     routes.SignIn -> {
-      SignInPage(sign_in_page.initial_model(page_context, query_params))
+      SignInPage(sign_in_page.initial_model(page_shared_state, query_params))
     }
     routes.Standings -> {
-      StandingsPage(standings_page.initial_model(page_context, query_params))
+      StandingsPage(standings_page.initial_model(
+        page_shared_state,
+        query_params,
+      ))
     }
     routes.TeamsSlug(slug) -> {
       let route_params = page_input.TeamsSlugRouteParams(slug:)
-      TeamsSlugPage(teams_slug_page.initial_model(
-        page_context,
-        route_params,
-        query_params,
-      ))
+      let page_model =
+        teams_slug_page.initial_model(
+          page_shared_state,
+          route_params,
+          query_params,
+        )
+      TeamsSlugPage(route_params:, model: page_model)
     }
     routes.NotFound -> {
-      NotFoundPage(not_found_page.initial_model(page_context, query_params))
+      NotFoundPage(not_found_page.initial_model(page_shared_state, query_params))
     }
   }
 }
@@ -167,9 +194,9 @@ pub fn update(
       let page = GamesPage(new_model)
       #(page, effect.map(page_effect, GamesMsg))
     }
-    GamesIdPage(page_model), GamesIdMsg(inner) -> {
+    GamesIdPage(route_params:, model: page_model), GamesIdMsg(inner) -> {
       let #(new_model, page_effect) = games_id_page.update(page_model, inner)
-      let page = GamesIdPage(new_model)
+      let page = GamesIdPage(route_params:, model: new_model)
       #(page, effect.map(page_effect, GamesIdMsg))
     }
     SignInPage(page_model), SignInMsg(inner) -> {
@@ -182,9 +209,9 @@ pub fn update(
       let page = StandingsPage(new_model)
       #(page, effect.map(page_effect, StandingsMsg))
     }
-    TeamsSlugPage(page_model), TeamsSlugMsg(inner) -> {
+    TeamsSlugPage(route_params:, model: page_model), TeamsSlugMsg(inner) -> {
       let #(new_model, page_effect) = teams_slug_page.update(page_model, inner)
-      let page = TeamsSlugPage(new_model)
+      let page = TeamsSlugPage(route_params:, model: new_model)
       #(page, effect.map(page_effect, TeamsSlugMsg))
     }
     NotFoundPage(page_model), NotFoundMsg(inner) -> {
@@ -208,7 +235,7 @@ pub fn view(page: Page) -> element.Element(Message) {
     GamesPage(page_model) ->
       games_page.view(page_model)
       |> element.map(GamesMsg)
-    GamesIdPage(page_model) ->
+    GamesIdPage(route_params: _, model: page_model) ->
       games_id_page.view(page_model)
       |> element.map(GamesIdMsg)
     SignInPage(page_model) ->
@@ -217,7 +244,7 @@ pub fn view(page: Page) -> element.Element(Message) {
     StandingsPage(page_model) ->
       standings_page.view(page_model)
       |> element.map(StandingsMsg)
-    TeamsSlugPage(page_model) ->
+    TeamsSlugPage(route_params: _, model: page_model) ->
       teams_slug_page.view(page_model)
       |> element.map(TeamsSlugMsg)
     NotFoundPage(page_model) ->

@@ -1,12 +1,6 @@
-import api/domain/game.{
-  type AdminGameSummary, type GameSnapshot, AdminGameSummary, Final,
-}
-@target(javascript)
-import api/to_server
-import components/ui
+import admin/page_shared_state.{type AdminPageSharedState}
+import broadcasts
 import generated/proute/admin/page_input
-@target(javascript)
-import generated_soon/client_transport as api_client
 import gleam/int
 import gleam/list
 import lustre/attribute
@@ -14,7 +8,72 @@ import lustre/effect.{type Effect}
 import lustre/element.{type Element}
 import lustre/element/html
 import lustre/event
-import page_context.{type PageContext}
+import rally/runtime/load as runtime_load
+
+@target(erlang)
+import generated/sql/admin/pages/games_sql
+@target(erlang)
+import sqlight
+
+@target(javascript)
+import generated/rally/server
+
+// TYPES
+
+pub type GameStatus {
+  AdminGamesScheduled
+  AdminGamesLive(period: String)
+  AdminGamesFinal
+}
+
+pub type AdminGameSummary {
+  AdminGamesSummary(
+    id: Int,
+    home_code: String,
+    away_code: String,
+    home_score: Int,
+    away_score: Int,
+    status: GameStatus,
+    needs_attention: Bool,
+  )
+}
+
+/// Rally save response payload and page-local broadcast projection.
+/// generated/rally encodes this as the admin save result, and browser push
+/// handling converts BroadcastGameUpdated frames into this shape.
+pub type GameUpdate {
+  AdminGamesUpdate(
+    id: Int,
+    home_code: String,
+    away_code: String,
+    home_score: Int,
+    away_score: Int,
+    status: GameStatus,
+  )
+}
+
+pub type LoadResult {
+  AdminGamesLoadResult(games: List(AdminGameSummary))
+}
+
+/// Page-local save error carried by Message.Saved and returned by handle.
+/// app_ws translates this into generated Rally websocket SaveError values for
+/// browser responses.
+pub type SaveError {
+  SaveError(message: String)
+}
+
+/// Server requests for the admin games page.
+pub type ServerMsg {
+  AdminGamesLoad
+  AdminGamesUpdateScore(
+    game_id: Int,
+    home_score: Int,
+    away_score: Int,
+    period: String,
+  )
+  AdminGamesMarkFinal(game_id: Int)
+}
 
 pub type Model {
   Model(games: List(AdminGameSummary))
@@ -23,44 +82,73 @@ pub type Model {
 pub type Message {
   AdjustAway(id: Int, home_score: Int, away_score: Int, delta: Int)
   AdjustHome(id: Int, home_score: Int, away_score: Int, delta: Int)
+  Loaded(Result(List(AdminGameSummary), runtime_load.LoadError))
   MarkFinal(id: Int)
+  Saved(Result(GameUpdate, SaveError))
 }
 
-pub fn init(
-  page_context page_context: PageContext,
-  query_params query_params: page_input.QueryParams,
-) -> #(Model, Effect(Message)) {
-  #(initial_model(page_context, query_params), init_effect())
-}
-
+/// Pure starting state for the admin games page.
+/// Generated browser and SSR glue call this to construct an empty page before
+/// Rally applies hydrated or freshly loaded data.
 pub fn initial_model(
-  _page_context: PageContext,
+  _page_shared_state: AdminPageSharedState,
   _query_params: page_input.QueryParams,
 ) -> Model {
   Model(games: [])
 }
 
+// UPDATE
+
+/// Proute page update function.
+/// generated/proute/admin/pages calls this when an AdminHomeMsg or AdminGamesMsg
+/// is active on the current page.
 pub fn update(
-  _page_context: PageContext,
+  _page_shared_state: AdminPageSharedState,
   model model: Model,
   msg msg: Message,
 ) -> #(Model, Effect(Message)) {
-  #(model, message_effect(msg))
+  case msg {
+    Loaded(Ok(games)) -> #(Model(games:), effect.none())
+    Loaded(Error(_)) -> #(model, effect.none())
+    Saved(Ok(game)) -> #(
+      upsert_game(model, game_update_summary(game)),
+      effect.none(),
+    )
+    Saved(Error(_)) -> #(model, effect.none())
+    AdjustAway(..) | AdjustHome(..) | MarkFinal(..) -> #(
+      model,
+      message_effect(msg),
+    )
+  }
 }
 
-pub fn admin_games_loaded(
-  model _model: Model,
-  games games: List(AdminGameSummary),
+/// Page-owned broadcast hook.
+/// Generated Rally browser broadcast dispatch calls this after a game update frame
+/// is decoded for the admin games topic.
+pub fn apply_broadcast(
+  model model: Model,
+  message message: broadcasts.Event,
 ) -> #(Model, Effect(Message)) {
-  #(Model(games: games), effect.none())
+  case message {
+    broadcasts.BroadcastGameUpdated(game) ->
+      game_updated(model, admin_game_update(game))
+  }
 }
 
+/// Subscribes the admin board to private admin game updates.
+pub fn topics(_model: Model) -> List(broadcasts.Topic) {
+  [broadcasts.admin_games_topic()]
+}
+
+/// Applies one admin game update to the loaded admin games list.
 pub fn game_updated(
   model model: Model,
-  game game: GameSnapshot,
+  game game: GameUpdate,
 ) -> #(Model, Effect(Message)) {
-  #(upsert_game(model, snapshot_summary(game)), effect.none())
+  #(upsert_game(model, game_update_summary(game)), effect.none())
 }
+
+// VIEW
 
 pub fn view(model model: Model) -> Element(Message) {
   view_games(
@@ -74,6 +162,8 @@ pub fn view(model model: Model) -> Element(Message) {
     on_mark_final: fn(id) { MarkFinal(id:) },
   )
 }
+
+// HELPERS
 
 fn view_games(
   games games: List(AdminGameSummary),
@@ -129,7 +219,7 @@ fn view_game_card(
       ]),
     ]),
     html.div([attribute.class("score-line admin-status-row")], [
-      ui.status_badge(game.status),
+      status_badge(game.status),
       final_action(game, on_mark_final),
     ]),
   ])
@@ -146,7 +236,7 @@ fn final_action(
   on_mark_final: fn(Int) -> msg,
 ) -> Element(msg) {
   case game.status {
-    Final -> html.span([], [])
+    AdminGamesFinal -> html.span([], [])
     _ ->
       html.button(
         [
@@ -167,14 +257,14 @@ fn upsert_game(model: Model, game: AdminGameSummary) -> Model {
       }
     })
 
-  Model(games: games)
+  Model(games:)
 }
 
-fn snapshot_summary(game: GameSnapshot) -> AdminGameSummary {
-  AdminGameSummary(
+fn game_update_summary(game: GameUpdate) -> AdminGameSummary {
+  AdminGamesSummary(
     id: game.id,
-    home_code: game.home.code,
-    away_code: game.away.code,
+    home_code: game.home_code,
+    away_code: game.away_code,
     home_score: game.home_score,
     away_score: game.away_score,
     status: game.status,
@@ -182,45 +272,80 @@ fn snapshot_summary(game: GameSnapshot) -> AdminGameSummary {
   )
 }
 
-@target(javascript)
-fn init_effect() -> Effect(Message) {
-  api_client.send(module: "admin/games", message: to_server.LoadAdminGames)
+fn admin_game_update(game: broadcasts.GameSnapshot) -> GameUpdate {
+  let broadcasts.BroadcastGameSnapshot(
+    id:,
+    home: broadcasts.BroadcastTeam(code: home_code, ..),
+    away: broadcasts.BroadcastTeam(code: away_code, ..),
+    home_score:,
+    away_score:,
+    status:,
+  ) = game
+
+  AdminGamesUpdate(
+    id:,
+    home_code:,
+    away_code:,
+    home_score:,
+    away_score:,
+    status: admin_game_status(status),
+  )
 }
 
-@target(erlang)
-fn init_effect() -> Effect(Message) {
-  effect.none()
+fn admin_game_status(status: broadcasts.GameStatus) -> GameStatus {
+  case status {
+    broadcasts.BroadcastScheduled -> AdminGamesScheduled
+    broadcasts.BroadcastLive(period) -> AdminGamesLive(period)
+    broadcasts.BroadcastFinal -> AdminGamesFinal
+  }
+}
+
+fn status_badge(status: GameStatus) -> Element(msg) {
+  case status {
+    AdminGamesScheduled ->
+      html.span([attribute.class("badge")], [html.text("Scheduled")])
+    AdminGamesLive(period) ->
+      html.span([attribute.class("badge live")], [html.text(period)])
+    AdminGamesFinal ->
+      html.span([attribute.class("badge final")], [html.text("Final")])
+  }
 }
 
 @target(javascript)
+/// Sends browser score mutations to the generated Rally save effect.
 fn message_effect(msg: Message) -> Effect(Message) {
   case msg {
     AdjustAway(id, home_score, away_score, delta) ->
-      api_client.send(
-        module: "admin/games",
-        message: to_server.UpdateScore(
+      server.save_admin_games(
+        message: AdminGamesUpdateScore(
           game_id: id,
           home_score: home_score,
           away_score: clamp_score(away_score + delta),
           period: "Live",
         ),
+        on_result: fn(result) { Saved(map_save_result(result)) },
       )
     AdjustHome(id, home_score, away_score, delta) ->
-      api_client.send(
-        module: "admin/games",
-        message: to_server.UpdateScore(
+      server.save_admin_games(
+        message: AdminGamesUpdateScore(
           game_id: id,
           home_score: clamp_score(home_score + delta),
           away_score: away_score,
           period: "Live",
         ),
+        on_result: fn(result) { Saved(map_save_result(result)) },
       )
     MarkFinal(id) ->
-      api_client.send(module: "admin/games", message: to_server.MarkFinal(id))
+      server.save_admin_games(
+        message: AdminGamesMarkFinal(id),
+        on_result: fn(result) { Saved(map_save_result(result)) },
+      )
+    Loaded(_) | Saved(_) -> effect.none()
   }
 }
 
 @target(erlang)
+/// Server-side no-op because admin mutations are handled in `handle`.
 fn message_effect(_msg: Message) -> Effect(Message) {
   effect.none()
 }
@@ -231,5 +356,126 @@ fn clamp_score(score: Int) -> Int {
   case score < 0 {
     True -> 0
     False -> score
+  }
+}
+
+@target(javascript)
+/// Converts transport save failures into the page-local save error.
+fn map_save_result(
+  result: Result(GameUpdate, List(server.SaveError)),
+) -> Result(GameUpdate, SaveError) {
+  case result {
+    Ok(game) -> Ok(game)
+    Error([server.SaveError(message: message, ..), ..]) ->
+      Error(SaveError(message:))
+    Error([]) -> Error(SaveError(message: "Could not save game."))
+  }
+}
+
+// SERVER
+
+@target(erlang)
+/// Server data loader behind generated Rally SSR and websocket load adapters.
+/// Generated code wraps this data in the Rally/Libero load result shape.
+pub fn load(
+  db: sqlight.Connection,
+) -> Result(List(AdminGameSummary), runtime_load.LoadError) {
+  case games_sql.list_admin_games(db:) {
+    Ok(rows) -> Ok(list.map(rows, admin_game_summary_from_row))
+    Error(sqlight.SqlightError(..)) ->
+      Error(runtime_load.LoadError(message: "Could not load games."))
+  }
+}
+
+@target(erlang)
+/// Server mutation handler for this page's ServerMsg values.
+/// app_ws calls this after generated Rally websocket code decodes an admin save
+/// request and verifies the connection is authorized.
+pub fn handle(
+  db: sqlight.Connection,
+  msg: ServerMsg,
+) -> Result(GameUpdate, SaveError) {
+  case msg {
+    AdminGamesLoad -> Error(SaveError(message: "Load is not a save action."))
+    AdminGamesUpdateScore(game_id, home_score, away_score, period) ->
+      case
+        games_sql.update_game_score(
+          db:,
+          home_score:,
+          away_score:,
+          period:,
+          game_id:,
+        )
+      {
+        Ok([row, ..]) -> Ok(game_update_from_score_row(row))
+        Ok([]) -> Error(SaveError(message: "Game not found."))
+        Error(sqlight.SqlightError(..)) ->
+          Error(SaveError(message: "Could not save game."))
+      }
+
+    AdminGamesMarkFinal(game_id) ->
+      case games_sql.update_game_final(db:, game_id:) {
+        Ok([row, ..]) -> Ok(game_update_from_final_row(row))
+        Ok([]) -> Error(SaveError(message: "Game not found."))
+        Error(sqlight.SqlightError(..)) ->
+          Error(SaveError(message: "Could not save game."))
+      }
+  }
+}
+
+@target(erlang)
+/// Builds the targeted broadcast emitted after a successful admin save.
+pub fn after_save(
+  db: sqlight.Connection,
+  game: GameUpdate,
+) -> Result(broadcasts.TargetedEvent, Nil) {
+  broadcasts.game_updated_broadcast(db, game.id)
+}
+
+@target(erlang)
+fn admin_game_summary_from_row(
+  row: games_sql.ListAdminGamesRow,
+) -> AdminGameSummary {
+  AdminGamesSummary(
+    id: row.id,
+    home_code: row.home_code,
+    away_code: row.away_code,
+    home_score: row.home_score,
+    away_score: row.away_score,
+    status: game_status(row.period, row.final),
+    needs_attention: False,
+  )
+}
+
+@target(erlang)
+fn game_update_from_score_row(row: games_sql.UpdateGameScoreRow) -> GameUpdate {
+  AdminGamesUpdate(
+    id: row.id,
+    home_code: row.home_code,
+    away_code: row.away_code,
+    home_score: row.home_score,
+    away_score: row.away_score,
+    status: game_status(row.period, row.final),
+  )
+}
+
+@target(erlang)
+fn game_update_from_final_row(row: games_sql.UpdateGameFinalRow) -> GameUpdate {
+  AdminGamesUpdate(
+    id: row.id,
+    home_code: row.home_code,
+    away_code: row.away_code,
+    home_score: row.home_score,
+    away_score: row.away_score,
+    status: game_status(row.period, row.final),
+  )
+}
+
+@target(erlang)
+fn game_status(period: String, final: Int) -> GameStatus {
+  case final == 1, period {
+    True, _ -> AdminGamesFinal
+    False, "Scheduled" -> AdminGamesScheduled
+    False, _ -> AdminGamesLive(period)
   }
 }

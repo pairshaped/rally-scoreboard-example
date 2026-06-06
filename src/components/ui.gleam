@@ -3,7 +3,6 @@
 //// These are pure Lustre elements. They do not import transport, modem,
 //// browser setup, or route modules.
 
-import api/domain/game
 import gleam/list
 import lustre/attribute
 import lustre/element.{type Element}
@@ -68,17 +67,6 @@ pub fn nav_link_external(
     ],
     [html.text(label)],
   )
-}
-
-pub fn status_badge(status: game.GameStatus) -> Element(msg) {
-  case status {
-    game.Scheduled ->
-      html.span([attribute.class("badge")], [html.text("Scheduled")])
-    game.Live(period) ->
-      html.span([attribute.class("badge live")], [html.text(period)])
-    game.Final ->
-      html.span([attribute.class("badge final")], [html.text("Final")])
-  }
 }
 
 pub fn not_found_view() -> Element(msg) {

@@ -1,119 +1,142 @@
 @target(erlang)
-import app_assets
+import app_auth
 @target(erlang)
 import app_auth_http
 @target(erlang)
-import app_config
-@target(erlang)
 import app_document
-@target(erlang)
-import app_session
 @target(erlang)
 import app_ws
 @target(erlang)
-import gleam/crypto
-@target(erlang)
-import gleam/erlang/process
-@target(erlang)
-import gleam/http
-@target(erlang)
-import gleam/http/request.{type Request, Request}
+import gleam/http/request.{type Request}
 @target(erlang)
 import gleam/http/response.{type Response}
 @target(erlang)
-import gleam/int
-@target(erlang)
-import gleam/io
-@target(erlang)
-import gleam/result
-@target(erlang)
-import gleam/string
+import gleam/option.{None, Some}
 @target(erlang)
 import mist.{type Connection, type ResponseData}
 @target(erlang)
-import sqlight
+import rally/runtime/auth_http
+@target(erlang)
+import rally/runtime/bootstrap
 
 @target(erlang)
-const db_path = "db/scoreboard.db"
-
-@target(erlang)
+/// Server entrypoint.
+/// Rally owns standard bootstrap. The app supplies product-specific handlers.
 pub fn main() -> Nil {
-  let assert Ok(db) = sqlight.open(db_path)
-  let assert Ok(key) = session_key()
-  let session = app_session.new(key)
-  let port = app_config.http_port(default: 8080)
-
-  let handler = fn(req: Request(Connection)) {
-    let Request(path: path, method: method, ..) = req
-    case method, path {
-      http.Post, "/sign_in" ->
-        app_auth_http.handle_sign_in_post(req: req, db: db, session: session)
-      http.Get, "/sign_out" -> app_auth_http.handle_sign_out(req)
-      http.Post, "/sign_out" -> app_auth_http.handle_sign_out(req)
-      _, "/ws" -> {
-        let admin_authorized =
-          app_auth_http.check_admin_session(req: req, db: db, session: session)
-          |> result.is_ok
-        mist.websocket(
-          req,
-          app_ws.handler,
-          fn(conn) { app_ws.on_init(conn, db, admin_authorized) },
-          app_ws.on_close,
-        )
-      }
-      _, _ ->
-        case string.starts_with(path, "/_build/") {
-          True -> app_assets.serve_static(string.drop_start(path, 8))
-          False ->
-            case string.starts_with(path, "/admin") {
-              True -> handle_admin_path(req: req, db: db, session: session)
-              False ->
-                app_document.response(
-                  req: req,
-                  path: path,
-                  db: db,
-                  session: session,
-                )
-            }
-        }
-    }
-  }
-
-  io.println("Listening on http://localhost:" <> int.to_string(port))
-  let assert Ok(_) =
-    mist.new(handler)
-    |> mist.port(port)
-    |> mist.start
-  process.sleep_forever()
-}
-
-@target(erlang)
-fn session_key() -> Result(BitArray, app_config.SecretKeyError) {
-  case app_config.secret_key() {
-    Ok(key) -> Ok(key)
-    Error(app_config.MissingSecret) -> {
-      io.println_error(
-        app_config.secret_key_error_message(app_config.MissingSecret)
-        <> "; using an in-memory development key",
-      )
-      Ok(crypto.strong_random_bytes(32))
-    }
-    Error(error) -> {
-      io.println_error(app_config.secret_key_error_message(error))
-      Error(error)
-    }
+  case
+    bootstrap.start(
+      default_port: 8080,
+      handlers: bootstrap.Handlers(
+        auth: handle_auth_path,
+        websocket: handle_websocket_path,
+        admin: handle_admin_path,
+        public: handle_public_path,
+      ),
+    )
+  {
+    Ok(Nil) -> Nil
+    Error(error) -> panic as bootstrap.start_error_message(error)
   }
 }
 
 @target(erlang)
 fn handle_admin_path(
   req req: Request(Connection),
-  db db: sqlight.Connection,
-  session session: app_session.Session,
+  context context: bootstrap.Context,
 ) -> Response(ResponseData) {
-  case app_auth_http.check_admin_session(req: req, db: db, session: session) {
-    Ok(_) ->
-      app_document.response(req: req, path: req.path, db: db, session: session)
-    Error(Nil) -> app_auth_http.sign_in_redirect(req.path)
+  auth_http.protect(
+    req:,
+    auth: app_auth_http.request_auth(db: context.db, session: context.session),
+    render: fn(_user) {
+      app_document.response(
+        req:,
+        path: req.path,
+        db: context.db,
+        session: context.session,
+      )
+    },
+  )
+}
+
+@target(erlang)
+fn handle_auth_path(
+  req req: Request(Connection),
+  context context: bootstrap.Context,
+) -> Result(Response(ResponseData), Nil) {
+  let code_routes =
+    auth_http.CodeAuthRoutes(
+      session: fn(context: bootstrap.Context) { context.session },
+      verify_code: fn(code, context: bootstrap.Context) {
+        app_auth.verify_sign_in_code(db: context.db, code:)
+      },
+      deliver_code: fn(email, context: bootstrap.Context) {
+        app_auth.deliver_sign_in_code(db: context.db, email:)
+      },
+      sign_in_default_return_to: "/admin/games",
+      sign_in_return_to: app_auth_http.admin_return_to,
+      sign_out_default_return_to: "/games",
+      secure: False,
+    )
+
+  let google_routes =
+    auth_http.GoogleAuthRoutes(
+      session: fn(context: bootstrap.Context) { context.session },
+      credentials: fn(_context: bootstrap.Context) {
+        app_auth_http.google_credentials()
+      },
+      sign_in: fn(callback, context: bootstrap.Context) {
+        app_auth.sign_in_with_google_code(db: context.db, callback:)
+      },
+      sign_in_default_return_to: "/admin/games",
+      sign_in_return_to: app_auth_http.admin_return_to,
+      secure: False,
+    )
+
+  case auth_http.route_code_auth(req:, context:, routes: code_routes) {
+    Ok(resp) -> Ok(resp)
+    Error(Nil) ->
+      auth_http.route_google_auth(req:, context:, routes: google_routes)
   }
+}
+
+@target(erlang)
+fn handle_websocket_path(
+  req req: Request(Connection),
+  context context: bootstrap.Context,
+) -> Response(ResponseData) {
+  let admin_user = case
+    auth_http.authorized_user(
+      req:,
+      auth: app_auth_http.request_auth(db: context.db, session: context.session),
+    )
+  {
+    Ok(user) -> Some(user)
+    Error(Nil) -> None
+  }
+  mist.websocket(
+    req,
+    app_ws.handler,
+    fn(conn) { app_ws.on_init(conn, context.db, admin_user) },
+    app_ws.on_close,
+  )
+}
+
+@target(erlang)
+fn handle_public_path(
+  req req: Request(Connection),
+  context context: bootstrap.Context,
+) -> Response(ResponseData) {
+  app_document.response(
+    req:,
+    path: req.path,
+    db: context.db,
+    session: context.session,
+  )
+}
+
+@target(javascript)
+/// JavaScript-side compile anchor for the server module.
+/// Browser builds can import this module without pulling in Erlang-only code.
+pub fn ensure() -> Nil {
+  Nil
 }

@@ -7,6 +7,10 @@ import lustre/element/html
 import lustre/element/svg
 import lustre/event
 
+// SHELLS
+
+/// Public mount shell shared by SSR and browser rendering.
+/// app_ssr and public_app both call this so hydration keeps the same outer UI.
 pub fn public(
   current_path current_path: String,
   dark_mode dark_mode: Bool,
@@ -28,6 +32,8 @@ pub fn public(
   ])
 }
 
+/// Admin mount shell shared by SSR and browser rendering.
+/// app_ssr and admin_app both call this so hydration keeps the same outer UI.
 pub fn admin(
   current_path current_path: String,
   dark_mode dark_mode: Bool,
@@ -46,6 +52,8 @@ pub fn admin(
     content,
   ])
 }
+
+// TOPBARS
 
 fn public_topbar(
   subtitle subtitle: String,
@@ -146,6 +154,8 @@ fn session_link(
   }
 }
 
+// CONTROLS
+
 fn nav_link(
   href href: String,
   label label: String,
@@ -154,7 +164,7 @@ fn nav_link(
   html.a(
     [
       attribute.href(href),
-      attribute.attribute("data-scoreboard-spa-nav", "1"),
+      attribute.attribute("data-rally-spa-nav", "1"),
       active_class(active),
     ],
     [html.text(label)],
@@ -197,6 +207,8 @@ fn theme_switch(
     moon_icon(),
   ])
 }
+
+// ICONS
 
 fn sun_icon() -> Element(msg) {
   svg.svg(icon_attrs("Light mode"), [
@@ -254,6 +266,8 @@ fn line_attrs(
     attribute.attribute("y2", y2),
   ]
 }
+
+// HELPERS
 
 fn is_games_path(path: String) -> Bool {
   path == "/" || string.starts_with(path, "/games")

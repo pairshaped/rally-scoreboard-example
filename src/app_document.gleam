@@ -1,54 +1,47 @@
 @target(erlang)
-import app_assets
-@target(erlang)
-import app_auth
-@target(erlang)
-import app_auth_http
-@target(erlang)
-import app_session
-@target(erlang)
 import app_ssr
 @target(erlang)
-import device_preferences
+import authentication_context.{type AuthenticationContext}
 @target(erlang)
 import generated/proute/admin/page_input as admin_page_input
 @target(erlang)
 import generated/proute/public/page_input as public_page_input
 @target(erlang)
-import gleam/bytes_tree
+import generated/rally/theme
 @target(erlang)
 import gleam/http/request.{type Request}
 @target(erlang)
 import gleam/http/response.{type Response}
 @target(erlang)
-import gleam/int
-@target(erlang)
-import gleam/list
-@target(erlang)
-import gleam/option.{None, Some}
-@target(erlang)
-import gleam/string
+import gleam/option.{type Option, None, Some}
 @target(erlang)
 import mist.{type Connection, type ResponseData}
 @target(erlang)
+import rally/runtime/document
+@target(erlang)
+import rally/runtime/session
+@target(erlang)
 import sqlight
 
+@target(javascript)
+/// JavaScript-side compile anchor for the document module.
+/// Browser builds can import this module without pulling in Erlang-only code.
+pub fn ensure() -> Nil {
+  Nil
+}
+
 @target(erlang)
+/// HTTP document response for public and admin app routes.
+/// scoreboard_unified calls this after routing/auth, and this module chooses the
+/// matching SSR mount and browser entrypoint.
 pub fn response(
   req req: Request(Connection),
   path path: String,
   db db: sqlight.Connection,
-  session session: app_session.Session,
+  session session: session.AuthSession,
 ) -> Response(ResponseData) {
-  html(req: req, path: path, db: db, session: session)
-  |> html_response
-}
-
-@target(erlang)
-fn html_response(body: String) -> Response(ResponseData) {
-  response.new(200)
-  |> response.set_header("content-type", "text/html; charset=utf-8")
-  |> response.set_body(mist.Bytes(bytes_tree.from_string(body)))
+  html(req:, path:, db:, session:)
+  |> document.html_response
 }
 
 @target(erlang)
@@ -56,48 +49,46 @@ fn html(
   req req: Request(Connection),
   path path: String,
   db db: sqlight.Connection,
-  session session: app_session.Session,
+  session session: session.AuthSession,
 ) -> String {
-  let entrypoint = case string.starts_with(path, "/admin") {
-    True -> "admin_app.mjs"
-    False -> "public_app.mjs"
-  }
-  let theme = resolve_theme(req)
-  let dark_mode = theme == "dark"
-  let ssr_app = case string.starts_with(path, "/admin") {
-    True ->
+  let mount = document.standard_mount(path:, admin_prefix: "/admin")
+  let entrypoint = document.standard_entrypoint(mount)
+  let dark_mode = theme.request_dark_mode(req)
+  let ssr_app = case mount {
+    document.Admin ->
       app_ssr.admin(
-        req: req,
-        path: path,
-        db: db,
+        req:,
+        path:,
+        db:,
         query_params: admin_query_params(req),
-        dark_mode: dark_mode,
-        session: session,
+        dark_mode:,
+        session:,
       )
-    False ->
+    document.Public ->
       app_ssr.public(
-        req: req,
-        path: path,
-        db: db,
+        req:,
+        path:,
+        db:,
         query_params: public_query_params(req),
-        dark_mode: dark_mode,
-        session: session,
+        dark_mode:,
+        session:,
       )
   }
   let app_attrs =
-    app_boot_attrs(req: req, db: db, session: session)
-    <> hydration_attr(ssr_app.hydration)
+    app_boot_attrs(
+      authentication_context: ssr_app.authentication_context,
+      can_access_admin: ssr_app.can_access_admin,
+    )
+    <> document.hydration_attr(ssr_app.hydration)
 
   "<!doctype html>
-<html data-theme=\"" <> theme <> "\">
+<html " <> theme.document_attribute(req) <> ">
 <head>
   <meta charset=\"utf-8\">
   <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">
   <title>Scoreboard</title>
   <link rel=\"stylesheet\" href=\"https://unpkg.com/@knadh/oat/oat.min.css\">
-  <style>
-" <> app_assets.css() <> "
-  </style>
+  <link rel=\"stylesheet\" href=\"/assets/app.css\">
 </head>
 <body>
   <div id=\"app\"" <> app_attrs <> ">" <> ssr_app.html <> "</div>
@@ -113,98 +104,45 @@ fn html(
 fn public_query_params(
   req: Request(Connection),
 ) -> public_page_input.QueryParams {
-  case request.get_query(req) {
-    Ok(values) -> public_page_input.QueryParams(values:)
-    Error(Nil) -> public_page_input.empty_query_params()
-  }
+  document.query_params(
+    req:,
+    from_values: fn(values) { public_page_input.QueryParams(values:) },
+    empty: public_page_input.empty_query_params,
+  )
 }
 
 @target(erlang)
 fn admin_query_params(
   req: Request(Connection),
 ) -> admin_page_input.QueryParams {
-  case request.get_query(req) {
-    Ok(values) -> admin_page_input.QueryParams(values:)
-    Error(Nil) -> admin_page_input.empty_query_params()
-  }
-}
-
-@target(erlang)
-fn hydration_attr(payloads: List(String)) -> String {
-  case payloads {
-    [] -> ""
-    _ ->
-      " data-hydration=\""
-      <> html_attr_escape(string.join(payloads, ","))
-      <> "\""
-  }
-}
-
-@target(erlang)
-fn resolve_theme(req: Request(Connection)) -> String {
-  let cookies = request.get_cookies(req)
-  case
-    list.find_map(cookies, fn(cookie) {
-      case cookie.0 {
-        name if name == device_preferences.cookie_name -> Ok(cookie.1)
-        _ -> Error(Nil)
-      }
-    })
-  {
-    Ok(value) ->
-      case device_preferences.parse(value) {
-        Ok(preferences) ->
-          case preferences.dark_mode {
-            True -> "dark"
-            False -> "light"
-          }
-        Error(Nil) -> "light"
-      }
-    Error(Nil) -> "light"
-  }
+  document.query_params(
+    req:,
+    from_values: fn(values) { admin_page_input.QueryParams(values:) },
+    empty: admin_page_input.empty_query_params,
+  )
 }
 
 @target(erlang)
 fn app_boot_attrs(
-  req req: Request(Connection),
-  db db: sqlight.Connection,
-  session session: app_session.Session,
+  authentication_context authentication_context: Option(AuthenticationContext),
+  can_access_admin can_access_admin: Bool,
 ) -> String {
-  case app_auth_http.authenticated_user(req: req, db: db, session: session) {
-    Ok(user) -> {
-      let context = user.context
+  case authentication_context {
+    Some(context) -> {
       let display_name = case context.display_name {
         Some(value) -> value
         None -> ""
       }
-      " data-auth-user-id=\""
-      <> int.to_string(context.user_id)
-      <> "\" data-auth-email=\""
-      <> html_attr_escape(context.email)
-      <> "\" data-auth-display-name=\""
-      <> html_attr_escape(display_name)
-      <> "\" data-can-access-admin=\""
-      <> bool_attr(app_auth.can_access_admin(user))
-      <> "\""
+      document.boot_attrs([
+        document.IntAttribute("auth-user-id", context.user_id),
+        document.StringAttribute("auth-email", context.email),
+        document.StringAttribute("auth-display-name", display_name),
+        document.BoolAttribute("can-access-admin", can_access_admin),
+      ])
     }
-    Error(Nil) -> " data-can-access-admin=\"0\""
+    None ->
+      document.boot_attrs([
+        document.BoolAttribute("can-access-admin", can_access_admin),
+      ])
   }
-}
-
-// nolint: prefer_guard_clause -- this is a string conversion helper, not control flow.
-@target(erlang)
-fn bool_attr(value: Bool) -> String {
-  case value {
-    True -> "1"
-    False -> "0"
-  }
-}
-
-@target(erlang)
-fn html_attr_escape(value: String) -> String {
-  value
-  |> string.replace("&", "&amp;")
-  |> string.replace("\"", "&quot;")
-  |> string.replace("<", "&lt;")
-  |> string.replace(">", "&gt;")
 }

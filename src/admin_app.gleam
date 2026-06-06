@@ -1,175 +1,72 @@
 @target(javascript)
-import admin/client_shared_state.{
-  type AdminClientSharedState, AdminClientSharedState,
+import admin/client_shell_state.{
+  type AdminClientShellState, AdminClientShellState,
 }
+@target(javascript)
+import admin/page_shared_state.{AdminPageSharedState}
 @target(javascript)
 import app_shell
 @target(javascript)
-import generated/proute/admin/page_input
+import browser_mount
 @target(javascript)
 import generated/proute/admin/pages
 @target(javascript)
-import generated/proute/admin/routes
-@target(javascript)
-import generated_soon/admin_boot
-@target(javascript)
-import generated_soon/browser
-@target(javascript)
-import generated_soon/browser_mount
-@target(javascript)
-import generated_soon/hydration
-@target(javascript)
-import generated_soon/to_client_application
-@target(javascript)
-import gleam/list
+import generated/rally/browser_app
 @target(javascript)
 import gleam/option.{None}
 @target(javascript)
-import lustre
-@target(javascript)
-import lustre/effect.{type Effect}
-@target(javascript)
 import lustre/element.{type Element}
-@target(javascript)
-import page_context.{PageContext}
 
 @target(javascript)
-type Model {
-  Model(page: pages.Page, shared_state: AdminClientSharedState)
-}
-
-@target(javascript)
-type Msg {
-  PageMsg(pages.Message)
-  ServerFrame(BitArray)
-  DarkModeChanged(Bool)
-  ShellNavigate(String)
-  BrowserPathChanged(String)
-}
-
-@target(javascript)
+/// Browser entrypoint for the admin mount.
+/// The app configures shared state and shell rendering; Rally owns lifecycle.
 pub fn main() -> Nil {
-  let app = lustre.application(init, update, view)
-  let _started = lustre.start(app, "#app", Nil)
+  browser_app.start_admin_mount(browser_app.AdminMountConfig(
+    page_shared_state: fn() {
+      AdminPageSharedState(
+        authentication_context: browser_mount.boot_authentication_context(),
+      )
+    },
+    shell_state: fn(current_path, dark_mode) {
+      AdminClientShellState(
+        league_name: "Scoreboard",
+        active_section: current_path,
+        dark_mode:,
+        toast: None,
+      )
+    },
+    set_active_path: fn(shell_state, path) {
+      AdminClientShellState(..shell_state, active_section: path)
+    },
+    set_dark_mode: fn(shell_state, dark_mode) {
+      AdminClientShellState(..shell_state, dark_mode:)
+    },
+    update_page: fn(page_shared_state, page, message) {
+      pages.update(page_shared_state, page, message)
+    },
+    view:,
+  ))
+}
+
+@target(erlang)
+/// Erlang-side compile anchor for the admin browser module.
+/// Server builds can import this module without pulling in JavaScript-only code.
+pub fn ensure() -> Nil {
   Nil
 }
 
 @target(javascript)
-fn init(_flags: Nil) -> #(Model, Effect(Msg)) {
-  let current_path = browser.path()
-  let route = routes.parse_path(current_path)
-  let dark_mode = browser_mount.device_dark_mode()
-  let #(page, page_effect) = initial_page(route: route)
-  let shared_state =
-    AdminClientSharedState(
-      authentication_context: browser_mount.boot_authentication_context(),
-      league_name: "Scoreboard",
-      dark_mode:,
-      active_section: current_path,
-      toast: None,
-    )
-
-  #(
-    Model(page: page, shared_state:),
-    effect.batch([
-      effect.map(page_effect, PageMsg),
-      browser_mount.startup_effects(
-        dark_mode: dark_mode,
-        on_frame: ServerFrame,
-        on_shell_navigation: ShellNavigate,
-        on_browser_navigation: BrowserPathChanged,
-      ),
-    ]),
-  )
-}
-
-@target(javascript)
-fn initial_page(
-  route route: routes.Route,
-) -> #(pages.Page, Effect(pages.Message)) {
-  let query_params = page_input.empty_query_params()
-
-  case hydration.messages() {
-    Ok(messages) -> {
-      let page =
-        list.fold(
-          messages,
-          pages.load_sync(PageContext, query_params, route),
-          fn(page, message) {
-            let #(page, _) =
-              to_client_application.apply_admin(page: page, message: message)
-            page
-          },
-        )
-      #(page, effect.none())
-    }
-    Error(Nil) -> admin_boot.load_client(PageContext, query_params, route)
-  }
-}
-
-@target(javascript)
-fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
-  case msg {
-    PageMsg(inner) -> {
-      let #(page, page_effect) = pages.update(PageContext, model.page, inner)
-      #(Model(..model, page: page), effect.map(page_effect, PageMsg))
-    }
-    ServerFrame(bytes) -> {
-      let #(page, page_effect) =
-        to_client_application.decode_and_apply_admin(
-          page: model.page,
-          bytes: bytes,
-        )
-      #(Model(..model, page: page), effect.map(page_effect, PageMsg))
-    }
-    DarkModeChanged(dark_mode) -> {
-      let shared_state =
-        AdminClientSharedState(..model.shared_state, dark_mode: dark_mode)
-      #(
-        Model(..model, shared_state:),
-        browser_mount.dark_mode_changed_effects(dark_mode),
-      )
-    }
-    ShellNavigate(path) -> {
-      let route = routes.parse_path(path)
-      navigate(model: model, route: route, push_history: True)
-    }
-    BrowserPathChanged(path) -> {
-      let route = routes.parse_path(path)
-      navigate(model: model, route: route, push_history: False)
-    }
-  }
-}
-
-@target(javascript)
-fn view(model: Model) -> Element(Msg) {
+fn view(
+  model: browser_app.AdminMountModel(AdminClientShellState),
+  on_page: fn(pages.Message) -> browser_app.AdminMountMsg,
+  on_dark_mode_change: fn(Bool) -> browser_app.AdminMountMsg,
+  _on_navigate: fn(String) -> browser_app.AdminMountMsg,
+) -> Element(browser_app.AdminMountMsg) {
   app_shell.admin(
-    current_path: model.shared_state.active_section,
-    dark_mode: model.shared_state.dark_mode,
-    authentication_context: model.shared_state.authentication_context,
-    on_dark_mode_change: DarkModeChanged,
-    content: pages.view(model.page) |> element.map(PageMsg),
-  )
-}
-
-@target(javascript)
-fn navigate(
-  model model: Model,
-  route route: routes.Route,
-  push_history push_history: Bool,
-) -> #(Model, Effect(Msg)) {
-  let path = routes.route_to_path(route)
-  let #(page, page_effect) =
-    admin_boot.load_client(PageContext, page_input.empty_query_params(), route)
-  let shared_state =
-    AdminClientSharedState(..model.shared_state, active_section: path)
-  let history_effect = case push_history {
-    True -> browser_mount.push_path(path)
-    False -> effect.none()
-  }
-
-  #(
-    Model(page: page, shared_state:),
-    effect.batch([history_effect, effect.map(page_effect, PageMsg)]),
+    current_path: model.shell_state.active_section,
+    dark_mode: model.shell_state.dark_mode,
+    authentication_context: model.page_shared_state.authentication_context,
+    on_dark_mode_change:,
+    content: pages.view(model.page) |> element.map(on_page),
   )
 }

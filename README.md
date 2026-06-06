@@ -11,27 +11,31 @@ gleam build --target erlang
 
 Target-specific behavior is marked at the declaration or import boundary. Today that means Gleam's `@target(javascript)` and `@target(erlang)` syntax. The architecture depends on target-scoped declarations, not on that exact spelling.
 
+Rally should not generate a full client app from server-shaped source. Rally-generated code is limited to thin route, wire, hydration, SSR, boot, transport, server dispatch, build metadata, and Libero codec composition glue.
+
 ## Shape
 
-- `src/api/**` contains every type that may cross the wire.
 - `src/public/pages/**` and `src/admin/pages/**` contain authored page modules.
-- `src/public/views/**`, `src/admin/views/**`, and `src/components/**` contain reusable view code.
+- `src/components/**` contains reusable view code.
 - `src/generated/proute/**` is generated route and page glue.
+- `src/generated/rally/**` is generated page protocol, SSR, hydration, browser boot, client transport, and server dispatch glue.
 - `src/generated/sql/**` is generated typed SQL for Erlang-only server paths.
-- `src/generated/api/**` will contain generated ETF codecs and target-annotated browser/server API transport glue for `src/api/**`.
+
+Authored SQL lives beside the page or workflow that owns it, in a local `sql/` directory. Generated SQL stays under `src/generated/sql/**`.
 
 Generated source is checked in while this project proves the shape. That includes tracer generated code used before full generator coverage exists.
 
-## Wire Boundary
+## Page Contract
 
-Only public types under `src/api/**` are wire-visible.
+Pages own their local `Model`, browser `Msg`, page-local `ServerMsg`, pure `initial_model`, shared `view`, browser `update`, optional `init`, and Erlang-only `load` and `handle` functions. Most pages omit `init`; use it only for page-specific browser startup effects such as browser APIs, local storage, focus, measurement, or one-off DOM effects.
 
-The root message types are:
+Page data shapes belong to the page that renders and updates them. Shared types are reserved for stable app concepts independent of a page.
 
-- `api/to_server.ToServer`: browser-to-server commands
-- `api/to_client.ToClient`: server-to-browser results, boot data, and live events
+Wire-crossing types may reference page-local types, approved root wire types under `src/wire/**`, primitives, and containers. Helper, service, query, business, formatting, and display types can be used as behavior, but their owned shapes cannot cross the wire.
 
-Domain models that cross the wire also live under `src/api/domain/**`. Page models, page messages, route types, SQL row types, handler-local types, and view helper types do not cross the wire.
+Client-side application behavior is authored in Gleam. JS or TS is reserved for tiny FFI modules around browser APIs.
+
+Generated output and rewritten source should preserve the Rally/Gleam house style: stable section layout for large modules and grouped, sorted imports.
 
 ## Current Commands
 
@@ -68,6 +72,6 @@ Admin routes are generated from `src/admin/pages`.
 
 ## Design Notes
 
-The main design note is [docs/unified-target-source.md](/Users/daverapin/projects/gleam/scoreboard-unified/docs/unified-target-source.md).
+The main design note is [docs/unified-target-source.md](/Users/daverapin/projects/gleam/rally-scoreboard-example/docs/unified-target-source.md).
 
-The architecture decision is [ADR 0009: Use Target Annotations For Unified Source](/Users/daverapin/projects/gleam/scoreboard-unified/docs/adr/0009-use-target-annotations-for-unified-source.md).
+The primary architecture decision is [ADR 0001: Use Page Local Rally Contracts](/Users/daverapin/projects/gleam/rally-scoreboard-example/docs/adr/0001-use-page-local-rally-contracts.md).

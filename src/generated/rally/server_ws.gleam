@@ -1,0 +1,598 @@
+@target(javascript)
+pub fn ensure() -> Nil {
+  Nil
+}
+
+@target(erlang)
+import admin/pages/games as admin_games_wire
+@target(erlang)
+import broadcasts as push_payload
+@target(erlang)
+import generated/rally/result as transport_result
+@target(erlang)
+import generated/rally/server_protocol
+@target(erlang)
+import gleam/erlang/process.{type Selector}
+@target(erlang)
+import gleam/list
+@target(erlang)
+import gleam/option.{type Option, None, Some}
+@target(erlang)
+import gleam/string
+@target(erlang)
+import mist.{type Next, type WebsocketConnection, type WebsocketMessage}
+@target(erlang)
+import public/pages/games as public_games_wire
+@target(erlang)
+import public/pages/games/id_ as public_game_detail_wire
+@target(erlang)
+import public/pages/standings as public_standings_wire
+@target(erlang)
+import public/pages/teams/slug_ as public_team_detail_wire
+@target(erlang)
+import rally/runtime/load as runtime_load
+@target(erlang)
+import rally/runtime/topics
+@target(erlang)
+import sqlight as load_context
+
+@target(erlang)
+pub type SaveError {
+  SaveError(field: Option(String), message: String)
+}
+
+@target(erlang)
+pub type Handlers(state, admin_auth) {
+  Handlers(
+    load_context: fn(state) -> load_context.Connection,
+    admin_auth: fn(state) -> Option(admin_auth),
+  )
+}
+
+@target(erlang)
+pub type ConnectionState(admin_auth) {
+  ConnectionState(
+    load_context: load_context.Connection,
+    admin_auth: Option(admin_auth),
+    topics: List(String),
+  )
+}
+
+@target(erlang)
+pub fn on_init(
+  load_context load_context: load_context.Connection,
+  admin_auth admin_auth: Option(admin_auth),
+) -> #(ConnectionState(admin_auth), Option(Selector(BitArray))) {
+  topics.start()
+  #(
+    ConnectionState(load_context:, admin_auth:, topics: []),
+    Some(topics.frame_selector()),
+  )
+}
+
+@target(erlang)
+pub fn on_close(state: ConnectionState(admin_auth)) -> Nil {
+  state.topics
+  |> list.each(topics.leave)
+}
+
+@target(erlang)
+pub fn handler(
+  state state: ConnectionState(admin_auth),
+  msg msg: WebsocketMessage(BitArray),
+  conn conn: WebsocketConnection,
+) -> Next(ConnectionState(admin_auth), BitArray) {
+  let handlers =
+    Handlers(
+      load_context: fn(state: ConnectionState(admin_auth)) {
+        state.load_context
+      },
+      admin_auth: fn(state: ConnectionState(admin_auth)) { state.admin_auth },
+    )
+
+  case msg {
+    mist.Binary(data) -> {
+      handle_client_frame(
+        state: state,
+        conn: conn,
+        data: data,
+        handlers: handlers,
+      )
+      mist.continue(state)
+    }
+    mist.Custom(frame) -> {
+      let _sent = mist.send_binary_frame(conn, frame)
+      mist.continue(state)
+    }
+    mist.Text(frame) -> {
+      case sync_topic_frame(state.topics, frame) {
+        Ok(next_topics) ->
+          mist.continue(ConnectionState(..state, topics: next_topics))
+        Error(Nil) -> mist.continue(state)
+      }
+    }
+    mist.Closed -> mist.stop()
+    mist.Shutdown -> mist.stop()
+  }
+}
+
+@target(erlang)
+pub fn handle_client_frame(
+  state state: state,
+  conn conn: WebsocketConnection,
+  data data: BitArray,
+  handlers handlers: Handlers(state, admin_auth),
+) -> Nil {
+  server_protocol.ensure()
+  case
+    try_admin_games_request(
+      state: state,
+      conn: conn,
+      data: data,
+      handlers: handlers,
+    )
+  {
+    Ok(Nil) -> Nil
+    Error(Nil) ->
+      case
+        try_public_game_detail_request(
+          state: state,
+          conn: conn,
+          data: data,
+          handlers: handlers,
+        )
+      {
+        Ok(Nil) -> Nil
+        Error(Nil) ->
+          case
+            try_public_games_request(
+              state: state,
+              conn: conn,
+              data: data,
+              handlers: handlers,
+            )
+          {
+            Ok(Nil) -> Nil
+            Error(Nil) ->
+              case
+                try_public_standings_request(
+                  state: state,
+                  conn: conn,
+                  data: data,
+                  handlers: handlers,
+                )
+              {
+                Ok(Nil) -> Nil
+                Error(Nil) ->
+                  case
+                    try_public_team_detail_request(
+                      state: state,
+                      conn: conn,
+                      data: data,
+                      handlers: handlers,
+                    )
+                  {
+                    Ok(Nil) -> Nil
+                    Error(Nil) -> Nil
+                  }
+              }
+          }
+      }
+  }
+}
+
+@target(erlang)
+pub fn sync_topic_frame(
+  current current: List(String),
+  frame frame: String,
+) -> Result(List(String), Nil) {
+  let prefix = "sub:"
+  case frame {
+    "unsub" -> {
+      current
+      |> list.each(topics.leave)
+      Ok([])
+    }
+    _ ->
+      case string.starts_with(frame, prefix) {
+        False -> Error(Nil)
+        True -> {
+          let next =
+            frame
+            |> string.drop_start(string.length(prefix))
+            |> string.split(",")
+            |> list.filter(fn(topic) { topic != "" })
+
+          current
+          |> list.filter(fn(topic) { !list.contains(next, topic) })
+          |> list.each(topics.leave)
+          next
+          |> list.filter(fn(topic) { !list.contains(current, topic) })
+          |> list.each(topics.join)
+          Ok(next)
+        }
+      }
+  }
+}
+
+@target(erlang)
+pub fn push_frame(
+  module module: String,
+  message message: push_payload.Event,
+) -> BitArray {
+  server_protocol.encode_push(module, message)
+}
+
+@target(erlang)
+fn try_admin_games_request(
+  state state: state,
+  conn conn: WebsocketConnection,
+  data data: BitArray,
+  handlers handlers: Handlers(state, admin_auth),
+) -> Result(Nil, Nil) {
+  case server_protocol.decode_admin_games_request(data) {
+    Ok(server_protocol.AdminGamesClientRequest(
+      request_id: request_id,
+      module: "admin/pages/games",
+      message: admin_games_wire.AdminGamesLoad,
+    )) -> {
+      send_admin_games_load_result(
+        state: state,
+        conn: conn,
+        request_id: request_id,
+        handlers: handlers,
+      )
+      Ok(Nil)
+    }
+    Ok(server_protocol.AdminGamesClientRequest(
+      request_id: request_id,
+      module: "admin/pages/games",
+      message: message,
+    )) ->
+      case message {
+        admin_games_wire.AdminGamesLoad -> Error(Nil)
+        _ -> {
+          send_admin_games_save_result(
+            state: state,
+            conn: conn,
+            request_id: request_id,
+            message: message,
+            handlers: handlers,
+          )
+          Ok(Nil)
+        }
+      }
+
+    _ -> Error(Nil)
+  }
+}
+
+@target(erlang)
+fn try_public_game_detail_request(
+  state state: state,
+  conn conn: WebsocketConnection,
+  data data: BitArray,
+  handlers handlers: Handlers(state, admin_auth),
+) -> Result(Nil, Nil) {
+  case server_protocol.decode_public_game_detail_request(data) {
+    Ok(server_protocol.PublicGameDetailClientRequest(
+      request_id: request_id,
+      module: "public/pages/games/id_",
+      message: public_game_detail_wire.PublicGameDetailLoad(game_id:),
+    )) -> {
+      send_public_game_detail_load_result(
+        state: state,
+        conn: conn,
+        request_id: request_id,
+        handlers: handlers,
+        game_id: game_id,
+      )
+      Ok(Nil)
+    }
+
+    _ -> Error(Nil)
+  }
+}
+
+@target(erlang)
+fn try_public_games_request(
+  state state: state,
+  conn conn: WebsocketConnection,
+  data data: BitArray,
+  handlers handlers: Handlers(state, admin_auth),
+) -> Result(Nil, Nil) {
+  case server_protocol.decode_public_games_request(data) {
+    Ok(server_protocol.PublicGamesClientRequest(
+      request_id: request_id,
+      module: "public/pages/games",
+      message: public_games_wire.PublicGamesLoad,
+    )) -> {
+      send_public_games_load_result(
+        state: state,
+        conn: conn,
+        request_id: request_id,
+        handlers: handlers,
+      )
+      Ok(Nil)
+    }
+
+    _ -> Error(Nil)
+  }
+}
+
+@target(erlang)
+fn try_public_standings_request(
+  state state: state,
+  conn conn: WebsocketConnection,
+  data data: BitArray,
+  handlers handlers: Handlers(state, admin_auth),
+) -> Result(Nil, Nil) {
+  case server_protocol.decode_public_standings_request(data) {
+    Ok(server_protocol.PublicStandingsClientRequest(
+      request_id: request_id,
+      module: "public/pages/standings",
+      message: public_standings_wire.PublicStandingsLoad,
+    )) -> {
+      send_public_standings_load_result(
+        state: state,
+        conn: conn,
+        request_id: request_id,
+        handlers: handlers,
+      )
+      Ok(Nil)
+    }
+
+    _ -> Error(Nil)
+  }
+}
+
+@target(erlang)
+fn try_public_team_detail_request(
+  state state: state,
+  conn conn: WebsocketConnection,
+  data data: BitArray,
+  handlers handlers: Handlers(state, admin_auth),
+) -> Result(Nil, Nil) {
+  case server_protocol.decode_public_team_detail_request(data) {
+    Ok(server_protocol.PublicTeamDetailClientRequest(
+      request_id: request_id,
+      module: "public/pages/teams/slug_",
+      message: public_team_detail_wire.PublicTeamDetailLoad(slug:),
+    )) -> {
+      send_public_team_detail_load_result(
+        state: state,
+        conn: conn,
+        request_id: request_id,
+        handlers: handlers,
+        slug: slug,
+      )
+      Ok(Nil)
+    }
+
+    _ -> Error(Nil)
+  }
+}
+
+@target(erlang)
+fn send_admin_games_load_result(
+  state state: state,
+  conn conn: WebsocketConnection,
+  request_id request_id: Int,
+  handlers handlers: Handlers(state, admin_auth),
+) -> Nil {
+  let result =
+    case handlers.admin_auth(state) {
+      None -> Error([runtime_load.LoadError(message: "Unauthorized.")])
+      Some(_) ->
+        case admin_games_wire.load(handlers.load_context(state)) {
+          Ok(data) -> Ok(admin_games_wire.AdminGamesLoadResult(data))
+          Error(runtime_load.LoadError(message: message)) -> Error([message])
+        }
+        |> map_page_load_result
+    }
+    |> map_load_result
+
+  let _sent =
+    mist.send_binary_frame(
+      conn,
+      server_protocol.encode_admin_games_load_result(
+        request_id: request_id,
+        result: result,
+      ),
+    )
+  Nil
+}
+
+@target(erlang)
+fn send_public_game_detail_load_result(
+  state state: state,
+  conn conn: WebsocketConnection,
+  request_id request_id: Int,
+  handlers handlers: Handlers(state, admin_auth),
+  game_id game_id: Int,
+) -> Nil {
+  let result =
+    case public_game_detail_wire.load(handlers.load_context(state), game_id) {
+      Ok(data) -> Ok(public_game_detail_wire.PublicGameDetailLoaded(data))
+      Error(runtime_load.LoadError(message: message)) -> Error([message])
+    }
+    |> map_page_load_result
+    |> map_load_result
+
+  let _sent =
+    mist.send_binary_frame(
+      conn,
+      server_protocol.encode_public_game_detail_load_result(
+        request_id: request_id,
+        result: result,
+      ),
+    )
+  Nil
+}
+
+@target(erlang)
+fn send_public_games_load_result(
+  state state: state,
+  conn conn: WebsocketConnection,
+  request_id request_id: Int,
+  handlers handlers: Handlers(state, admin_auth),
+) -> Nil {
+  let result =
+    case public_games_wire.load(handlers.load_context(state)) {
+      Ok(data) -> Ok(public_games_wire.PublicGamesLoaded(data))
+      Error(runtime_load.LoadError(message: message)) -> Error([message])
+    }
+    |> map_page_load_result
+    |> map_load_result
+
+  let _sent =
+    mist.send_binary_frame(
+      conn,
+      server_protocol.encode_public_games_load_result(
+        request_id: request_id,
+        result: result,
+      ),
+    )
+  Nil
+}
+
+@target(erlang)
+fn send_public_standings_load_result(
+  state state: state,
+  conn conn: WebsocketConnection,
+  request_id request_id: Int,
+  handlers handlers: Handlers(state, admin_auth),
+) -> Nil {
+  let result =
+    case public_standings_wire.load(handlers.load_context(state)) {
+      Ok(data) -> Ok(public_standings_wire.PublicStandingsLoaded(data))
+      Error(runtime_load.LoadError(message: message)) -> Error([message])
+    }
+    |> map_page_load_result
+    |> map_load_result
+
+  let _sent =
+    mist.send_binary_frame(
+      conn,
+      server_protocol.encode_public_standings_load_result(
+        request_id: request_id,
+        result: result,
+      ),
+    )
+  Nil
+}
+
+@target(erlang)
+fn send_public_team_detail_load_result(
+  state state: state,
+  conn conn: WebsocketConnection,
+  request_id request_id: Int,
+  handlers handlers: Handlers(state, admin_auth),
+  slug slug: String,
+) -> Nil {
+  let result =
+    case public_team_detail_wire.load(handlers.load_context(state), slug) {
+      Ok(data) -> Ok(public_team_detail_wire.PublicTeamDetailLoaded(data))
+      Error(runtime_load.LoadError(message: message)) -> Error([message])
+    }
+    |> map_page_load_result
+    |> map_load_result
+
+  let _sent =
+    mist.send_binary_frame(
+      conn,
+      server_protocol.encode_public_team_detail_load_result(
+        request_id: request_id,
+        result: result,
+      ),
+    )
+  Nil
+}
+
+@target(erlang)
+fn send_admin_games_save_result(
+  state state: state,
+  conn conn: WebsocketConnection,
+  request_id request_id: Int,
+  message message: admin_games_wire.ServerMsg,
+  handlers handlers: Handlers(state, admin_auth),
+) -> Nil {
+  let result = case handlers.admin_auth(state) {
+    None -> Error([SaveError(field: None, message: "Unauthorized.")])
+    Some(_) ->
+      case admin_games_wire.handle(handlers.load_context(state), message) {
+        Ok(value) -> Ok(value)
+        Error(admin_games_wire.SaveError(message: message)) ->
+          Error([SaveError(field: None, message:)])
+      }
+  }
+
+  let _sent =
+    mist.send_binary_frame(
+      conn,
+      server_protocol.encode_admin_games_save_result(
+        request_id: request_id,
+        result: map_save_result(result),
+      ),
+    )
+
+  case result {
+    Ok(value) ->
+      case admin_games_wire.after_save(handlers.load_context(state), value) {
+        Ok(push_payload.TargetedEvent(topics: target_topics, event: event)) ->
+          target_topics
+          |> list.each(fn(topic) {
+            let topic_name = push_payload.topic_name(topic)
+            topics.broadcast_except_self(
+              topic_name,
+              push_frame(module: topic_name, message: event),
+            )
+          })
+        Error(Nil) -> Nil
+      }
+    Error(_) -> Nil
+  }
+}
+
+@target(erlang)
+fn map_page_load_result(
+  result: Result(a, List(String)),
+) -> Result(a, List(runtime_load.LoadError)) {
+  case result {
+    Ok(value) -> Ok(value)
+    Error(errors) ->
+      Error(list.map(errors, fn(message) { runtime_load.LoadError(message:) }))
+  }
+}
+
+@target(erlang)
+fn map_load_result(
+  result: Result(a, List(runtime_load.LoadError)),
+) -> Result(a, List(transport_result.ApiLoadError)) {
+  case result {
+    Ok(value) -> Ok(value)
+    Error(errors) ->
+      Error(
+        list.map(errors, fn(error) {
+          let runtime_load.LoadError(message:) = error
+          transport_result.ApiLoadError(message:)
+        }),
+      )
+  }
+}
+
+@target(erlang)
+fn map_save_result(
+  result: Result(a, List(SaveError)),
+) -> Result(a, List(transport_result.ApiSaveError)) {
+  case result {
+    Ok(value) -> Ok(value)
+    Error(errors) ->
+      Error(
+        list.map(errors, fn(error) {
+          let SaveError(field:, message:) = error
+          transport_result.ApiSaveError(field:, message:)
+        }),
+      )
+  }
+}

@@ -1,216 +1,73 @@
 @target(javascript)
 import app_shell
 @target(javascript)
-import generated/proute/public/page_input
+import browser_mount
 @target(javascript)
 import generated/proute/public/pages
 @target(javascript)
-import generated/proute/public/routes
+import generated/rally/browser
 @target(javascript)
-import generated_soon/browser
-@target(javascript)
-import generated_soon/browser_mount
-@target(javascript)
-import generated_soon/hydration
-@target(javascript)
-import generated_soon/public_boot
-@target(javascript)
-import generated_soon/to_client_application
-@target(javascript)
-import gleam/int
-@target(javascript)
-import gleam/list
-@target(javascript)
-import gleam/option.{type Option, None, Some}
-@target(javascript)
-import lustre
-@target(javascript)
-import lustre/effect.{type Effect}
+import generated/rally/browser_app
 @target(javascript)
 import lustre/element.{type Element}
 @target(javascript)
-import page_context.{PageContext}
-@target(javascript)
-import public/client_shared_state.{
-  type PublicClientSharedState, PublicClientSharedState,
+import public/client_shell_state.{
+  type PublicClientShellState, PublicClientShellState,
 }
 @target(javascript)
-import public/pages/games as games_page
-@target(javascript)
-import public/pages/games/id_ as games_id_page
-@target(javascript)
-import public/pages/standings as standings_page
-@target(javascript)
-import public/pages/teams/slug_ as teams_slug_page
+import public/page_shared_state.{PublicPageSharedState}
 
 @target(javascript)
-type Model {
-  Model(page: pages.Page, shared_state: PublicClientSharedState)
-}
-
-@target(javascript)
-type Msg {
-  PageMsg(pages.Message)
-  ServerFrame(BitArray)
-  DarkModeChanged(Bool)
-  ShellNavigate(String)
-  BrowserPathChanged(String)
-}
-
-@target(javascript)
+/// Browser entrypoint for the public mount.
+/// The app configures shared state and shell rendering; Rally owns lifecycle.
 pub fn main() -> Nil {
-  let app = lustre.application(init, update, view)
-  let _started = lustre.start(app, "#app", Nil)
+  browser_app.start_public_mount(browser_app.PublicMountConfig(
+    page_shared_state: fn() {
+      PublicPageSharedState(
+        authentication_context: browser_mount.boot_authentication_context(),
+        can_access_admin: browser.boot_bool("canAccessAdmin"),
+      )
+    },
+    shell_state: fn(current_path, dark_mode) {
+      PublicClientShellState(
+        league_name: "Scoreboard",
+        active_section: current_path,
+        dark_mode:,
+      )
+    },
+    set_active_path: fn(shell_state, path) {
+      PublicClientShellState(..shell_state, active_section: path)
+    },
+    set_dark_mode: fn(shell_state, dark_mode) {
+      PublicClientShellState(..shell_state, dark_mode:)
+    },
+    update_page: fn(_page_shared_state, page, message) {
+      pages.update(page, message)
+    },
+    view:,
+  ))
+}
+
+@target(erlang)
+/// Erlang-side compile anchor for the public browser module.
+/// Server builds can import this module without pulling in JavaScript-only code.
+pub fn ensure() -> Nil {
   Nil
 }
 
 @target(javascript)
-fn init(_flags: Nil) -> #(Model, Effect(Msg)) {
-  let current_path = browser.path()
-  let route = routes.parse_path(current_path)
-  let query_params = query_params_from_browser()
-  let dark_mode = browser_mount.device_dark_mode()
-  let #(page, page_effect) =
-    initial_page(route: route, query_params: query_params)
-  let shared_state =
-    PublicClientSharedState(
-      league_name: "Scoreboard",
-      active_section: current_path,
-      dark_mode:,
-      authentication_context: browser_mount.boot_authentication_context(),
-      can_access_admin: browser.boot_bool("canAccessAdmin"),
-    )
-
-  #(
-    Model(page: page, shared_state:),
-    effect.batch([
-      effect.map(page_effect, PageMsg),
-      browser_mount.startup_effects(
-        dark_mode: dark_mode,
-        on_frame: ServerFrame,
-        on_shell_navigation: ShellNavigate,
-        on_browser_navigation: BrowserPathChanged,
-      ),
-    ]),
-  )
-}
-
-@target(javascript)
-fn initial_page(
-  route route: routes.Route,
-  query_params query_params: page_input.QueryParams,
-) -> #(pages.Page, Effect(pages.Message)) {
-  case hydration.messages() {
-    Ok(messages) -> {
-      let page =
-        list.fold(
-          messages,
-          pages.load_sync(PageContext, query_params, route),
-          fn(page, message) {
-            let #(page, _) =
-              to_client_application.apply_public(page: page, message: message)
-            page
-          },
-        )
-      #(page, effect.none())
-    }
-    Error(Nil) -> public_boot.load_client(PageContext, query_params, route)
-  }
-}
-
-@target(javascript)
-fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
-  case msg {
-    PageMsg(inner) -> {
-      case page_navigation(inner) {
-        Some(route) -> navigate(model: model, route: route, push_history: True)
-        None -> {
-          let #(page, page_effect) = pages.update(model.page, inner)
-          #(Model(..model, page: page), effect.map(page_effect, PageMsg))
-        }
-      }
-    }
-    ServerFrame(bytes) -> {
-      let #(page, page_effect) =
-        to_client_application.decode_and_apply_public(
-          page: model.page,
-          bytes: bytes,
-        )
-      #(Model(..model, page: page), effect.map(page_effect, PageMsg))
-    }
-    DarkModeChanged(dark_mode) -> {
-      let shared_state =
-        PublicClientSharedState(..model.shared_state, dark_mode: dark_mode)
-      #(
-        Model(..model, shared_state:),
-        browser_mount.dark_mode_changed_effects(dark_mode),
-      )
-    }
-    ShellNavigate(path) -> {
-      let route = routes.parse_path(path)
-      navigate(model: model, route: route, push_history: True)
-    }
-    BrowserPathChanged(path) -> {
-      let route = routes.parse_path(path)
-      navigate(model: model, route: route, push_history: False)
-    }
-  }
-}
-
-@target(javascript)
-fn view(model: Model) -> Element(Msg) {
+fn view(
+  model: browser_app.PublicMountModel(PublicClientShellState),
+  on_page: fn(pages.Message) -> browser_app.PublicMountMsg,
+  on_dark_mode_change: fn(Bool) -> browser_app.PublicMountMsg,
+  _on_navigate: fn(String) -> browser_app.PublicMountMsg,
+) -> Element(browser_app.PublicMountMsg) {
   app_shell.public(
-    current_path: model.shared_state.active_section,
-    dark_mode: model.shared_state.dark_mode,
-    authentication_context: model.shared_state.authentication_context,
-    can_access_admin: model.shared_state.can_access_admin,
-    on_dark_mode_change: DarkModeChanged,
-    content: pages.view(model.page) |> element.map(PageMsg),
+    current_path: model.shell_state.active_section,
+    dark_mode: model.shell_state.dark_mode,
+    authentication_context: model.page_shared_state.authentication_context,
+    can_access_admin: model.page_shared_state.can_access_admin,
+    on_dark_mode_change:,
+    content: pages.view(model.page) |> element.map(on_page),
   )
-}
-
-@target(javascript)
-fn page_navigation(message: pages.Message) -> Option(routes.Route) {
-  case message {
-    pages.GamesMsg(games_page.NavigateTeam(slug)) ->
-      Some(routes.TeamsSlug(slug:))
-    pages.GamesMsg(games_page.NavigateGame(id)) ->
-      Some(routes.GamesId(id: int.to_string(id)))
-    pages.GamesIdMsg(games_id_page.NavigateTeam(slug)) ->
-      Some(routes.TeamsSlug(slug:))
-    pages.StandingsMsg(standings_page.NavigateTeam(slug)) ->
-      Some(routes.TeamsSlug(slug:))
-    pages.TeamsSlugMsg(teams_slug_page.NavigateTeam(slug)) ->
-      Some(routes.TeamsSlug(slug:))
-    pages.TeamsSlugMsg(teams_slug_page.NavigateGame(id)) ->
-      Some(routes.GamesId(id: int.to_string(id)))
-    _ -> None
-  }
-}
-
-@target(javascript)
-fn navigate(
-  model model: Model,
-  route route: routes.Route,
-  push_history push_history: Bool,
-) -> #(Model, Effect(Msg)) {
-  let path = routes.route_to_path(route)
-  let #(page, page_effect) =
-    public_boot.load_client(PageContext, page_input.empty_query_params(), route)
-  let shared_state =
-    PublicClientSharedState(..model.shared_state, active_section: path)
-  let history_effect = case push_history {
-    True -> browser_mount.push_path(path)
-    False -> effect.none()
-  }
-
-  #(
-    Model(page: page, shared_state:),
-    effect.batch([history_effect, effect.map(page_effect, PageMsg)]),
-  )
-}
-
-@target(javascript)
-fn query_params_from_browser() -> page_input.QueryParams {
-  page_input.QueryParams(values: browser_mount.query_pairs())
 }

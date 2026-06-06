@@ -1,0 +1,1145 @@
+@target(erlang)
+pub fn ensure() -> Nil {
+  Nil
+}
+
+@target(javascript)
+import admin/page_shared_state as admin_page_shared_state
+@target(javascript)
+import admin/pages/games as admin_games_wire
+@target(javascript)
+import admin/pages/home_ as admin_pages_home__page
+@target(javascript)
+import broadcasts as push_payload
+@target(javascript)
+import generated/proute/admin/page_input as admin_page_input
+@target(javascript)
+import generated/proute/admin/pages as admin_pages
+@target(javascript)
+import generated/proute/admin/routes as admin_routes
+@target(javascript)
+import generated/proute/public/page_input as public_page_input
+@target(javascript)
+import generated/proute/public/pages as public_pages
+@target(javascript)
+import generated/proute/public/routes as public_routes
+@target(javascript)
+import generated/rally/browser
+@target(javascript)
+import generated/rally/browser_mount
+@target(javascript)
+import generated/rally/client_protocol
+@target(javascript)
+import generated/rally/client_transport
+@target(javascript)
+import generated/rally/hydration
+@target(javascript)
+import generated/rally/result.{type ApiLoadError, ApiLoadError}
+@target(javascript)
+import gleam/int
+@target(javascript)
+import gleam/list
+@target(javascript)
+import gleam/option.{type Option, None, Some}
+@target(javascript)
+import lustre
+@target(javascript)
+import lustre/effect.{type Effect}
+@target(javascript)
+import lustre/element.{type Element}
+@target(javascript)
+import public/page_shared_state as public_page_shared_state
+@target(javascript)
+import public/pages/games as public_games_wire
+@target(javascript)
+import public/pages/games/id_ as public_game_detail_wire
+@target(javascript)
+import public/pages/home_ as public_pages_home__page
+@target(javascript)
+import public/pages/standings as public_standings_wire
+@target(javascript)
+import public/pages/teams/slug_ as public_team_detail_wire
+@target(javascript)
+import rally/runtime/load as runtime_load
+
+@target(javascript)
+pub type AdminLoadRoute {
+  AdminNoLoad
+  AdminGamesLoad(
+    message: admin_games_wire.ServerMsg,
+    to_message: fn(Result(admin_games_wire.LoadResult, List(ApiLoadError))) ->
+      admin_pages.Message,
+  )
+}
+
+@target(javascript)
+pub type PublicLoadRoute {
+  PublicNoLoad
+  PublicGameDetailLoad(
+    message: public_game_detail_wire.ServerMsg,
+    to_message: fn(
+      Result(public_game_detail_wire.LoadResult, List(ApiLoadError)),
+    ) -> public_pages.Message,
+  )
+  PublicGamesLoad(
+    message: public_games_wire.ServerMsg,
+    to_message: fn(Result(public_games_wire.LoadResult, List(ApiLoadError))) ->
+      public_pages.Message,
+  )
+  PublicStandingsLoad(
+    message: public_standings_wire.ServerMsg,
+    to_message: fn(Result(public_standings_wire.LoadResult, List(ApiLoadError))) ->
+      public_pages.Message,
+  )
+  PublicTeamDetailLoad(
+    message: public_team_detail_wire.ServerMsg,
+    to_message: fn(
+      Result(public_team_detail_wire.LoadResult, List(ApiLoadError)),
+    ) -> public_pages.Message,
+  )
+}
+
+@target(javascript)
+pub fn admin_load_route(route route: admin_routes.Route) -> AdminLoadRoute {
+  case route {
+    admin_routes.AdminGames ->
+      AdminGamesLoad(
+        message: admin_games_wire.AdminGamesLoad,
+        to_message: fn(result) {
+          case result {
+            Ok(admin_games_wire.AdminGamesLoadResult(data)) ->
+              admin_pages.AdminGamesMsg(admin_games_wire.Loaded(Ok(data)))
+            Error(errors) ->
+              admin_pages.AdminGamesMsg(
+                admin_games_wire.Loaded(
+                  Error(runtime_load.LoadError(message: api_load_error(errors))),
+                ),
+              )
+          }
+        },
+      )
+    admin_routes.AdminHome ->
+      AdminGamesLoad(
+        message: admin_games_wire.AdminGamesLoad,
+        to_message: fn(result) {
+          case result {
+            Ok(admin_games_wire.AdminGamesLoadResult(data)) ->
+              admin_pages.AdminHomeMsg(admin_games_wire.Loaded(Ok(data)))
+            Error(errors) ->
+              admin_pages.AdminHomeMsg(
+                admin_games_wire.Loaded(
+                  Error(runtime_load.LoadError(message: api_load_error(errors))),
+                ),
+              )
+          }
+        },
+      )
+    _ -> AdminNoLoad
+  }
+}
+
+@target(javascript)
+pub fn public_load_route(route route: public_routes.Route) -> PublicLoadRoute {
+  case route {
+    public_routes.GamesId(id:) ->
+      case int.parse(id) {
+        Ok(game_id) ->
+          PublicGameDetailLoad(
+            message: public_game_detail_wire.PublicGameDetailLoad(game_id:),
+            to_message: fn(result) {
+              case result {
+                Ok(public_game_detail_wire.PublicGameDetailLoaded(data)) ->
+                  public_pages.GamesIdMsg(
+                    public_game_detail_wire.Loaded(Ok(data)),
+                  )
+                Error(errors) ->
+                  public_pages.GamesIdMsg(
+                    public_game_detail_wire.Loaded(
+                      Error(
+                        runtime_load.LoadError(message: api_load_error(errors)),
+                      ),
+                    ),
+                  )
+              }
+            },
+          )
+        Error(Nil) -> PublicNoLoad
+      }
+    public_routes.Games ->
+      PublicGamesLoad(
+        message: public_games_wire.PublicGamesLoad,
+        to_message: fn(result) {
+          case result {
+            Ok(public_games_wire.PublicGamesLoaded(data)) ->
+              public_pages.GamesMsg(public_games_wire.Loaded(Ok(data)))
+            Error(errors) ->
+              public_pages.GamesMsg(
+                public_games_wire.Loaded(
+                  Error(runtime_load.LoadError(message: api_load_error(errors))),
+                ),
+              )
+          }
+        },
+      )
+    public_routes.Home ->
+      PublicGamesLoad(
+        message: public_games_wire.PublicGamesLoad,
+        to_message: fn(result) {
+          case result {
+            Ok(public_games_wire.PublicGamesLoaded(data)) ->
+              public_pages.HomeMsg(public_games_wire.Loaded(Ok(data)))
+            Error(errors) ->
+              public_pages.HomeMsg(
+                public_games_wire.Loaded(
+                  Error(runtime_load.LoadError(message: api_load_error(errors))),
+                ),
+              )
+          }
+        },
+      )
+    public_routes.Standings ->
+      PublicStandingsLoad(
+        message: public_standings_wire.PublicStandingsLoad,
+        to_message: fn(result) {
+          case result {
+            Ok(public_standings_wire.PublicStandingsLoaded(data)) ->
+              public_pages.StandingsMsg(public_standings_wire.Loaded(Ok(data)))
+            Error(errors) ->
+              public_pages.StandingsMsg(
+                public_standings_wire.Loaded(
+                  Error(runtime_load.LoadError(message: api_load_error(errors))),
+                ),
+              )
+          }
+        },
+      )
+    public_routes.TeamsSlug(slug:) ->
+      PublicTeamDetailLoad(
+        message: public_team_detail_wire.PublicTeamDetailLoad(slug:),
+        to_message: fn(result) {
+          case result {
+            Ok(public_team_detail_wire.PublicTeamDetailLoaded(data)) ->
+              public_pages.TeamsSlugMsg(
+                public_team_detail_wire.Loaded(Ok(data)),
+              )
+            Error(errors) ->
+              public_pages.TeamsSlugMsg(
+                public_team_detail_wire.Loaded(
+                  Error(runtime_load.LoadError(message: api_load_error(errors))),
+                ),
+              )
+          }
+        },
+      )
+    _ -> PublicNoLoad
+  }
+}
+
+@target(javascript)
+pub fn admin_message_path(
+  message message: admin_pages.Message,
+) -> Option(String) {
+  case message {
+    _ -> None
+  }
+}
+
+@target(javascript)
+pub fn public_message_path(
+  message message: public_pages.Message,
+) -> Option(String) {
+  case message {
+    public_pages.GamesMsg(public_games_wire.NavigateGame(id:)) ->
+      Some(
+        public_routes.route_to_path(
+          public_routes.GamesId(id: int.to_string(id)),
+        ),
+      )
+    public_pages.HomeMsg(public_games_wire.NavigateGame(id:)) ->
+      Some(
+        public_routes.route_to_path(
+          public_routes.GamesId(id: int.to_string(id)),
+        ),
+      )
+    public_pages.TeamsSlugMsg(public_team_detail_wire.NavigateGame(id:)) ->
+      Some(
+        public_routes.route_to_path(
+          public_routes.GamesId(id: int.to_string(id)),
+        ),
+      )
+    public_pages.GamesIdMsg(public_game_detail_wire.NavigateTeam(slug:)) ->
+      Some(public_routes.route_to_path(public_routes.TeamsSlug(slug: slug)))
+    public_pages.GamesMsg(public_games_wire.NavigateTeam(slug:)) ->
+      Some(public_routes.route_to_path(public_routes.TeamsSlug(slug: slug)))
+    public_pages.HomeMsg(public_games_wire.NavigateTeam(slug:)) ->
+      Some(public_routes.route_to_path(public_routes.TeamsSlug(slug: slug)))
+    public_pages.StandingsMsg(public_standings_wire.NavigateTeam(slug:)) ->
+      Some(public_routes.route_to_path(public_routes.TeamsSlug(slug: slug)))
+    public_pages.TeamsSlugMsg(public_team_detail_wire.NavigateTeam(slug:)) ->
+      Some(public_routes.route_to_path(public_routes.TeamsSlug(slug: slug)))
+    _ -> None
+  }
+}
+
+@target(javascript)
+pub fn admin_page_topics(
+  page page: admin_pages.Page,
+) -> List(push_payload.Topic) {
+  case page {
+    admin_pages.AdminGamesPage(model) -> admin_games_wire.topics(model)
+    admin_pages.AdminHomePage(model) -> admin_pages_home__page.topics(model)
+    _ -> []
+  }
+}
+
+@target(javascript)
+pub fn admin_apply_broadcast(
+  page page: admin_pages.Page,
+  module _module: String,
+  message message: push_payload.Event,
+) -> #(admin_pages.Page, Effect(admin_pages.Message)) {
+  case page {
+    admin_pages.AdminGamesPage(model) -> {
+      let #(model, page_effect) =
+        admin_games_wire.apply_broadcast(model, message)
+      #(
+        admin_pages.AdminGamesPage(model),
+        effect.map(page_effect, admin_pages.AdminGamesMsg),
+      )
+    }
+    admin_pages.AdminHomePage(model) -> {
+      let #(model, page_effect) =
+        admin_pages_home__page.apply_broadcast(model, message)
+      #(
+        admin_pages.AdminHomePage(model),
+        effect.map(page_effect, admin_pages.AdminHomeMsg),
+      )
+    }
+    _ -> #(page, effect.none())
+  }
+}
+
+@target(javascript)
+pub fn public_page_topics(
+  page page: public_pages.Page,
+) -> List(push_payload.Topic) {
+  case page {
+    public_pages.GamesIdPage(route_params:, model:) ->
+      public_game_detail_wire.topics(route_params, model)
+    public_pages.GamesPage(model) -> public_games_wire.topics(model)
+    public_pages.HomePage(model) -> public_pages_home__page.topics(model)
+    public_pages.StandingsPage(model) -> public_standings_wire.topics(model)
+    public_pages.TeamsSlugPage(route_params:, model:) ->
+      public_team_detail_wire.topics(route_params, model)
+    _ -> []
+  }
+}
+
+@target(javascript)
+pub fn public_apply_broadcast(
+  page page: public_pages.Page,
+  module _module: String,
+  message message: push_payload.Event,
+) -> #(public_pages.Page, Effect(public_pages.Message)) {
+  case page {
+    public_pages.GamesIdPage(route_params:, model:) -> {
+      let #(model, page_effect) =
+        public_game_detail_wire.apply_broadcast(model, message)
+      #(
+        public_pages.GamesIdPage(route_params:, model: model),
+        effect.map(page_effect, public_pages.GamesIdMsg),
+      )
+    }
+    public_pages.GamesPage(model) -> {
+      let #(model, page_effect) =
+        public_games_wire.apply_broadcast(model, message)
+      #(
+        public_pages.GamesPage(model),
+        effect.map(page_effect, public_pages.GamesMsg),
+      )
+    }
+    public_pages.HomePage(model) -> {
+      let #(model, page_effect) =
+        public_pages_home__page.apply_broadcast(model, message)
+      #(
+        public_pages.HomePage(model),
+        effect.map(page_effect, public_pages.HomeMsg),
+      )
+    }
+    public_pages.StandingsPage(model) -> {
+      let #(model, page_effect) =
+        public_standings_wire.apply_broadcast(model, message)
+      #(
+        public_pages.StandingsPage(model),
+        effect.map(page_effect, public_pages.StandingsMsg),
+      )
+    }
+    public_pages.TeamsSlugPage(route_params:, model:) -> {
+      let #(model, page_effect) =
+        public_team_detail_wire.apply_broadcast(model, message)
+      #(
+        public_pages.TeamsSlugPage(route_params:, model: model),
+        effect.map(page_effect, public_pages.TeamsSlugMsg),
+      )
+    }
+    _ -> #(page, effect.none())
+  }
+}
+
+@target(javascript)
+pub fn admin_load_client(
+  page_shared_state page_shared_state: admin_page_shared_state.AdminPageSharedState,
+  query_params query_params: admin_page_input.QueryParams,
+  route route: admin_routes.Route,
+) -> #(admin_pages.Page, Effect(admin_pages.Message)) {
+  let #(page, page_effect) =
+    admin_pages.load(page_shared_state, query_params, route)
+  #(
+    page,
+    effect.batch([
+      page_effect,
+      admin_request_effect(route, admin_load_route(route)),
+    ]),
+  )
+}
+
+@target(javascript)
+pub fn admin_load_path(
+  page_shared_state page_shared_state: admin_page_shared_state.AdminPageSharedState,
+  query_params query_params: admin_page_input.QueryParams,
+  path path: String,
+) -> #(String, admin_pages.Page, Effect(admin_pages.Message)) {
+  let route = admin_routes.parse_path(path)
+  let canonical_path = admin_routes.route_to_path(route)
+  let #(page, page_effect) =
+    admin_load_client(page_shared_state:, query_params:, route:)
+  #(canonical_path, page, page_effect)
+}
+
+@target(javascript)
+pub fn admin_initial_page(
+  page_shared_state page_shared_state: admin_page_shared_state.AdminPageSharedState,
+  query_params query_params: admin_page_input.QueryParams,
+  route route: admin_routes.Route,
+  update_page update_page: fn(
+    admin_page_shared_state.AdminPageSharedState,
+    admin_pages.Page,
+    admin_pages.Message,
+  ) -> #(admin_pages.Page, Effect(admin_pages.Message)),
+) -> #(admin_pages.Page, Effect(admin_pages.Message)) {
+  let #(page, page_effect) =
+    admin_pages.load(page_shared_state, query_params, route)
+
+  case admin_load_route(route) {
+    AdminNoLoad -> #(page, page_effect)
+    AdminGamesLoad(message: _, to_message:) -> {
+      initial_loaded_page(
+        page: page,
+        page_effect: page_effect,
+        page_shared_state: page_shared_state,
+        hydration: hydration.admin_games_load_result(),
+        to_message: to_message,
+        load_client: fn() {
+          admin_request_effect(route, admin_load_route(route))
+        },
+        update_page: update_page,
+      )
+    }
+  }
+}
+
+@target(javascript)
+pub fn admin_initial_page_from_path(
+  page_shared_state page_shared_state: admin_page_shared_state.AdminPageSharedState,
+  query_params query_params: admin_page_input.QueryParams,
+  path path: String,
+  update_page update_page: fn(
+    admin_page_shared_state.AdminPageSharedState,
+    admin_pages.Page,
+    admin_pages.Message,
+  ) -> #(admin_pages.Page, Effect(admin_pages.Message)),
+) -> #(admin_pages.Page, Effect(admin_pages.Message)) {
+  admin_initial_page(
+    page_shared_state:,
+    query_params:,
+    route: admin_routes.parse_path(path),
+    update_page:,
+  )
+}
+
+@target(javascript)
+fn admin_request_effect(
+  route _route: admin_routes.Route,
+  selected selected: AdminLoadRoute,
+) -> Effect(admin_pages.Message) {
+  case selected {
+    AdminNoLoad -> effect.none()
+    AdminGamesLoad(message:, to_message:) ->
+      client_transport.send_admin_games_load(message:, on_result: to_message)
+  }
+}
+
+@target(javascript)
+pub fn public_load_client(
+  page_shared_state page_shared_state: public_page_shared_state.PublicPageSharedState,
+  query_params query_params: public_page_input.QueryParams,
+  route route: public_routes.Route,
+) -> #(public_pages.Page, Effect(public_pages.Message)) {
+  let #(page, page_effect) =
+    public_pages.load(page_shared_state, query_params, route)
+  #(
+    page,
+    effect.batch([
+      page_effect,
+      public_request_effect(route, public_load_route(route)),
+    ]),
+  )
+}
+
+@target(javascript)
+pub fn public_load_path(
+  page_shared_state page_shared_state: public_page_shared_state.PublicPageSharedState,
+  query_params query_params: public_page_input.QueryParams,
+  path path: String,
+) -> #(String, public_pages.Page, Effect(public_pages.Message)) {
+  let route = public_routes.parse_path(path)
+  let canonical_path = public_routes.route_to_path(route)
+  let #(page, page_effect) =
+    public_load_client(page_shared_state:, query_params:, route:)
+  #(canonical_path, page, page_effect)
+}
+
+@target(javascript)
+pub fn public_initial_page(
+  page_shared_state page_shared_state: public_page_shared_state.PublicPageSharedState,
+  query_params query_params: public_page_input.QueryParams,
+  route route: public_routes.Route,
+  update_page update_page: fn(
+    public_page_shared_state.PublicPageSharedState,
+    public_pages.Page,
+    public_pages.Message,
+  ) -> #(public_pages.Page, Effect(public_pages.Message)),
+) -> #(public_pages.Page, Effect(public_pages.Message)) {
+  let #(page, page_effect) =
+    public_pages.load(page_shared_state, query_params, route)
+
+  case public_load_route(route) {
+    PublicNoLoad -> #(page, page_effect)
+    PublicGameDetailLoad(message: _, to_message:) -> {
+      initial_loaded_page(
+        page: page,
+        page_effect: page_effect,
+        page_shared_state: page_shared_state,
+        hydration: hydration.public_game_detail_load_result(),
+        to_message: to_message,
+        load_client: fn() {
+          public_request_effect(route, public_load_route(route))
+        },
+        update_page: update_page,
+      )
+    }
+    PublicGamesLoad(message: _, to_message:) -> {
+      initial_loaded_page(
+        page: page,
+        page_effect: page_effect,
+        page_shared_state: page_shared_state,
+        hydration: hydration.public_games_load_result(),
+        to_message: to_message,
+        load_client: fn() {
+          public_request_effect(route, public_load_route(route))
+        },
+        update_page: update_page,
+      )
+    }
+    PublicStandingsLoad(message: _, to_message:) -> {
+      initial_loaded_page(
+        page: page,
+        page_effect: page_effect,
+        page_shared_state: page_shared_state,
+        hydration: hydration.public_standings_load_result(),
+        to_message: to_message,
+        load_client: fn() {
+          public_request_effect(route, public_load_route(route))
+        },
+        update_page: update_page,
+      )
+    }
+    PublicTeamDetailLoad(message: _, to_message:) -> {
+      initial_loaded_page(
+        page: page,
+        page_effect: page_effect,
+        page_shared_state: page_shared_state,
+        hydration: hydration.public_team_detail_load_result(),
+        to_message: to_message,
+        load_client: fn() {
+          public_request_effect(route, public_load_route(route))
+        },
+        update_page: update_page,
+      )
+    }
+  }
+}
+
+@target(javascript)
+pub fn public_initial_page_from_path(
+  page_shared_state page_shared_state: public_page_shared_state.PublicPageSharedState,
+  query_params query_params: public_page_input.QueryParams,
+  path path: String,
+  update_page update_page: fn(
+    public_page_shared_state.PublicPageSharedState,
+    public_pages.Page,
+    public_pages.Message,
+  ) -> #(public_pages.Page, Effect(public_pages.Message)),
+) -> #(public_pages.Page, Effect(public_pages.Message)) {
+  public_initial_page(
+    page_shared_state:,
+    query_params:,
+    route: public_routes.parse_path(path),
+    update_page:,
+  )
+}
+
+@target(javascript)
+fn public_request_effect(
+  route route: public_routes.Route,
+  selected selected: PublicLoadRoute,
+) -> Effect(public_pages.Message) {
+  case selected {
+    PublicNoLoad -> effect.none()
+    PublicGameDetailLoad(message:, to_message:) ->
+      case route {
+        public_routes.GamesId(id: _) ->
+          client_transport.send_public_game_detail_load(
+            message:,
+            on_result: to_message,
+          )
+        _ -> effect.none()
+      }
+    PublicGamesLoad(message:, to_message:) ->
+      client_transport.send_public_games_load(message:, on_result: to_message)
+    PublicStandingsLoad(message:, to_message:) ->
+      client_transport.send_public_standings_load(
+        message:,
+        on_result: to_message,
+      )
+    PublicTeamDetailLoad(message:, to_message:) ->
+      case route {
+        public_routes.TeamsSlug(slug: _) ->
+          client_transport.send_public_team_detail_load(
+            message:,
+            on_result: to_message,
+          )
+        _ -> effect.none()
+      }
+  }
+}
+
+@target(javascript)
+pub type AdminMountModel(shell_state) {
+  AdminMountModel(
+    page: admin_pages.Page,
+    shell_state: shell_state,
+    page_shared_state: admin_page_shared_state.AdminPageSharedState,
+  )
+}
+
+@target(javascript)
+pub type AdminMountMsg {
+  AdminPageMsg(admin_pages.Message)
+  AdminServerFrame(BitArray)
+  AdminDarkModeChanged(Bool)
+  AdminShellNavigate(String)
+  AdminBrowserPathChanged(String)
+}
+
+@target(javascript)
+pub type AdminMountConfig(shell_state) {
+  AdminMountConfig(
+    page_shared_state: fn() -> admin_page_shared_state.AdminPageSharedState,
+    shell_state: fn(String, Bool) -> shell_state,
+    set_active_path: fn(shell_state, String) -> shell_state,
+    set_dark_mode: fn(shell_state, Bool) -> shell_state,
+    update_page: fn(
+      admin_page_shared_state.AdminPageSharedState,
+      admin_pages.Page,
+      admin_pages.Message,
+    ) -> #(admin_pages.Page, Effect(admin_pages.Message)),
+    view: fn(
+      AdminMountModel(shell_state),
+      fn(admin_pages.Message) -> AdminMountMsg,
+      fn(Bool) -> AdminMountMsg,
+      fn(String) -> AdminMountMsg,
+    ) -> Element(AdminMountMsg),
+  )
+}
+
+@target(javascript)
+pub fn start_admin_mount(config config: AdminMountConfig(shell_state)) -> Nil {
+  start(
+    init: fn(_flags) { admin_mount_init(config) },
+    update: fn(model, msg) { admin_mount_update(config, model, msg) },
+    view: fn(model) {
+      config.view(model, AdminPageMsg, AdminDarkModeChanged, AdminShellNavigate)
+    },
+  )
+}
+
+@target(javascript)
+fn admin_mount_init(
+  config config: AdminMountConfig(shell_state),
+) -> #(AdminMountModel(shell_state), Effect(AdminMountMsg)) {
+  let route = admin_routes.parse_path(browser.path())
+  let current_path = admin_routes.route_to_path(route)
+  let dark_mode = browser_mount.device_dark_mode()
+  let query_params =
+    admin_page_input.QueryParams(values: browser_mount.query_pairs())
+  let page_shared_state = config.page_shared_state()
+  let shell_state = config.shell_state(current_path, dark_mode)
+  let #(page, page_effect) =
+    admin_initial_page(
+      page_shared_state:,
+      query_params: query_params,
+      route:,
+      update_page: config.update_page,
+    )
+
+  #(
+    AdminMountModel(page: page, shell_state:, page_shared_state:),
+    effect.batch([
+      startup_effects(
+        page_effect: page_effect,
+        dark_mode: dark_mode,
+        on_page: AdminPageMsg,
+        on_frame: AdminServerFrame,
+        on_shell_navigation: AdminShellNavigate,
+        on_browser_navigation: AdminBrowserPathChanged,
+      ),
+      sync_topics(admin_page_topics(page)),
+    ]),
+  )
+}
+
+@target(javascript)
+fn admin_mount_update(
+  config config: AdminMountConfig(shell_state),
+  model model: AdminMountModel(shell_state),
+  msg msg: AdminMountMsg,
+) -> #(AdminMountModel(shell_state), Effect(AdminMountMsg)) {
+  case msg {
+    AdminPageMsg(inner) -> {
+      case admin_message_path(inner) {
+        Some(path) ->
+          admin_mount_navigate(
+            config: config,
+            model: model,
+            path: path,
+            push_history: True,
+          )
+        None -> {
+          let #(page, page_effect) =
+            map_page_effect(
+              config.update_page(model.page_shared_state, model.page, inner),
+              AdminPageMsg,
+            )
+          #(
+            AdminMountModel(..model, page: page),
+            effect.batch([
+              page_effect,
+              sync_topics(admin_page_topics(page)),
+            ]),
+          )
+        }
+      }
+    }
+    AdminServerFrame(bytes) -> {
+      let #(page, page_effect) =
+        server_frame_effect(
+          page: model.page,
+          bytes: bytes,
+          apply_broadcast: admin_apply_broadcast,
+          on_page: AdminPageMsg,
+        )
+      #(
+        AdminMountModel(..model, page: page),
+        effect.batch([
+          page_effect,
+          sync_topics(admin_page_topics(page)),
+        ]),
+      )
+    }
+    AdminDarkModeChanged(dark_mode) -> {
+      let shell_state = config.set_dark_mode(model.shell_state, dark_mode)
+      #(
+        AdminMountModel(..model, shell_state:),
+        browser_mount.dark_mode_changed_effects(dark_mode),
+      )
+    }
+    AdminShellNavigate(path) -> {
+      admin_mount_navigate(
+        config: config,
+        model: model,
+        path: path,
+        push_history: True,
+      )
+    }
+    AdminBrowserPathChanged(path) -> {
+      admin_mount_navigate(
+        config: config,
+        model: model,
+        path: path,
+        push_history: False,
+      )
+    }
+  }
+}
+
+@target(javascript)
+fn admin_mount_navigate(
+  config config: AdminMountConfig(shell_state),
+  model model: AdminMountModel(shell_state),
+  path path: String,
+  push_history push_history: Bool,
+) -> #(AdminMountModel(shell_state), Effect(AdminMountMsg)) {
+  let route = admin_routes.parse_path(path)
+  let canonical_path = admin_routes.route_to_path(route)
+  let shell_state = config.set_active_path(model.shell_state, canonical_path)
+  let #(page, page_effect) =
+    admin_load_client(
+      page_shared_state: model.page_shared_state,
+      query_params: admin_page_input.empty_query_params(),
+      route:,
+    )
+
+  #(
+    AdminMountModel(
+      page: page,
+      shell_state:,
+      page_shared_state: model.page_shared_state,
+    ),
+    effect.batch([
+      navigation_effects(
+        path: canonical_path,
+        push_history: push_history,
+        page_effect: page_effect,
+        on_page: AdminPageMsg,
+      ),
+      sync_topics(admin_page_topics(page)),
+    ]),
+  )
+}
+
+@target(javascript)
+pub type PublicMountModel(shell_state) {
+  PublicMountModel(
+    page: public_pages.Page,
+    shell_state: shell_state,
+    page_shared_state: public_page_shared_state.PublicPageSharedState,
+  )
+}
+
+@target(javascript)
+pub type PublicMountMsg {
+  PublicPageMsg(public_pages.Message)
+  PublicServerFrame(BitArray)
+  PublicDarkModeChanged(Bool)
+  PublicShellNavigate(String)
+  PublicBrowserPathChanged(String)
+}
+
+@target(javascript)
+pub type PublicMountConfig(shell_state) {
+  PublicMountConfig(
+    page_shared_state: fn() -> public_page_shared_state.PublicPageSharedState,
+    shell_state: fn(String, Bool) -> shell_state,
+    set_active_path: fn(shell_state, String) -> shell_state,
+    set_dark_mode: fn(shell_state, Bool) -> shell_state,
+    update_page: fn(
+      public_page_shared_state.PublicPageSharedState,
+      public_pages.Page,
+      public_pages.Message,
+    ) -> #(public_pages.Page, Effect(public_pages.Message)),
+    view: fn(
+      PublicMountModel(shell_state),
+      fn(public_pages.Message) -> PublicMountMsg,
+      fn(Bool) -> PublicMountMsg,
+      fn(String) -> PublicMountMsg,
+    ) -> Element(PublicMountMsg),
+  )
+}
+
+@target(javascript)
+pub fn start_public_mount(
+  config config: PublicMountConfig(shell_state),
+) -> Nil {
+  start(
+    init: fn(_flags) { public_mount_init(config) },
+    update: fn(model, msg) { public_mount_update(config, model, msg) },
+    view: fn(model) {
+      config.view(
+        model,
+        PublicPageMsg,
+        PublicDarkModeChanged,
+        PublicShellNavigate,
+      )
+    },
+  )
+}
+
+@target(javascript)
+fn public_mount_init(
+  config config: PublicMountConfig(shell_state),
+) -> #(PublicMountModel(shell_state), Effect(PublicMountMsg)) {
+  let route = public_routes.parse_path(browser.path())
+  let current_path = public_routes.route_to_path(route)
+  let dark_mode = browser_mount.device_dark_mode()
+  let query_params =
+    public_page_input.QueryParams(values: browser_mount.query_pairs())
+  let page_shared_state = config.page_shared_state()
+  let shell_state = config.shell_state(current_path, dark_mode)
+  let #(page, page_effect) =
+    public_initial_page(
+      page_shared_state:,
+      query_params: query_params,
+      route:,
+      update_page: config.update_page,
+    )
+
+  #(
+    PublicMountModel(page: page, shell_state:, page_shared_state:),
+    effect.batch([
+      startup_effects(
+        page_effect: page_effect,
+        dark_mode: dark_mode,
+        on_page: PublicPageMsg,
+        on_frame: PublicServerFrame,
+        on_shell_navigation: PublicShellNavigate,
+        on_browser_navigation: PublicBrowserPathChanged,
+      ),
+      sync_topics(public_page_topics(page)),
+    ]),
+  )
+}
+
+@target(javascript)
+fn public_mount_update(
+  config config: PublicMountConfig(shell_state),
+  model model: PublicMountModel(shell_state),
+  msg msg: PublicMountMsg,
+) -> #(PublicMountModel(shell_state), Effect(PublicMountMsg)) {
+  case msg {
+    PublicPageMsg(inner) -> {
+      case public_message_path(inner) {
+        Some(path) ->
+          public_mount_navigate(
+            config: config,
+            model: model,
+            path: path,
+            push_history: True,
+          )
+        None -> {
+          let #(page, page_effect) =
+            map_page_effect(
+              config.update_page(model.page_shared_state, model.page, inner),
+              PublicPageMsg,
+            )
+          #(
+            PublicMountModel(..model, page: page),
+            effect.batch([
+              page_effect,
+              sync_topics(public_page_topics(page)),
+            ]),
+          )
+        }
+      }
+    }
+    PublicServerFrame(bytes) -> {
+      let #(page, page_effect) =
+        server_frame_effect(
+          page: model.page,
+          bytes: bytes,
+          apply_broadcast: public_apply_broadcast,
+          on_page: PublicPageMsg,
+        )
+      #(
+        PublicMountModel(..model, page: page),
+        effect.batch([
+          page_effect,
+          sync_topics(public_page_topics(page)),
+        ]),
+      )
+    }
+    PublicDarkModeChanged(dark_mode) -> {
+      let shell_state = config.set_dark_mode(model.shell_state, dark_mode)
+      #(
+        PublicMountModel(..model, shell_state:),
+        browser_mount.dark_mode_changed_effects(dark_mode),
+      )
+    }
+    PublicShellNavigate(path) -> {
+      public_mount_navigate(
+        config: config,
+        model: model,
+        path: path,
+        push_history: True,
+      )
+    }
+    PublicBrowserPathChanged(path) -> {
+      public_mount_navigate(
+        config: config,
+        model: model,
+        path: path,
+        push_history: False,
+      )
+    }
+  }
+}
+
+@target(javascript)
+fn public_mount_navigate(
+  config config: PublicMountConfig(shell_state),
+  model model: PublicMountModel(shell_state),
+  path path: String,
+  push_history push_history: Bool,
+) -> #(PublicMountModel(shell_state), Effect(PublicMountMsg)) {
+  let route = public_routes.parse_path(path)
+  let canonical_path = public_routes.route_to_path(route)
+  let shell_state = config.set_active_path(model.shell_state, canonical_path)
+  let #(page, page_effect) =
+    public_load_client(
+      page_shared_state: model.page_shared_state,
+      query_params: public_page_input.empty_query_params(),
+      route:,
+    )
+
+  #(
+    PublicMountModel(
+      page: page,
+      shell_state:,
+      page_shared_state: model.page_shared_state,
+    ),
+    effect.batch([
+      navigation_effects(
+        path: canonical_path,
+        push_history: push_history,
+        page_effect: page_effect,
+        on_page: PublicPageMsg,
+      ),
+      sync_topics(public_page_topics(page)),
+    ]),
+  )
+}
+
+@target(javascript)
+pub fn start(
+  init init: fn(Nil) -> #(model, Effect(msg)),
+  update update: fn(model, msg) -> #(model, Effect(msg)),
+  view view: fn(model) -> Element(msg),
+) -> Nil {
+  let app = lustre.application(init, update, view)
+  let _started = lustre.start(app, "#app", Nil)
+  Nil
+}
+
+@target(javascript)
+pub fn startup_effects(
+  page_effect page_effect: Effect(page_msg),
+  dark_mode dark_mode: Bool,
+  on_page on_page: fn(page_msg) -> msg,
+  on_frame on_frame: fn(BitArray) -> msg,
+  on_shell_navigation on_shell_navigation: fn(String) -> msg,
+  on_browser_navigation on_browser_navigation: fn(String) -> msg,
+) -> Effect(msg) {
+  effect.batch([
+    effect.map(page_effect, on_page),
+    browser_mount.startup_effects(
+      dark_mode: dark_mode,
+      on_frame: on_frame,
+      on_shell_navigation: on_shell_navigation,
+      on_browser_navigation: on_browser_navigation,
+    ),
+  ])
+}
+
+@target(javascript)
+pub fn sync_topics(topics topics: List(push_payload.Topic)) -> Effect(msg) {
+  client_transport.sync_topics(list.map(topics, push_payload.topic_name))
+}
+
+@target(javascript)
+pub fn initial_page(
+  hydration hydration: Result(result, Nil),
+  load_hydrated load_hydrated: fn(result) -> page,
+  load_client load_client: fn() -> #(page, Effect(page_msg)),
+) -> #(page, Effect(page_msg)) {
+  case hydration {
+    Ok(result) -> #(load_hydrated(result), effect.none())
+    Error(Nil) -> load_client()
+  }
+}
+
+@target(javascript)
+pub fn map_page_effect(
+  page_update page_update: #(page, Effect(page_msg)),
+  on_page on_page: fn(page_msg) -> msg,
+) -> #(page, Effect(msg)) {
+  let #(page, page_effect) = page_update
+  #(page, effect.map(page_effect, on_page))
+}
+
+@target(javascript)
+pub fn server_frame_effect(
+  page page: page,
+  bytes bytes: BitArray,
+  apply_broadcast apply_broadcast: fn(page, String, push_payload.Event) ->
+    #(page, Effect(page_msg)),
+  on_page on_page: fn(page_msg) -> msg,
+) -> #(page, Effect(msg)) {
+  case client_protocol.decode_server_frame(bytes) {
+    Ok(client_protocol.Push(module:, message:)) ->
+      map_page_effect(apply_broadcast(page, module, message), on_page)
+    Error(Nil) -> #(page, effect.none())
+  }
+}
+
+@target(javascript)
+pub fn navigation_effects(
+  path path: String,
+  push_history push_history: Bool,
+  page_effect page_effect: Effect(page_msg),
+  on_page on_page: fn(page_msg) -> msg,
+) -> Effect(msg) {
+  let history_effect = case push_history {
+    True -> browser_mount.push_path(path)
+    False -> effect.none()
+  }
+
+  effect.batch([history_effect, effect.map(page_effect, on_page)])
+}
+
+@target(javascript)
+fn initial_loaded_page(
+  page page: page,
+  page_effect page_effect: Effect(message),
+  page_shared_state page_shared_state: shared_state,
+  hydration hydration: Result(result, Nil),
+  to_message to_message: fn(result) -> message,
+  load_client load_client: fn() -> Effect(message),
+  update_page update_page: fn(shared_state, page, message) ->
+    #(page, Effect(message)),
+) -> #(page, Effect(message)) {
+  case hydration {
+    Ok(result) -> {
+      let #(page, _) = update_page(page_shared_state, page, to_message(result))
+      #(page, page_effect)
+    }
+    Error(Nil) -> #(page, effect.batch([page_effect, load_client()]))
+  }
+}
+
+@target(javascript)
+fn api_load_error(errors: List(ApiLoadError)) -> String {
+  case errors {
+    [ApiLoadError(message: message), ..] -> message
+    [] -> "Could not load page."
+  }
+}

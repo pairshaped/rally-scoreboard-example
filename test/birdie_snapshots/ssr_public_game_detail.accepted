@@ -1,8 +1,6 @@
 ---
 version: 2.0.0
 title: ssr public game detail
-file: ./test/ssr_snapshot_test.gleam
-test_name: ssr_public_game_detail_snapshot_test
 ---
 hydration_count: 1
 
@@ -16,8 +14,8 @@ hydration_count: 1
 </div>
 </div>
 <nav class="nav">
-<a class="active" data-scoreboard-spa-nav="1" href="/games">Games</a>
-<a data-scoreboard-spa-nav="1" href="/standings">Standings</a>
+<a class="active" data-rally-spa-nav="1" href="/games">Games</a>
+<a data-rally-spa-nav="1" href="/standings">Standings</a>
 <a href="/sign_in">Sign In</a>
 <label class="theme-switch">
 <svg xmlns="http://www.w3.org/2000/svg" aria-label="Light mode" class="theme-icon" fill="none" height="16" role="img" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="16">
@@ -74,10 +72,6 @@ hydration_count: 1
 </div>
 <span class="badge live">3rd</span>
 </div>
-<h2>Scoring summary</h2>
-<ul>
-<li>MTL 2, TOR 4</li>
-</ul>
 </div>
 </section>
 </main>

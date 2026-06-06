@@ -1,14 +1,5 @@
-import api/domain/game.{
-  type GameSnapshot, type PublicGameSummary, Final, PublicGameSummary,
-}
-import api/domain/team.{type TeamDetail, TeamDetail}
-@target(javascript)
-import api/to_server
-import components/game_card
-import components/ui
+import broadcasts
 import generated/proute/public/page_input
-@target(javascript)
-import generated_soon/client_transport as api_client
 import gleam/bool
 import gleam/int
 import gleam/list
@@ -17,53 +8,123 @@ import lustre/attribute
 import lustre/effect.{type Effect}
 import lustre/element.{type Element}
 import lustre/element/html
-import page_context.{type PageContext}
+import lustre/event
+import public/page_shared_state.{type PublicPageSharedState}
+import rally/runtime/load as runtime_load
+
+@target(erlang)
+import generated/sql/public/pages/games_sql
+@target(erlang)
+import generated/sql/public/pages/teams/slug__sql as teams_sql
+@target(erlang)
+import sqlight
+
+// TYPES
+
+pub type GameStatus {
+  Scheduled
+  Live(period: String)
+  Final
+}
+
+pub type Team {
+  Team(code: String, name: String, slug: String)
+}
+
+pub type GameSummary {
+  GameSummary(
+    id: Int,
+    home: Team,
+    away: Team,
+    home_score: Int,
+    away_score: Int,
+    status: GameStatus,
+  )
+}
+
+pub type TeamDetail {
+  TeamDetail(
+    code: String,
+    name: String,
+    slug: String,
+    wins: Int,
+    losses: Int,
+    points_for: Int,
+    points_against: Int,
+    recent_games: List(GameSummary),
+  )
+}
+
+/// Server request to load one team by slug.
+pub type ServerMsg {
+  PublicTeamDetailLoad(slug: String)
+}
+
+pub type LoadResult {
+  PublicTeamDetailLoaded(team: TeamDetail)
+}
 
 pub type Model {
   Model(team: Option(TeamDetail))
 }
 
 pub type Message {
+  Loaded(Result(TeamDetail, runtime_load.LoadError))
   NavigateTeam(slug: String)
   NavigateGame(id: Int)
 }
 
-pub fn init(
-  page_context page_context: PageContext,
-  route_params route_params: page_input.TeamsSlugRouteParams,
-  query_params query_params: page_input.QueryParams,
-) -> #(Model, Effect(Message)) {
-  #(
-    initial_model(page_context, route_params, query_params),
-    init_effect(route_params.slug),
-  )
-}
-
+/// Pure starting state for the team detail page.
+/// Generated browser and SSR glue call this to construct an empty page before
+/// Rally applies hydrated or freshly loaded data.
 pub fn initial_model(
-  _page_context: PageContext,
+  _page_shared_state: PublicPageSharedState,
   _route_params: page_input.TeamsSlugRouteParams,
   _query_params: page_input.QueryParams,
 ) -> Model {
   Model(team: None)
 }
 
+// UPDATE
+
+/// Proute page update function.
+/// generated/proute/public/pages calls this when a TeamsSlugMsg is active on the
+/// current page.
 pub fn update(
   model model: Model,
-  msg _msg: Message,
+  msg msg: Message,
 ) -> #(Model, Effect(Message)) {
-  #(model, effect.none())
+  case msg {
+    Loaded(Ok(team)) -> #(Model(team: Some(team)), effect.none())
+    Loaded(Error(_)) -> #(model, effect.none())
+    NavigateTeam(_) | NavigateGame(_) -> #(model, effect.none())
+  }
 }
 
-pub fn team_loaded(
-  model _model: Model,
-  team team: TeamDetail,
+/// Page-owned broadcast hook.
+/// Generated Rally browser broadcast dispatch calls this after a game update frame
+/// is decoded for this page's route team topic.
+pub fn apply_broadcast(
+  model model: Model,
+  message message: broadcasts.Event,
 ) -> #(Model, Effect(Message)) {
-  #(Model(team: Some(team)), effect.none())
+  case message {
+    broadcasts.BroadcastGameUpdated(game) -> game_updated(model, game)
+  }
 }
 
+/// Subscribes the team detail page to the team named by its route slug.
+pub fn topics(
+  route_params: page_input.TeamsSlugRouteParams,
+  _model: Model,
+) -> List(broadcasts.Topic) {
+  [broadcasts.team_topic(route_params.slug)]
+}
+
+/// Applies a broadcast game snapshot to the loaded team detail.
 pub fn game_updated(
   model model: Model,
-  game game: GameSnapshot,
+  game game: broadcasts.GameSnapshot,
 ) -> #(Model, Effect(Message)) {
   case model.team {
     Some(team) -> #(
@@ -74,6 +135,8 @@ pub fn game_updated(
   }
 }
 
+// VIEW
+
 pub fn view(model model: Model) -> Element(Message) {
   html.main([], [
     view_team_detail(model.team, fn(slug) { NavigateTeam(slug:) }, fn(id) {
@@ -82,25 +145,43 @@ pub fn view(model model: Model) -> Element(Message) {
   ])
 }
 
-fn apply_game_updated(team: TeamDetail, snapshot: GameSnapshot) -> TeamDetail {
+// HELPERS
+
+/// Applies a game update only when it affects the loaded team.
+fn apply_game_updated(
+  team: TeamDetail,
+  snapshot: broadcasts.GameSnapshot,
+) -> TeamDetail {
   use <- bool.guard(!game_belongs_to_team(team.code, snapshot), team)
   apply_team_game_update(team, snapshot)
 }
 
-fn game_belongs_to_team(team_code: String, snapshot: GameSnapshot) -> Bool {
-  snapshot.home.code == team_code || snapshot.away.code == team_code
+/// Checks whether a broadcast game includes the loaded team.
+fn game_belongs_to_team(
+  team_code: String,
+  snapshot: broadcasts.GameSnapshot,
+) -> Bool {
+  let broadcasts.BroadcastGameSnapshot(
+    home: broadcasts.BroadcastTeam(code: home_code, ..),
+    away: broadcasts.BroadcastTeam(code: away_code, ..),
+    ..,
+  ) = snapshot
+
+  home_code == team_code || away_code == team_code
 }
 
+/// Updates the team's recent games and record from one game snapshot.
 fn apply_team_game_update(
   team: TeamDetail,
-  snapshot: GameSnapshot,
+  snapshot: broadcasts.GameSnapshot,
 ) -> TeamDetail {
-  case list.find(team.recent_games, fn(game) { game.id == snapshot.id }) {
+  let broadcasts.BroadcastGameSnapshot(id:, ..) = snapshot
+  case list.find(team.recent_games, fn(game) { game.id == id }) {
     Error(Nil) -> team
     Ok(existing) -> {
       let updated_games =
         list.map(team.recent_games, fn(game) {
-          case game.id == snapshot.id {
+          case game.id == id {
             True -> update_game_summary(game, snapshot)
             False -> game
           }
@@ -123,20 +204,30 @@ fn apply_team_game_update(
 }
 
 fn update_game_summary(
-  game: PublicGameSummary,
-  snapshot: GameSnapshot,
-) -> PublicGameSummary {
-  PublicGameSummary(
+  game: GameSummary,
+  snapshot: broadcasts.GameSnapshot,
+) -> GameSummary {
+  let broadcasts.BroadcastGameSnapshot(home_score:, away_score:, status:, ..) =
+    snapshot
+  GameSummary(
     ..game,
-    home_score: snapshot.home_score,
-    away_score: snapshot.away_score,
-    status: snapshot.status,
+    home_score:,
+    away_score:,
+    status: broadcast_game_status(status),
   )
+}
+
+fn broadcast_game_status(status: broadcasts.GameStatus) -> GameStatus {
+  case status {
+    broadcasts.BroadcastScheduled -> Scheduled
+    broadcasts.BroadcastLive(period) -> Live(period)
+    broadcasts.BroadcastFinal -> Final
+  }
 }
 
 fn record_contribution(
   team_code: String,
-  game: PublicGameSummary,
+  game: GameSummary,
 ) -> #(Int, Int, Int, Int) {
   case game.status {
     Final ->
@@ -187,7 +278,7 @@ fn view_team_detail(
       ) = detail
       html.div([], [
         html.section([attribute.class("panel")], [
-          ui.section_head(name, ""),
+          section_head(name),
           html.article([attribute.class("card team-record-card")], [
             html.header([attribute.class("team-record-title")], [
               html.strong([], [html.text(code)]),
@@ -204,7 +295,7 @@ fn view_team_detail(
           ]),
         ]),
         html.section([attribute.class("panel")], [
-          ui.section_head("Recent games", ""),
+          section_head("Recent games"),
           case recent_games {
             [] ->
               html.p([attribute.class("muted")], [html.text("No games yet.")])
@@ -212,11 +303,7 @@ fn view_team_detail(
               html.div(
                 [attribute.class("game-grid")],
                 list.map(recent_games, fn(game) {
-                  game_card.public_summary(
-                    game,
-                    on_navigate_team,
-                    on_navigate_game,
-                  )
+                  view_game_card(game, on_navigate_team, on_navigate_game)
                 }),
               )
           },
@@ -233,12 +320,130 @@ fn stat_item(label: String, value: String) -> Element(msg) {
   ])
 }
 
-@target(javascript)
-fn init_effect(slug: String) -> Effect(Message) {
-  api_client.send(module: "public/teams", message: to_server.LoadTeam(slug:))
+fn view_game_card(
+  game: GameSummary,
+  on_navigate_team: fn(String) -> msg,
+  on_navigate_game: fn(Int) -> msg,
+) -> Element(msg) {
+  html.article([attribute.class("game-card")], [
+    html.div([attribute.class("team-row")], [
+      team_link(game.away, on_navigate_team),
+      html.span([attribute.class("score")], [
+        html.text(int.to_string(game.away_score)),
+      ]),
+    ]),
+    html.div([attribute.class("team-row")], [
+      team_link(game.home, on_navigate_team),
+      html.span([attribute.class("score")], [
+        html.text(int.to_string(game.home_score)),
+      ]),
+    ]),
+    html.div([attribute.class("score-line")], [
+      status_badge(game.status),
+      html.a(
+        [
+          attribute.href("/games/" <> int.to_string(game.id)),
+          event.on_click(on_navigate_game(game.id))
+            |> event.prevent_default,
+        ],
+        [html.text("Details")],
+      ),
+    ]),
+  ])
+}
+
+fn team_link(team: Team, on_navigate_team: fn(String) -> msg) -> Element(msg) {
+  html.a(
+    [
+      attribute.href("/teams/" <> team.slug),
+      event.on_click(on_navigate_team(team.slug))
+        |> event.prevent_default,
+    ],
+    [html.strong([], [html.text(team.name)])],
+  )
+}
+
+fn section_head(title: String) -> Element(msg) {
+  html.div([attribute.class("section-head")], [
+    html.div([], [html.h1([], [html.text(title)]), html.span([], [])]),
+  ])
+}
+
+fn status_badge(status: GameStatus) -> Element(msg) {
+  case status {
+    Scheduled -> html.span([attribute.class("badge")], [html.text("Scheduled")])
+    Live(period) ->
+      html.span([attribute.class("badge live")], [html.text(period)])
+    Final -> html.span([attribute.class("badge final")], [html.text("Final")])
+  }
+}
+
+// SERVER
+
+@target(erlang)
+/// Server data loader behind the generated Rally SSR and WS load adapters.
+/// Rally calls this, then wraps page data in the Rally/Libero load result shape.
+pub fn load(
+  db: sqlight.Connection,
+  slug: String,
+) -> Result(TeamDetail, runtime_load.LoadError) {
+  case teams_sql.get_team_by_slug(db:, slug:) {
+    Ok([row, ..]) -> load_team_games(db, row)
+    Ok([]) -> Error(runtime_load.LoadError(message: "Team not found."))
+    Error(sqlight.SqlightError(..)) ->
+      Error(runtime_load.LoadError(message: "Could not load team."))
+  }
 }
 
 @target(erlang)
-fn init_effect(_slug: String) -> Effect(Message) {
-  effect.none()
+fn load_team_games(
+  db: sqlight.Connection,
+  row: teams_sql.GetTeamBySlugRow,
+) -> Result(TeamDetail, runtime_load.LoadError) {
+  let team_code = optional_string(row.code)
+
+  case games_sql.list_public_games(db:, team_filter: team_code) {
+    Ok(games) ->
+      Ok(TeamDetail(
+        code: team_code,
+        name: row.name,
+        slug: row.slug,
+        wins: row.wins,
+        losses: row.losses,
+        points_for: row.points_for,
+        points_against: row.points_against,
+        recent_games: list.map(games, game_summary_from_row),
+      ))
+    Error(sqlight.SqlightError(..)) ->
+      Error(runtime_load.LoadError(message: "Could not load team games."))
+  }
+}
+
+@target(erlang)
+fn game_summary_from_row(row: games_sql.ListPublicGamesRow) -> GameSummary {
+  GameSummary(
+    id: row.id,
+    home: Team(row.home_code, row.home_name, row.home_slug),
+    away: Team(row.away_code, row.away_name, row.away_slug),
+    home_score: row.home_score,
+    away_score: row.away_score,
+    status: game_status(row.period, row.final),
+  )
+}
+
+@target(erlang)
+fn game_status(period: String, final: Int) -> GameStatus {
+  case final == 1, period {
+    True, _ -> Final
+    False, "Scheduled" -> Scheduled
+    False, _ -> Live(period)
+  }
+}
+
+@target(erlang)
+fn optional_string(value: Option(String)) -> String {
+  case value {
+    Some(value) -> value
+    None -> ""
+  }
 }

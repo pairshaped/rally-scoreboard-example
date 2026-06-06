@@ -9,27 +9,32 @@ mist = ">= 6.0.3 and < 7.0.0"
 gleam_http = ">= 4.3.0 and < 5.0.0"
 gleam_erlang = ">= 1.3.0 and < 2.0.0"
 gleam_crypto = ">= 1.6.0 and < 2.0.0"
+gleam_json = ">= 3.1.0 and < 4.0.0"
+libero = { path = "../libero-gleam" }
+rally = { path = "../rally-gleam" }
 
 [dev-dependencies]
 gleeunit = ">= 1.0.0 and < 2.0.0"
-glinter = ">= 2.19.0 and < 3.0.0"
-libero = { path = "../libero" }
-marmot = "1.7.1"
-proute = { path = "../proute" }
 birdie = ">= 2.0.0 and < 3.0.0"
+glinter = ">= 2.19.0 and < 3.0.0"
+marmot = ">= 1.7.2 and < 2.0.0"
+proute = { path = "../proute" }
+simplifile = ">= 2.4.0 and < 3.0.0"
 
 [tools.glinter]
 stats = true
-warnings_as_errors = false
+warnings_as_errors = true
 exclude = ["src/generated/**/*.gleam"]
 scan_paths = ["src"]
 
 [tools.marmot]
 database = "db/scoreboard.db"
-sql_dir = "src/sql"
 output = "src/generated/sql"
 
-[tools.libero]
-api_dir = "src/api"
-js_output_dir = "src/generated/api"
-erlang_output_dir = "src/generated/api"
+[tools.rally.load_rpc.push]
+module = "broadcasts"
+type = "Event"
+
+[tools.rally.load_rpc.context]
+module = "sqlight"
+type = "Connection"

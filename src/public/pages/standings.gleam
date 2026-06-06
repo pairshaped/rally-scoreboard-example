@@ -1,13 +1,5 @@
-import api/domain/game.{
-  type GameSnapshot, type PublicGameSummary, type Team, Final, PublicGameSummary,
-}
-import api/domain/standing.{type StandingRow, StandingRow}
-@target(javascript)
-import api/to_server
-import components/ui
+import broadcasts
 import generated/proute/public/page_input
-@target(javascript)
-import generated_soon/client_transport as api_client
 import gleam/int
 import gleam/list
 import gleam/order
@@ -17,69 +9,145 @@ import lustre/effect.{type Effect}
 import lustre/element.{type Element}
 import lustre/element/html
 import lustre/event
-import page_context.{type PageContext}
+import public/page_shared_state.{type PublicPageSharedState}
+import rally/runtime/load as runtime_load
+
+@target(erlang)
+import generated/sql/public/pages/games_sql
+@target(erlang)
+import sqlight
+
+// TYPES
+
+pub type GameStatus {
+  Scheduled
+  Live(period: String)
+  Final
+}
+
+pub type Team {
+  Team(code: String, name: String, slug: String)
+}
+
+pub type GameSummary {
+  GameSummary(
+    id: Int,
+    home: Team,
+    away: Team,
+    home_score: Int,
+    away_score: Int,
+    status: GameStatus,
+  )
+}
+
+/// Derived view model for standings rows.
+/// view builds these from the loaded GameSummary values so the standings table
+/// does not need to store a second copy in Model.
+pub type StandingRow {
+  StandingRow(
+    team_code: String,
+    team_name: String,
+    slug: String,
+    wins: Int,
+    losses: Int,
+    points_for: Int,
+    points_against: Int,
+  )
+}
+
+/// Server request to load standings data.
+pub type ServerMsg {
+  PublicStandingsLoad
+}
+
+pub type LoadResult {
+  PublicStandingsLoaded(games: List(GameSummary))
+}
 
 pub type Model {
-  Model(games: List(PublicGameSummary))
+  Model(games: List(GameSummary))
 }
 
 pub type Message {
+  Loaded(Result(List(GameSummary), runtime_load.LoadError))
   NavigateTeam(slug: String)
 }
 
-pub fn init(
-  page_context page_context: PageContext,
-  query_params query_params: page_input.QueryParams,
-) -> #(Model, Effect(Message)) {
-  #(initial_model(page_context, query_params), init_effect())
-}
-
+/// Pure starting state for the standings page.
+/// Generated browser and SSR glue call this to construct an empty page before
+/// Rally applies hydrated or freshly loaded data.
 pub fn initial_model(
-  _page_context: PageContext,
+  _page_shared_state: PublicPageSharedState,
   _query_params: page_input.QueryParams,
 ) -> Model {
   Model(games: [])
 }
 
+// UPDATE
+
+/// Proute page update function.
+/// generated/proute/public/pages calls this when a StandingsMsg is active on the
+/// current page.
 pub fn update(
   model model: Model,
-  msg _msg: Message,
+  msg msg: Message,
 ) -> #(Model, Effect(Message)) {
-  #(model, effect.none())
+  case msg {
+    Loaded(Ok(games)) -> #(Model(games:), effect.none())
+    Loaded(Error(_)) -> #(model, effect.none())
+    NavigateTeam(_) -> #(model, effect.none())
+  }
 }
 
-pub fn games_loaded(
-  model _model: Model,
-  games games: List(PublicGameSummary),
+/// Page-owned broadcast hook.
+/// Generated Rally browser broadcast dispatch calls this after a game update frame
+/// is decoded for the standings topic.
+pub fn apply_broadcast(
+  model model: Model,
+  message message: broadcasts.Event,
 ) -> #(Model, Effect(Message)) {
-  #(Model(games: games), effect.none())
+  case message {
+    broadcasts.BroadcastGameUpdated(game) -> game_updated(model, game)
+  }
 }
 
+/// Subscribes standings to all game score changes.
+pub fn topics(_model: Model) -> List(broadcasts.Topic) {
+  [broadcasts.all_games_topic()]
+}
+
+/// Applies one broadcast game snapshot before recomputing standings rows.
 pub fn game_updated(
   model model: Model,
-  game game: GameSnapshot,
+  game game: broadcasts.GameSnapshot,
 ) -> #(Model, Effect(Message)) {
+  let broadcasts.BroadcastGameSnapshot(id:, ..) = game
   let games =
     list.map(model.games, fn(summary) {
-      case summary.id == game.id {
+      case summary.id == id {
         True -> update_summary(summary, game)
         False -> summary
       }
     })
 
-  #(Model(games: games), effect.none())
+  #(Model(games:), effect.none())
 }
+
+// VIEW
 
 pub fn view(model model: Model) -> Element(Message) {
   html.main([], [
     html.section([attribute.class("panel")], [
-      ui.section_head("League table", ""),
+      section_head("League table"),
       view_standings(from_games(model.games), fn(slug) { NavigateTeam(slug:) }),
     ]),
   ])
 }
 
-fn from_games(games: List(PublicGameSummary)) -> List(StandingRow) {
+// HELPERS
+
+/// Recomputes the standings table from the current game summaries.
+fn from_games(games: List(GameSummary)) -> List(StandingRow) {
   games
   |> list.fold([], add_game)
   |> list.sort(by: compare_rows)
@@ -111,10 +179,7 @@ fn view_standings(
   }
 }
 
-fn add_game(
-  rows: List(StandingRow),
-  game: PublicGameSummary,
-) -> List(StandingRow) {
+fn add_game(rows: List(StandingRow), game: GameSummary) -> List(StandingRow) {
   let #(home_wins, home_losses, home_for, home_against) =
     home_contribution(game)
   let #(away_wins, away_losses, away_for, away_against) =
@@ -176,7 +241,7 @@ fn upsert_row(
   }
 }
 
-fn home_contribution(game: PublicGameSummary) -> #(Int, Int, Int, Int) {
+fn home_contribution(game: GameSummary) -> #(Int, Int, Int, Int) {
   case game.status {
     Final -> #(
       bool_to_int(game.home_score > game.away_score),
@@ -188,7 +253,7 @@ fn home_contribution(game: PublicGameSummary) -> #(Int, Int, Int, Int) {
   }
 }
 
-fn away_contribution(game: PublicGameSummary) -> #(Int, Int, Int, Int) {
+fn away_contribution(game: GameSummary) -> #(Int, Int, Int, Int) {
   case game.status {
     Final -> #(
       bool_to_int(game.away_score > game.home_score),
@@ -245,23 +310,66 @@ fn view_standing_row(
 }
 
 fn update_summary(
-  summary: PublicGameSummary,
-  game: GameSnapshot,
-) -> PublicGameSummary {
-  PublicGameSummary(
+  summary: GameSummary,
+  game: broadcasts.GameSnapshot,
+) -> GameSummary {
+  let broadcasts.BroadcastGameSnapshot(home_score:, away_score:, status:, ..) =
+    game
+  GameSummary(
     ..summary,
-    home_score: game.home_score,
-    away_score: game.away_score,
-    status: game.status,
+    home_score:,
+    away_score:,
+    status: broadcast_game_status(status),
   )
 }
 
-@target(javascript)
-fn init_effect() -> Effect(Message) {
-  api_client.send(module: "public/standings", message: to_server.LoadGames)
+fn broadcast_game_status(status: broadcasts.GameStatus) -> GameStatus {
+  case status {
+    broadcasts.BroadcastScheduled -> Scheduled
+    broadcasts.BroadcastLive(period) -> Live(period)
+    broadcasts.BroadcastFinal -> Final
+  }
+}
+
+fn section_head(title: String) -> Element(msg) {
+  html.div([attribute.class("section-head")], [
+    html.div([], [html.h1([], [html.text(title)]), html.span([], [])]),
+  ])
+}
+
+// SERVER
+
+@target(erlang)
+/// Server data loader behind the generated Rally SSR and WS load adapters.
+/// Rally calls this, then wraps page data in the Rally/Libero load result shape;
+/// focused tests also call it directly.
+pub fn load(
+  db: sqlight.Connection,
+) -> Result(List(GameSummary), runtime_load.LoadError) {
+  case games_sql.list_public_games(db:, team_filter: "") {
+    Ok(rows) -> Ok(list.map(rows, game_summary_from_row))
+    Error(sqlight.SqlightError(..)) ->
+      Error(runtime_load.LoadError(message: "Could not load standings."))
+  }
 }
 
 @target(erlang)
-fn init_effect() -> Effect(Message) {
-  effect.none()
+fn game_summary_from_row(row: games_sql.ListPublicGamesRow) -> GameSummary {
+  GameSummary(
+    id: row.id,
+    home: Team(row.home_code, row.home_name, row.home_slug),
+    away: Team(row.away_code, row.away_name, row.away_slug),
+    home_score: row.home_score,
+    away_score: row.away_score,
+    status: game_status(row.period, row.final),
+  )
+}
+
+@target(erlang)
+fn game_status(period: String, final: Int) -> GameStatus {
+  case final == 1, period {
+    True, _ -> Final
+    False, "Scheduled" -> Scheduled
+    False, _ -> Live(period)
+  }
 }

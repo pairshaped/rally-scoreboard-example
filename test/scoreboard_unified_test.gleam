@@ -1,19 +1,27 @@
 @target(erlang)
-import api/domain/game
-@target(erlang)
-import api/to_client.{type ToClient}
-@target(erlang)
-import api/to_server
-@target(erlang)
-import app_api
-@target(erlang)
-import app_ws
+import admin/pages/games as admin_games_page
 import authentication_context
+@target(erlang)
+import broadcasts
+@target(erlang)
+import generated/proute/public/page_input
+@target(erlang)
+import gleam/erlang/process
 @target(erlang)
 import gleam/list
 import gleam/option.{None, Some}
 import gleeunit
 import gleeunit/should
+@target(erlang)
+import public/pages/games/id_ as public_game_detail_page
+@target(erlang)
+import public/pages/standings as public_standings_page
+@target(erlang)
+import public/pages/teams/slug_ as public_team_detail_page
+@target(erlang)
+import rally/runtime/load as runtime_load
+@target(erlang)
+import rally/runtime/topics
 @target(erlang)
 import sqlight
 
@@ -35,22 +43,30 @@ pub fn normalize_display_name_test() {
 }
 
 @target(erlang)
-pub fn mark_final_returns_save_ack_and_game_update_test() {
+pub fn mark_final_returns_save_ack_payload_and_game_update_test() {
   let db = live_game_db()
 
-  let reply =
-    app_api.dispatch_reply(
-      db: db,
-      message: to_server.MarkFinal(1),
-      admin_authorized: True,
-    )
+  let result =
+    admin_games_page.handle(db, admin_games_page.AdminGamesMarkFinal(1))
+  let broadcast = broadcasts.game_updated_broadcast(db, 1)
 
-  case reply {
-    app_api.SaveReply(
-      result: Ok(Nil),
-      messages: [to_client.GameUpdated(updated)],
-    ) -> updated.status == game.Final
-    _ -> False
+  case result, broadcast {
+    Ok(admin_games_page.AdminGamesUpdate(
+      status: admin_games_page.AdminGamesFinal,
+      ..,
+    )),
+      Ok(broadcasts.TargetedEvent(
+        topics: [
+          broadcasts.AllGames,
+          broadcasts.AdminGames,
+          broadcasts.Game(1),
+          broadcasts.Team("toronto-towers"),
+          broadcasts.Team("montreal-meteors"),
+        ],
+        event: broadcasts.BroadcastGameUpdated(updated),
+      ))
+    -> updated.status == broadcasts.BroadcastFinal
+    _, _ -> False
   }
   |> should.equal(True)
 
@@ -58,22 +74,33 @@ pub fn mark_final_returns_save_ack_and_game_update_test() {
 }
 
 @target(erlang)
-pub fn update_score_returns_save_ack_and_game_update_test() {
+pub fn update_score_returns_save_ack_payload_and_game_update_test() {
   let db = final_game_db()
 
-  let reply =
-    app_api.dispatch_reply(
-      db: db,
-      message: to_server.UpdateScore(1, 5, 2, "Live"),
-      admin_authorized: True,
+  let result =
+    admin_games_page.handle(
+      db,
+      admin_games_page.AdminGamesUpdateScore(1, 5, 2, "Live"),
     )
+  let broadcast = broadcasts.game_updated_broadcast(db, 1)
 
-  case reply {
-    app_api.SaveReply(
-      result: Ok(Nil),
-      messages: [to_client.GameUpdated(updated)],
-    ) -> updated.status == game.Live("Live")
-    _ -> False
+  case result, broadcast {
+    Ok(admin_games_page.AdminGamesUpdate(
+      status: admin_games_page.AdminGamesLive("Live"),
+      ..,
+    )),
+      Ok(broadcasts.TargetedEvent(
+        topics: [
+          broadcasts.AllGames,
+          broadcasts.AdminGames,
+          broadcasts.Game(1),
+          broadcasts.Team("toronto-towers"),
+          broadcasts.Team("montreal-meteors"),
+        ],
+        event: broadcasts.BroadcastGameUpdated(updated),
+      ))
+    -> updated.status == broadcasts.BroadcastLive("Live")
+    _, _ -> False
   }
   |> should.equal(True)
 
@@ -81,87 +108,151 @@ pub fn update_score_returns_save_ack_and_game_update_test() {
 }
 
 @target(erlang)
-pub fn only_game_updates_are_global_mutation_broadcasts_test() {
-  let game_update =
-    to_client.GameUpdated(game.GameSnapshot(
-      id: 1,
-      home: game.Team("TOR", "Toronto Towers", "toronto-towers"),
-      away: game.Team("MTL", "Montreal Meteors", "montréal-meteors"),
-      home_score: 4,
-      away_score: 2,
-      status: game.Final,
-    ))
+pub fn rally_topics_exclude_origin_connection_test() {
+  process.flush_messages()
+  topics.start()
+  topics.join("origin-excluded-test")
 
-  app_ws.should_broadcast_live_update(
-    request: to_server.MarkFinal(1),
-    reply: game_update,
+  let frame = <<"hello">>
+  let selector = topics.frame_selector()
+
+  topics.broadcast_except_self("origin-excluded-test", frame)
+
+  process.selector_receive(selector, within: 100)
+  |> should.equal(Error(Nil))
+}
+
+@target(erlang)
+pub fn rally_topics_deliver_to_peer_connection_test() {
+  topics.start()
+  let topic = "peer-delivery-test"
+  let frame = <<"hello peer">>
+  let joined_subject = process.new_subject()
+  let result_subject = process.new_subject()
+
+  let _pid =
+    process.spawn(fn() {
+      topics.join(topic)
+      process.send(joined_subject, Nil)
+      case process.selector_receive(topics.frame_selector(), within: 1000) {
+        Ok(received) -> process.send(result_subject, received)
+        Error(_) -> process.send(result_subject, <<>>)
+      }
+    })
+
+  let assert Ok(Nil) = process.receive(joined_subject, 1000)
+
+  topics.join(topic)
+  topics.broadcast_except_self(topic, frame)
+
+  process.receive(result_subject, 1000)
+  |> should.equal(Ok(frame))
+}
+
+@target(erlang)
+pub fn page_topics_follow_route_params_test() {
+  let game_route = page_input.GamesIdRouteParams(id: "1")
+  let invalid_game_route = page_input.GamesIdRouteParams(id: "abc")
+  let team_route = page_input.TeamsSlugRouteParams(slug: "toronto-towers")
+
+  public_game_detail_page.topics(
+    game_route,
+    public_game_detail_page.Model(game: None),
   )
-  |> should.equal(True)
+  |> should.equal([broadcasts.Game(1)])
 
-  let games_loaded =
-    to_client.GamesLoaded([
-      game.PublicGameSummary(
-        id: 1,
-        home: game.Team("TOR", "Toronto Towers", "toronto-towers"),
-        away: game.Team("MTL", "Montreal Meteors", "montréal-meteors"),
+  public_game_detail_page.topics(
+    invalid_game_route,
+    public_game_detail_page.Model(game: None),
+  )
+  |> should.equal([])
+
+  public_game_detail_page.topics(
+    game_route,
+    public_game_detail_page.Model(
+      game: Some(public_game_detail_page.GameDetail(
+        id: 99,
+        home: public_game_detail_page.Team(
+          code: "TOR",
+          name: "Toronto Towers",
+          slug: "toronto-towers",
+        ),
+        away: public_game_detail_page.Team(
+          code: "MTL",
+          name: "Montreal Meteors",
+          slug: "montreal-meteors",
+        ),
         home_score: 4,
         away_score: 2,
-        status: game.Final,
-      ),
-    ])
-
-  app_ws.should_broadcast_live_update(
-    request: to_server.MarkFinal(1),
-    reply: games_loaded,
+        status: public_game_detail_page.Live("3rd"),
+      )),
+    ),
   )
-  |> should.equal(False)
+  |> should.equal([broadcasts.Game(1)])
+
+  public_team_detail_page.topics(
+    team_route,
+    public_team_detail_page.Model(team: None),
+  )
+  |> should.equal([broadcasts.Team("toronto-towers")])
+
+  public_team_detail_page.topics(
+    team_route,
+    public_team_detail_page.Model(
+      team: Some(
+        public_team_detail_page.TeamDetail(
+          code: "TOR",
+          name: "Toronto Towers",
+          slug: "different-loaded-slug",
+          wins: 0,
+          losses: 0,
+          points_for: 0,
+          points_against: 0,
+          recent_games: [],
+        ),
+      ),
+    ),
+  )
+  |> should.equal([broadcasts.Team("toronto-towers")])
 }
 
 @target(erlang)
-pub fn load_standings_returns_only_standings_test() {
+pub fn load_standings_returns_page_owned_game_summaries_test() {
   let db = live_game_db()
 
-  let replies =
-    app_api.dispatch(
-      db: db,
-      message: to_server.LoadStandings,
-      admin_authorized: False,
-    )
+  let result = public_standings_page.load(db)
 
-  case replies {
-    [to_client.StandingsLoaded(rows)] -> list.length(rows)
+  case result {
+    Ok(games) -> list.length(games)
     _ -> 0
   }
-  |> should.equal(2)
+  |> should.equal(1)
 
-  replies
-  |> has_toronto_standing(wins: 0, losses: 0, points_for: 0, points_against: 0)
+  result
+  |> has_toronto_game_summary(home_score: 4, away_score: 2)
   |> should.equal(True)
 
   let assert Ok(_) = sqlight.close(db)
 }
 
 @target(erlang)
-fn has_toronto_standing(
-  messages: List(ToClient),
-  wins wins: Int,
-  losses losses: Int,
-  points_for points_for: Int,
-  points_against points_against: Int,
+fn has_toronto_game_summary(
+  result: Result(
+    List(public_standings_page.GameSummary),
+    runtime_load.LoadError,
+  ),
+  home_score home_score: Int,
+  away_score away_score: Int,
 ) -> Bool {
-  list.any(messages, fn(message) {
-    case message {
-      to_client.StandingsLoaded(rows) ->
-        list.any(rows, fn(row) {
-          row.team_code == "TOR"
-          && row.wins == wins
-          && row.losses == losses
-          && row.points_for == points_for
-          && row.points_against == points_against
-        })
-      _ -> False
-    }
-  })
+  case result {
+    Ok(games) ->
+      list.any(games, fn(game) {
+        game.home.code == "TOR"
+        && game.home_score == home_score
+        && game.away_score == away_score
+      })
+    Error(_) -> False
+  }
 }
 
 @target(erlang)
