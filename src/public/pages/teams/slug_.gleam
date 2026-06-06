@@ -139,7 +139,7 @@ pub fn team_loaded(
   model _model: Model,
   team team: TeamDetail,
 ) -> #(Model, Effect(Message)) {
-  apply_loaded(team)
+  #(Model(team: Some(team)), effect.none())
 }
 
 @target(javascript)
@@ -162,7 +162,7 @@ fn map_load_result(
   case result {
     Ok(PublicTeamDetailLoaded(team)) -> Ok(team)
     Error([server.LoadError(message: message), ..]) ->
-      Error(LoadError(message: message))
+      Error(LoadError(message:))
     Error([]) -> Error(LoadError(message: "Could not load team."))
   }
 }
@@ -174,13 +174,9 @@ fn map_load_result(
 pub fn loaded_from_wire(result: Result(LoadResult, List(String))) -> Message {
   case result {
     Ok(PublicTeamDetailLoaded(team)) -> Loaded(Ok(team))
-    Error([message, ..]) -> Loaded(Error(LoadError(message: message)))
+    Error([message, ..]) -> Loaded(Error(LoadError(message:)))
     Error([]) -> Loaded(Error(LoadError(message: "Could not load team.")))
   }
-}
-
-fn apply_loaded(team: TeamDetail) -> #(Model, Effect(Message)) {
-  #(Model(team: Some(team)), effect.none())
 }
 
 // UPDATE
@@ -193,7 +189,7 @@ pub fn update(
   msg msg: Message,
 ) -> #(Model, Effect(Message)) {
   case msg {
-    Loaded(Ok(team)) -> apply_loaded(team)
+    Loaded(Ok(team)) -> #(Model(team: Some(team)), effect.none())
     Loaded(Error(_)) -> #(model, effect.none())
     NavigateTeam(_) | NavigateGame(_) -> #(model, effect.none())
   }
@@ -483,7 +479,7 @@ pub fn load(
   db: sqlight.Connection,
   slug: String,
 ) -> Result(TeamDetail, LoadError) {
-  case teams_sql.get_team_by_slug(db: db, slug: slug) {
+  case teams_sql.get_team_by_slug(db:, slug:) {
     Ok([row, ..]) -> load_team_games(db, row)
     Ok([]) -> Error(LoadError(message: "Team not found."))
     Error(sqlight.SqlightError(..)) ->
@@ -498,7 +494,7 @@ fn load_team_games(
 ) -> Result(TeamDetail, LoadError) {
   let team_code = optional_string(row.code)
 
-  case games_sql.list_public_games(db: db, team_filter: team_code) {
+  case games_sql.list_public_games(db:, team_filter: team_code) {
     Ok(games) ->
       Ok(TeamDetail(
         code: team_code,

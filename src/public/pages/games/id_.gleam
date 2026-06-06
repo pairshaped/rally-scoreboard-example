@@ -119,7 +119,7 @@ pub fn game_loaded(
   model _model: Model,
   game game: GameDetail,
 ) -> #(Model, Effect(Message)) {
-  apply_loaded(game)
+  #(Model(game: Some(game)), effect.none())
 }
 
 @target(javascript)
@@ -146,7 +146,7 @@ fn map_load_result(
   case result {
     Ok(PublicGameDetailLoaded(game)) -> Ok(game)
     Error([server.LoadError(message: message), ..]) ->
-      Error(LoadError(message: message))
+      Error(LoadError(message:))
     Error([]) -> Error(LoadError(message: "Could not load game."))
   }
 }
@@ -158,13 +158,9 @@ fn map_load_result(
 pub fn loaded_from_wire(result: Result(LoadResult, List(String))) -> Message {
   case result {
     Ok(PublicGameDetailLoaded(game)) -> Loaded(Ok(game))
-    Error([message, ..]) -> Loaded(Error(LoadError(message: message)))
+    Error([message, ..]) -> Loaded(Error(LoadError(message:)))
     Error([]) -> Loaded(Error(LoadError(message: "Could not load game.")))
   }
-}
-
-fn apply_loaded(game: GameDetail) -> #(Model, Effect(Message)) {
-  #(Model(game: Some(game)), effect.none())
 }
 
 // UPDATE
@@ -177,7 +173,7 @@ pub fn update(
   msg msg: Message,
 ) -> #(Model, Effect(Message)) {
   case msg {
-    Loaded(Ok(game)) -> apply_loaded(game)
+    Loaded(Ok(game)) -> #(Model(game: Some(game)), effect.none())
     Loaded(Error(_)) -> #(model, effect.none())
     NavigateTeam(_) -> #(model, effect.none())
   }
@@ -322,7 +318,7 @@ pub fn load(
   db: sqlight.Connection,
   game_id: Int,
 ) -> Result(GameDetail, LoadError) {
-  case games_sql.get_game(db: db, game_id: game_id) {
+  case games_sql.get_game(db:, game_id:) {
     Ok([row, ..]) -> Ok(game_detail_from_row(row))
     Ok([]) -> Error(LoadError(message: "Game not found."))
     Error(sqlight.SqlightError(..)) ->

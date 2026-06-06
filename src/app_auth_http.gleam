@@ -21,8 +21,8 @@ pub fn request_auth(
   session session: session.AuthSession,
 ) -> auth_http.RequestAuth(app_auth.AuthenticatedUser) {
   auth_http.RequestAuth(
-    session: session,
-    load_user: fn(user_id) { app_auth.user_by_id(db: db, user_id: user_id) },
+    session:,
+    load_user: fn(user_id) { app_auth.user_by_id(db:, user_id:) },
     can_access: app_auth.can_access_admin,
   )
 }

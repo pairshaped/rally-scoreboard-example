@@ -22,7 +22,7 @@ import page_context.{PageContext}
 /// The app configures shared state and shell rendering; Rally owns lifecycle.
 pub fn main() -> Nil {
   browser_app.start_admin_mount(browser_app.AdminMountConfig(
-    page_context: PageContext,
+    page_context: fn(_shared_state) { PageContext },
     shared_state: fn(current_path, dark_mode) {
       AdminClientSharedState(
         authentication_context: browser_mount.boot_authentication_context(),
@@ -38,8 +38,10 @@ pub fn main() -> Nil {
     set_dark_mode: fn(shared_state, dark_mode) {
       AdminClientSharedState(..shared_state, dark_mode:)
     },
-    update_page: fn(page, message) { pages.update(PageContext, page, message) },
-    view: view,
+    update_page: fn(page_context, page, message) {
+      pages.update(page_context, page, message)
+    },
+    view:,
   ))
 }
 
@@ -61,7 +63,7 @@ fn view(
     current_path: model.shared_state.active_section,
     dark_mode: model.shared_state.dark_mode,
     authentication_context: model.shared_state.authentication_context,
-    on_dark_mode_change: on_dark_mode_change,
+    on_dark_mode_change:,
     content: pages.view(model.page) |> element.map(on_page),
   )
 }

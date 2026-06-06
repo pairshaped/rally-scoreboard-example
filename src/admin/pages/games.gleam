@@ -140,7 +140,7 @@ pub fn admin_games_loaded(
   model _model: Model,
   games games: List(AdminGameSummary),
 ) -> #(Model, Effect(Message)) {
-  apply_loaded(games)
+  #(Model(games:), effect.none())
 }
 
 @target(javascript)
@@ -162,7 +162,7 @@ fn map_load_result(
   case result {
     Ok(AdminGamesLoadResult(games)) -> Ok(games)
     Error([server.LoadError(message: message), ..]) ->
-      Error(LoadError(message: message))
+      Error(LoadError(message:))
     Error([]) -> Error(LoadError(message: "Could not load admin games."))
   }
 }
@@ -173,8 +173,8 @@ fn map_load_result(
 /// context, then pass the result through the Libero codec boundary.
 pub fn load_wire(db: sqlight.Connection) -> Result(LoadResult, List(String)) {
   case load(db) {
-    Ok(games) -> Ok(AdminGamesLoadResult(games: games))
-    Error(LoadError(message: message)) -> Error([message])
+    Ok(games) -> Ok(AdminGamesLoadResult(games:))
+    Error(LoadError(message:)) -> Error([message])
   }
 }
 
@@ -185,14 +185,10 @@ pub fn load_wire(db: sqlight.Connection) -> Result(LoadResult, List(String)) {
 pub fn loaded_from_wire(result: Result(LoadResult, List(String))) -> Message {
   case result {
     Ok(AdminGamesLoadResult(games)) -> Loaded(Ok(games))
-    Error([message, ..]) -> Loaded(Error(LoadError(message: message)))
+    Error([message, ..]) -> Loaded(Error(LoadError(message:)))
     Error([]) ->
       Loaded(Error(LoadError(message: "Could not load admin games.")))
   }
-}
-
-fn apply_loaded(games: List(AdminGameSummary)) -> #(Model, Effect(Message)) {
-  #(Model(games: games), effect.none())
 }
 
 // UPDATE
@@ -206,7 +202,7 @@ pub fn update(
   msg msg: Message,
 ) -> #(Model, Effect(Message)) {
   case msg {
-    Loaded(Ok(games)) -> apply_loaded(games)
+    Loaded(Ok(games)) -> #(Model(games:), effect.none())
     Loaded(Error(_)) -> #(model, effect.none())
     Saved(Ok(game)) -> #(
       upsert_game(model, game_update_summary(game)),
@@ -356,7 +352,7 @@ fn upsert_game(model: Model, game: AdminGameSummary) -> Model {
       }
     })
 
-  Model(games: games)
+  Model(games:)
 }
 
 fn game_update_summary(game: GameUpdate) -> AdminGameSummary {
@@ -463,7 +459,7 @@ fn map_save_result(
   case result {
     Ok(game) -> Ok(game)
     Error([server.SaveError(message: message, ..), ..]) ->
-      Error(SaveError(message: message))
+      Error(SaveError(message:))
     Error([]) -> Error(SaveError(message: "Could not save game."))
   }
 }
@@ -477,7 +473,7 @@ fn map_save_result(
 pub fn load(
   db: sqlight.Connection,
 ) -> Result(List(AdminGameSummary), LoadError) {
-  case games_sql.list_admin_games(db: db) {
+  case games_sql.list_admin_games(db:) {
     Ok(rows) -> Ok(list.map(rows, admin_game_summary_from_row))
     Error(sqlight.SqlightError(..)) ->
       Error(LoadError(message: "Could not load games."))
@@ -497,11 +493,11 @@ pub fn handle(
     AdminGamesUpdateScore(game_id, home_score, away_score, period) ->
       case
         games_sql.update_game_score(
-          db: db,
-          home_score: home_score,
-          away_score: away_score,
-          period: period,
-          game_id: game_id,
+          db:,
+          home_score:,
+          away_score:,
+          period:,
+          game_id:,
         )
       {
         Ok([row, ..]) -> Ok(game_update_from_score_row(row))
@@ -511,7 +507,7 @@ pub fn handle(
       }
 
     AdminGamesMarkFinal(game_id) ->
-      case games_sql.update_game_final(db: db, game_id: game_id) {
+      case games_sql.update_game_final(db:, game_id:) {
         Ok([row, ..]) -> Ok(game_update_from_final_row(row))
         Ok([]) -> Error(SaveError(message: "Game not found."))
         Error(sqlight.SqlightError(..)) ->

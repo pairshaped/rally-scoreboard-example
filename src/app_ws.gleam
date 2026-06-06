@@ -43,5 +43,5 @@ pub fn handler(
   msg msg: WebsocketMessage(BitArray),
   conn conn: WebsocketConnection,
 ) -> Next(State, BitArray) {
-  server_ws.handler(state: state, msg: msg, conn: conn)
+  server_ws.handler(state:, msg:, conn:)
 }

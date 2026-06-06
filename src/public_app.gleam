@@ -22,7 +22,7 @@ import public/client_shared_state.{
 /// The app configures shared state and shell rendering; Rally owns lifecycle.
 pub fn main() -> Nil {
   browser_app.start_public_mount(browser_app.PublicMountConfig(
-    page_context: PageContext,
+    page_context: fn(_shared_state) { PageContext },
     shared_state: fn(current_path, dark_mode) {
       PublicClientSharedState(
         league_name: "Scoreboard",
@@ -38,8 +38,10 @@ pub fn main() -> Nil {
     set_dark_mode: fn(shared_state, dark_mode) {
       PublicClientSharedState(..shared_state, dark_mode:)
     },
-    update_page: pages.update,
-    view: view,
+    update_page: fn(_page_context, page, message) {
+      pages.update(page, message)
+    },
+    view:,
   ))
 }
 
@@ -62,7 +64,7 @@ fn view(
     dark_mode: model.shared_state.dark_mode,
     authentication_context: model.shared_state.authentication_context,
     can_access_admin: model.shared_state.can_access_admin,
-    on_dark_mode_change: on_dark_mode_change,
+    on_dark_mode_change:,
     content: pages.view(model.page) |> element.map(on_page),
   )
 }

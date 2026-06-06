@@ -131,7 +131,7 @@ pub fn games_loaded(
   model _model: Model,
   games games: List(GameSummary),
 ) -> #(Model, Effect(Message)) {
-  apply_loaded(games)
+  #(Model(games:), effect.none())
 }
 
 @target(javascript)
@@ -154,7 +154,7 @@ fn map_load_result(
   case result {
     Ok(PublicStandingsLoaded(games)) -> Ok(games)
     Error([server.LoadError(message: message), ..]) ->
-      Error(LoadError(message: message))
+      Error(LoadError(message:))
     Error([]) -> Error(LoadError(message: "Could not load standings."))
   }
 }
@@ -166,13 +166,9 @@ fn map_load_result(
 pub fn loaded_from_wire(result: Result(LoadResult, List(String))) -> Message {
   case result {
     Ok(PublicStandingsLoaded(games)) -> Loaded(Ok(games))
-    Error([message, ..]) -> Loaded(Error(LoadError(message: message)))
+    Error([message, ..]) -> Loaded(Error(LoadError(message:)))
     Error([]) -> Loaded(Error(LoadError(message: "Could not load standings.")))
   }
-}
-
-fn apply_loaded(games: List(GameSummary)) -> #(Model, Effect(Message)) {
-  #(Model(games: games), effect.none())
 }
 
 // UPDATE
@@ -185,7 +181,7 @@ pub fn update(
   msg msg: Message,
 ) -> #(Model, Effect(Message)) {
   case msg {
-    Loaded(Ok(games)) -> apply_loaded(games)
+    Loaded(Ok(games)) -> #(Model(games:), effect.none())
     Loaded(Error(_)) -> #(model, effect.none())
     NavigateTeam(_) -> #(model, effect.none())
   }
@@ -220,7 +216,7 @@ pub fn game_updated(
       }
     })
 
-  #(Model(games: games), effect.none())
+  #(Model(games:), effect.none())
 }
 
 // VIEW
@@ -436,7 +432,7 @@ fn section_head(title: String) -> Element(msg) {
 /// Rally calls this, then wraps page data in the Rally/Libero load result shape;
 /// focused tests also call it directly.
 pub fn load(db: sqlight.Connection) -> Result(List(GameSummary), LoadError) {
-  case games_sql.list_public_games(db: db, team_filter: "") {
+  case games_sql.list_public_games(db:, team_filter: "") {
     Ok(rows) -> Ok(list.map(rows, game_summary_from_row))
     Error(sqlight.SqlightError(..)) ->
       Error(LoadError(message: "Could not load standings."))

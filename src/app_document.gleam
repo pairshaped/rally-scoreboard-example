@@ -40,7 +40,7 @@ pub fn response(
   db db: sqlight.Connection,
   session session: session.AuthSession,
 ) -> Response(ResponseData) {
-  html(req: req, path: path, db: db, session: session)
+  html(req:, path:, db:, session:)
   |> document.html_response
 }
 
@@ -51,27 +51,27 @@ fn html(
   db db: sqlight.Connection,
   session session: session.AuthSession,
 ) -> String {
-  let mount = document.standard_mount(path: path, admin_prefix: "/admin")
+  let mount = document.standard_mount(path:, admin_prefix: "/admin")
   let entrypoint = document.standard_entrypoint(mount)
   let dark_mode = theme.request_dark_mode(req)
   let ssr_app = case mount {
     document.Admin ->
       app_ssr.admin(
-        req: req,
-        path: path,
-        db: db,
+        req:,
+        path:,
+        db:,
         query_params: admin_query_params(req),
-        dark_mode: dark_mode,
-        session: session,
+        dark_mode:,
+        session:,
       )
     document.Public ->
       app_ssr.public(
-        req: req,
-        path: path,
-        db: db,
+        req:,
+        path:,
+        db:,
         query_params: public_query_params(req),
-        dark_mode: dark_mode,
-        session: session,
+        dark_mode:,
+        session:,
       )
   }
   let app_attrs =
@@ -105,7 +105,7 @@ fn public_query_params(
   req: Request(Connection),
 ) -> public_page_input.QueryParams {
   document.query_params(
-    req: req,
+    req:,
     from_values: fn(values) { public_page_input.QueryParams(values:) },
     empty: public_page_input.empty_query_params,
   )
@@ -116,7 +116,7 @@ fn admin_query_params(
   req: Request(Connection),
 ) -> admin_page_input.QueryParams {
   document.query_params(
-    req: req,
+    req:,
     from_values: fn(values) { admin_page_input.QueryParams(values:) },
     empty: admin_page_input.empty_query_params,
   )

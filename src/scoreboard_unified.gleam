@@ -45,11 +45,11 @@ fn handle_admin_path(
   context context: bootstrap.Context,
 ) -> Response(ResponseData) {
   auth_http.protect(
-    req: req,
+    req:,
     auth: app_auth_http.request_auth(db: context.db, session: context.session),
     render: fn(_user) {
       app_document.response(
-        req: req,
+        req:,
         path: req.path,
         db: context.db,
         session: context.session,
@@ -64,12 +64,12 @@ fn handle_auth_path(
   context context: bootstrap.Context,
 ) -> Result(Response(ResponseData), Nil) {
   auth_http.route_code_auth(
-    req: req,
-    context: context,
+    req:,
+    context:,
     routes: auth_http.CodeAuthRoutes(
       session: fn(context: bootstrap.Context) { context.session },
       verify_code: fn(code, context: bootstrap.Context) {
-        app_auth.verify_sign_in_code(db: context.db, code: code)
+        app_auth.verify_sign_in_code(db: context.db, code:)
       },
       sign_in_default_return_to: "/admin/games",
       sign_in_return_to: app_auth_http.admin_return_to,
@@ -86,7 +86,7 @@ fn handle_websocket_path(
 ) -> Response(ResponseData) {
   let admin_user = case
     auth_http.authorized_user(
-      req: req,
+      req:,
       auth: app_auth_http.request_auth(db: context.db, session: context.session),
     )
   {
@@ -107,7 +107,7 @@ fn handle_public_path(
   context context: bootstrap.Context,
 ) -> Response(ResponseData) {
   app_document.response(
-    req: req,
+    req:,
     path: req.path,
     db: context.db,
     session: context.session,

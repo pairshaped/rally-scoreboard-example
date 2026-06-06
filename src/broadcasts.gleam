@@ -86,7 +86,7 @@ pub fn game_updated_broadcast(
   db: sqlight.Connection,
   game_id: Int,
 ) -> Result(TargetedEvent, Nil) {
-  case game_detail_sql.get_game(db: db, game_id: game_id) {
+  case game_detail_sql.get_game(db:, game_id:) {
     Ok([row, ..]) ->
       row
       |> game_updated_snapshot

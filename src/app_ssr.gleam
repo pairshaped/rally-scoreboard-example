@@ -65,7 +65,7 @@ pub fn public(
   session session: session.AuthSession,
 ) -> SsrApp {
   let #(authentication_context, can_access_admin) =
-    boot_identity(req: req, db: db, session: session)
+    boot_identity(req:, db:, session:)
 
   public_render(
     path:,
@@ -100,16 +100,16 @@ pub fn public_render(
   SsrApp(
     html: app_shell.public(
       current_path: page.current_path,
-      dark_mode: dark_mode,
-      authentication_context: authentication_context,
-      can_access_admin: can_access_admin,
+      dark_mode:,
+      authentication_context:,
+      can_access_admin:,
       on_dark_mode_change: fn(_) { Nil },
       content: page.content,
     )
       |> element.to_string,
     hydration: page.hydration,
-    authentication_context: authentication_context,
-    can_access_admin: can_access_admin,
+    authentication_context:,
+    can_access_admin:,
   )
 }
 
@@ -127,7 +127,7 @@ pub fn admin(
   session session: session.AuthSession,
 ) -> SsrApp {
   let #(authentication_context, can_access_admin) =
-    boot_identity(req: req, db: db, session: session)
+    boot_identity(req:, db:, session:)
 
   admin_render(
     path:,
@@ -162,15 +162,15 @@ pub fn admin_render(
   SsrApp(
     html: app_shell.admin(
       current_path: page.current_path,
-      dark_mode: dark_mode,
-      authentication_context: authentication_context,
+      dark_mode:,
+      authentication_context:,
       on_dark_mode_change: fn(_) { Nil },
       content: page.content,
     )
       |> element.to_string,
     hydration: page.hydration,
-    authentication_context: authentication_context,
-    can_access_admin: can_access_admin,
+    authentication_context:,
+    can_access_admin:,
   )
 }
 
@@ -184,8 +184,8 @@ fn boot_identity(
 ) -> #(Option(AuthenticationContext), Bool) {
   case
     auth_http.authenticated_user(
-      req: req,
-      auth: app_auth_http.request_auth(db: db, session: session),
+      req:,
+      auth: app_auth_http.request_auth(db:, session:),
     )
   {
     Ok(user) -> #(Some(user.context), app_auth.can_access_admin(user))
