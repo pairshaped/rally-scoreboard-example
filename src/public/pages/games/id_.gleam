@@ -17,24 +17,16 @@ import sqlight
 
 // TYPES
 
-/// Libero wire payload nested in LoadResult.
-/// Generated codecs include this because PublicGameDetailLoaded carries game
-/// status values across the browser/server boundary.
 pub type GameStatus {
   Scheduled
   Live(period: String)
   Final
 }
 
-/// Libero wire payload nested in GameDetail.
-/// Generated codecs include this because PublicGameDetailLoaded carries teams
-/// across the browser/server boundary.
 pub type Team {
   Team(code: String, name: String, slug: String)
 }
 
-/// Libero wire payload nested in LoadResult.
-/// Rally load responses send this through generated client/server protocol code.
 pub type GameDetail {
   GameDetail(
     id: Int,
@@ -46,29 +38,19 @@ pub type GameDetail {
   )
 }
 
-/// Rally load request message.
-/// generated/rally browser and server protocol code encodes this for detail page
-/// load requests, and load_route builds it from Proute route params.
+/// Server request to load one game by id.
 pub type ServerMsg {
   PublicGameDetailLoad(game_id: Int)
 }
 
-/// Rally load response payload.
-/// generated/rally and Libero code encode/decode this across SSR and websocket
-/// load paths before boot code maps it into Message.
 pub type LoadResult {
   PublicGameDetailLoaded(game: GameDetail)
 }
 
-/// Proute page model.
-/// generated/proute/public/pages stores this inside GamesIdPage.
 pub type Model {
   Model(game: Option(GameDetail))
 }
 
-/// Proute page message.
-/// generated/proute/public/pages wraps this as GamesIdMsg and routes it back
-/// into this module's update function.
 pub type Message {
   Loaded(Result(GameDetail, runtime_load.LoadError))
   NavigateTeam(slug: String)
@@ -89,7 +71,7 @@ pub fn init(
 ) -> #(Model, Effect(Message)) {
   #(
     initial_model(page_shared_state, route_params, query_params),
-    alert_effect(route_params.id),
+    effect.from(fn(_dispatch) { show_game_detail_alert(route_params.id) }),
   )
 }
 
@@ -105,18 +87,15 @@ pub fn initial_model(
 }
 
 @target(javascript)
-fn alert_effect(id: String) -> Effect(Message) {
-  effect.from(fn(_dispatch) { show_game_detail_alert(id) })
-}
-
-@target(erlang)
-fn alert_effect(_id: String) -> Effect(Message) {
-  effect.none()
-}
-
-@target(javascript)
+/// Browser-only demo alert used by this page's optional init hook.
 @external(javascript, "./id__ffi.mjs", "show_game_detail_alert")
 fn show_game_detail_alert(id: String) -> Nil
+
+@target(erlang)
+/// Server-side no-op so SSR can compile the shared init code.
+fn show_game_detail_alert(_id: String) -> Nil {
+  Nil
+}
 
 // UPDATE
 
@@ -146,6 +125,7 @@ pub fn apply_push(
   }
 }
 
+/// Subscribes the game detail page to the game named by its route id.
 pub fn topics(
   route_params: page_input.GamesIdRouteParams,
   _model: Model,
@@ -156,6 +136,7 @@ pub fn topics(
   }
 }
 
+/// Applies a broadcast snapshot when it matches the loaded game detail.
 pub fn game_updated(
   model model: Model,
   game game: broadcasts.GameSnapshot,
@@ -172,9 +153,6 @@ pub fn game_updated(
 
 // VIEW
 
-/// Proute page view function.
-/// generated/proute/public/pages calls this and wraps emitted messages back into
-/// the generated pages.Message union.
 pub fn view(model model: Model) -> Element(Message) {
   html.main([], [
     html.section([attribute.class("panel")], [

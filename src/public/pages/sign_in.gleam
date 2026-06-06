@@ -6,15 +6,10 @@ import lustre/element.{type Element}
 import lustre/element/html
 import public/page_shared_state.{type PublicPageSharedState}
 
-/// Proute page model for the sign-in route.
-/// generated/proute/public/pages stores this inside the SignInPage variant.
 pub type Model {
   Model(return_to: String, invalid: Bool, sent: Bool)
 }
 
-/// Proute page message for the sign-in route.
-/// generated/proute/public/pages wraps this as SignInMsg and routes it back into
-/// this module's update function.
 pub type Message {
   NoOp
 }
@@ -43,8 +38,6 @@ pub fn update(
   #(model, effect.none())
 }
 
-/// Proute page view function for the sign-in route.
-/// generated/proute/public/pages calls this when rendering SignInPage.
 pub fn view(model model: Model) -> Element(Message) {
   html.section([attribute.class("panel")], [
     html.h1([], [html.text("Sign in")]),
@@ -128,6 +121,7 @@ fn find_query(
   })
 }
 
+/// Keeps post-sign-in redirects inside the admin route space.
 fn safe_admin_return_to(path: Result(String, Nil)) -> String {
   case path {
     Ok("/admin") -> "/admin"

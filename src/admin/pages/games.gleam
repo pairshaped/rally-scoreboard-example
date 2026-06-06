@@ -20,17 +20,12 @@ import generated/rally/server
 
 // TYPES
 
-/// Libero wire payload nested in admin load and save results.
-/// Generated codecs include this because admin game summaries and updates carry
-/// status values across the browser/server boundary.
 pub type GameStatus {
   AdminGamesScheduled
   AdminGamesLive(period: String)
   AdminGamesFinal
 }
 
-/// Libero wire payload nested in LoadResult.
-/// Rally load responses send this through generated client/server protocol code.
 pub type AdminGameSummary {
   AdminGamesSummary(
     id: Int,
@@ -57,9 +52,6 @@ pub type GameUpdate {
   )
 }
 
-/// Rally load response payload.
-/// generated/rally and Libero code encode/decode this across SSR and websocket
-/// load paths before boot code maps it into Message.
 pub type LoadResult {
   AdminGamesLoadResult(games: List(AdminGameSummary))
 }
@@ -71,9 +63,7 @@ pub type SaveError {
   SaveError(message: String)
 }
 
-/// Rally server message for admin load and mutation requests.
-/// generated/rally browser and server protocol code encodes this for websocket
-/// frames, and app_ws passes decoded values into handle.
+/// Server requests for the admin games page.
 pub type ServerMsg {
   AdminGamesLoad
   AdminGamesUpdateScore(
@@ -85,16 +75,10 @@ pub type ServerMsg {
   AdminGamesMarkFinal(game_id: Int)
 }
 
-/// Proute page model.
-/// generated/proute/admin/pages stores this inside AdminHomePage and
-/// AdminGamesPage.
 pub type Model {
   Model(games: List(AdminGameSummary))
 }
 
-/// Proute page message.
-/// generated/proute/admin/pages wraps this as AdminHomeMsg or AdminGamesMsg and
-/// routes it back into this module's update function.
 pub type Message {
   AdjustAway(id: Int, home_score: Int, away_score: Int, delta: Int)
   AdjustHome(id: Int, home_score: Int, away_score: Int, delta: Int)
@@ -151,10 +135,12 @@ pub fn apply_push(
   }
 }
 
+/// Subscribes the admin board to private admin game updates.
 pub fn topics(_model: Model) -> List(broadcasts.Topic) {
   [broadcasts.admin_games_topic()]
 }
 
+/// Applies one admin game update to the loaded admin games list.
 pub fn game_updated(
   model model: Model,
   game game: GameUpdate,
@@ -164,9 +150,6 @@ pub fn game_updated(
 
 // VIEW
 
-/// Proute page view function.
-/// generated/proute/admin/pages calls this and wraps emitted messages back into
-/// the generated pages.Message union.
 pub fn view(model model: Model) -> Element(Message) {
   view_games(
     games: model.games,
@@ -329,6 +312,7 @@ fn status_badge(status: GameStatus) -> Element(msg) {
 }
 
 @target(javascript)
+/// Sends browser score mutations to the generated Rally save effect.
 fn message_effect(msg: Message) -> Effect(Message) {
   case msg {
     AdjustAway(id, home_score, away_score, delta) ->
@@ -361,6 +345,7 @@ fn message_effect(msg: Message) -> Effect(Message) {
 }
 
 @target(erlang)
+/// Server-side no-op because admin mutations are handled in `handle`.
 fn message_effect(_msg: Message) -> Effect(Message) {
   effect.none()
 }
@@ -375,6 +360,7 @@ fn clamp_score(score: Int) -> Int {
 }
 
 @target(javascript)
+/// Converts transport save failures into the page-local save error.
 fn map_save_result(
   result: Result(GameUpdate, List(server.SaveError)),
 ) -> Result(GameUpdate, SaveError) {
@@ -438,6 +424,7 @@ pub fn handle(
 }
 
 @target(erlang)
+/// Builds the targeted broadcast emitted after a successful admin save.
 pub fn after_save(
   db: sqlight.Connection,
   game: GameUpdate,

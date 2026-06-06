@@ -21,24 +21,16 @@ import sqlight
 
 // TYPES
 
-/// Libero wire payload nested in LoadResult.
-/// Generated codecs include this because PublicTeamDetailLoaded carries game
-/// status values across the browser/server boundary.
 pub type GameStatus {
   Scheduled
   Live(period: String)
   Final
 }
 
-/// Libero wire payload nested in TeamDetail and GameSummary.
-/// Generated codecs include this because PublicTeamDetailLoaded carries team
-/// values across the browser/server boundary.
 pub type Team {
   Team(code: String, name: String, slug: String)
 }
 
-/// Libero wire payload nested in TeamDetail.
-/// Rally load responses send this through generated client/server protocol code.
 pub type GameSummary {
   GameSummary(
     id: Int,
@@ -50,8 +42,6 @@ pub type GameSummary {
   )
 }
 
-/// Libero wire payload nested in LoadResult.
-/// Rally load responses send this through generated client/server protocol code.
 pub type TeamDetail {
   TeamDetail(
     code: String,
@@ -65,29 +55,19 @@ pub type TeamDetail {
   )
 }
 
-/// Rally load request message.
-/// generated/rally browser and server protocol code encodes this for team detail
-/// load requests, and load_route builds it from Proute route params.
+/// Server request to load one team by slug.
 pub type ServerMsg {
   PublicTeamDetailLoad(slug: String)
 }
 
-/// Rally load response payload.
-/// generated/rally and Libero code encode/decode this across SSR and websocket
-/// load paths before boot code maps it into Message.
 pub type LoadResult {
   PublicTeamDetailLoaded(team: TeamDetail)
 }
 
-/// Proute page model.
-/// generated/proute/public/pages stores this inside TeamsSlugPage.
 pub type Model {
   Model(team: Option(TeamDetail))
 }
 
-/// Proute page message.
-/// generated/proute/public/pages wraps this as TeamsSlugMsg and routes it back
-/// into this module's update function.
 pub type Message {
   Loaded(Result(TeamDetail, runtime_load.LoadError))
   NavigateTeam(slug: String)
@@ -133,6 +113,7 @@ pub fn apply_push(
   }
 }
 
+/// Subscribes the team detail page to the team named by its route slug.
 pub fn topics(
   route_params: page_input.TeamsSlugRouteParams,
   _model: Model,
@@ -140,6 +121,7 @@ pub fn topics(
   [broadcasts.team_topic(route_params.slug)]
 }
 
+/// Applies a broadcast game snapshot to the loaded team detail.
 pub fn game_updated(
   model model: Model,
   game game: broadcasts.GameSnapshot,
@@ -155,9 +137,6 @@ pub fn game_updated(
 
 // VIEW
 
-/// Proute page view function.
-/// generated/proute/public/pages calls this and wraps emitted messages back into
-/// the generated pages.Message union.
 pub fn view(model model: Model) -> Element(Message) {
   html.main([], [
     view_team_detail(model.team, fn(slug) { NavigateTeam(slug:) }, fn(id) {
@@ -168,6 +147,7 @@ pub fn view(model model: Model) -> Element(Message) {
 
 // HELPERS
 
+/// Applies a game update only when it affects the loaded team.
 fn apply_game_updated(
   team: TeamDetail,
   snapshot: broadcasts.GameSnapshot,
@@ -176,6 +156,7 @@ fn apply_game_updated(
   apply_team_game_update(team, snapshot)
 }
 
+/// Checks whether a broadcast game includes the loaded team.
 fn game_belongs_to_team(
   team_code: String,
   snapshot: broadcasts.GameSnapshot,
@@ -189,6 +170,7 @@ fn game_belongs_to_team(
   home_code == team_code || away_code == team_code
 }
 
+/// Updates the team's recent games and record from one game snapshot.
 fn apply_team_game_update(
   team: TeamDetail,
   snapshot: broadcasts.GameSnapshot,

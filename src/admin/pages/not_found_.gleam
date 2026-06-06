@@ -5,12 +5,10 @@ import lustre/effect.{type Effect}
 import lustre/element.{type Element}
 import lustre/element/html
 
-/// Proute page model for unmatched admin routes.
 pub type Model {
   Model(title: String)
 }
 
-/// Proute page message for unmatched admin routes.
 pub type Message {
   NoOp
 }
@@ -32,8 +30,6 @@ pub fn update(
   #(model, effect.none())
 }
 
-/// Proute page view function for unmatched admin routes.
-/// generated/proute/admin/pages calls this when rendering NotFoundPage.
 pub fn view(model model: Model) -> Element(Message) {
   html.main([], [
     html.section([attribute.class("panel")], [

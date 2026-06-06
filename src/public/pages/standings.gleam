@@ -19,24 +19,16 @@ import sqlight
 
 // TYPES
 
-/// Libero wire payload nested in LoadResult.
-/// Generated codecs include this because PublicStandingsLoaded carries game
-/// status values across the browser/server boundary.
 pub type GameStatus {
   Scheduled
   Live(period: String)
   Final
 }
 
-/// Libero wire payload nested in GameSummary.
-/// Generated codecs include this because PublicStandingsLoaded carries teams
-/// across the browser/server boundary.
 pub type Team {
   Team(code: String, name: String, slug: String)
 }
 
-/// Libero wire payload nested in LoadResult.
-/// Rally load responses send this through generated client/server protocol code.
 pub type GameSummary {
   GameSummary(
     id: Int,
@@ -63,29 +55,19 @@ pub type StandingRow {
   )
 }
 
-/// Rally load request message.
-/// generated/rally browser and server protocol code encodes this for standings
-/// load requests, and load_route builds it for the Proute route.
+/// Server request to load standings data.
 pub type ServerMsg {
   PublicStandingsLoad
 }
 
-/// Rally load response payload.
-/// generated/rally and Libero code encode/decode this across SSR and websocket
-/// load paths before boot code maps it into Message.
 pub type LoadResult {
   PublicStandingsLoaded(games: List(GameSummary))
 }
 
-/// Proute page model.
-/// generated/proute/public/pages stores this inside StandingsPage.
 pub type Model {
   Model(games: List(GameSummary))
 }
 
-/// Proute page message.
-/// generated/proute/public/pages wraps this as StandingsMsg and routes it back
-/// into this module's update function.
 pub type Message {
   Loaded(Result(List(GameSummary), runtime_load.LoadError))
   NavigateTeam(slug: String)
@@ -129,10 +111,12 @@ pub fn apply_push(
   }
 }
 
+/// Subscribes standings to all game score changes.
 pub fn topics(_model: Model) -> List(broadcasts.Topic) {
   [broadcasts.all_games_topic()]
 }
 
+/// Applies one broadcast game snapshot before recomputing standings rows.
 pub fn game_updated(
   model model: Model,
   game game: broadcasts.GameSnapshot,
@@ -151,9 +135,6 @@ pub fn game_updated(
 
 // VIEW
 
-/// Proute page view function.
-/// generated/proute/public/pages calls this and wraps emitted messages back into
-/// the generated pages.Message union.
 pub fn view(model model: Model) -> Element(Message) {
   html.main([], [
     html.section([attribute.class("panel")], [
@@ -165,6 +146,7 @@ pub fn view(model model: Model) -> Element(Message) {
 
 // HELPERS
 
+/// Recomputes the standings table from the current game summaries.
 fn from_games(games: List(GameSummary)) -> List(StandingRow) {
   games
   |> list.fold([], add_game)
