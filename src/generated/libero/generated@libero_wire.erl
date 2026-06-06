@@ -541,8 +541,3 @@ decode_term(List, Depth) when is_list(List) ->
 decode_term(Map, Depth) when is_map(Map) ->
     maps:map(fun(_K, V) -> decode_term(V, Depth + 1) end, Map);
 decode_term(Other, _Depth) -> Other.
-
-
-
-
-
