@@ -58,9 +58,10 @@ pub type Message {
 /// Load the page for a route.
 ///
 /// The mount supplies page shared state and structured query params. This generated
-/// function forwards those inputs with any route params into the matching page
-/// module's conventional `init` function, then wraps the returned model and
-/// effect.
+/// function constructs the matching page and wraps its effect. Pages may expose
+/// `init` for client-side startup effects such as browser APIs or page-local
+/// event listeners. When `init` is absent, generated code uses `initial_model`
+/// and `effect.none()`.
 pub fn load(
   page_shared_state page_shared_state: PublicPageSharedState,
   query_params query_params: page_input.QueryParams,
@@ -68,13 +69,13 @@ pub fn load(
 ) -> #(Page, Effect(Message)) {
   case route {
     routes.Home -> {
-      let #(page_model, page_effect) =
-        home_page.init(page_shared_state, query_params)
+      let page_model = home_page.initial_model(page_shared_state, query_params)
+      let page_effect = effect.none()
       #(HomePage(page_model), effect.map(page_effect, HomeMsg))
     }
     routes.Games -> {
-      let #(page_model, page_effect) =
-        games_page.init(page_shared_state, query_params)
+      let page_model = games_page.initial_model(page_shared_state, query_params)
+      let page_effect = effect.none()
       #(GamesPage(page_model), effect.map(page_effect, GamesMsg))
     }
     routes.GamesId(id) -> {
@@ -87,27 +88,35 @@ pub fn load(
       )
     }
     routes.SignIn -> {
-      let #(page_model, page_effect) =
-        sign_in_page.init(page_shared_state, query_params)
+      let page_model =
+        sign_in_page.initial_model(page_shared_state, query_params)
+      let page_effect = effect.none()
       #(SignInPage(page_model), effect.map(page_effect, SignInMsg))
     }
     routes.Standings -> {
-      let #(page_model, page_effect) =
-        standings_page.init(page_shared_state, query_params)
+      let page_model =
+        standings_page.initial_model(page_shared_state, query_params)
+      let page_effect = effect.none()
       #(StandingsPage(page_model), effect.map(page_effect, StandingsMsg))
     }
     routes.TeamsSlug(slug) -> {
       let route_params = page_input.TeamsSlugRouteParams(slug:)
-      let #(page_model, page_effect) =
-        teams_slug_page.init(page_shared_state, route_params, query_params)
+      let page_model =
+        teams_slug_page.initial_model(
+          page_shared_state,
+          route_params,
+          query_params,
+        )
+      let page_effect = effect.none()
       #(
         TeamsSlugPage(route_params:, model: page_model),
         effect.map(page_effect, TeamsSlugMsg),
       )
     }
     routes.NotFound -> {
-      let #(page_model, page_effect) =
-        not_found_page.init(page_shared_state, query_params)
+      let page_model =
+        not_found_page.initial_model(page_shared_state, query_params)
+      let page_effect = effect.none()
       #(NotFoundPage(page_model), effect.map(page_effect, NotFoundMsg))
     }
   }

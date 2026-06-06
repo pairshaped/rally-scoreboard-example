@@ -17,15 +17,6 @@ pub type Model =
 pub type Message =
   games_page.Message
 
-/// Proute page init function for the public root route.
-/// generated/proute/public/pages calls this when it constructs HomePage.
-pub fn init(
-  page_shared_state page_shared_state: PublicPageSharedState,
-  query_params query_params: page_input.QueryParams,
-) -> #(Model, Effect(Message)) {
-  games_page.init(page_shared_state, query_params)
-}
-
 /// Pure starting state for the public root page.
 /// The root route is a real Proute page, but it reuses the games page model so
 /// SSR, hydration, and browser init all start from the same shape.

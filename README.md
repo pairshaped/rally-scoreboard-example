@@ -27,7 +27,7 @@ Generated source is checked in while this project proves the shape. That include
 
 ## Page Contract
 
-Pages own their local `Model`, browser `Msg`, `ServerCommand`, shared `view`, JavaScript-only `init` and `update`, and Erlang-only `load` and `handle` functions.
+Pages own their local `Model`, browser `Msg`, page-local `ServerMsg`, pure `initial_model`, shared `view`, browser `update`, optional `init`, and Erlang-only `load` and `handle` functions. Most pages omit `init`; use it only for page-specific browser startup effects such as browser APIs, local storage, focus, measurement, or one-off DOM effects.
 
 Page data shapes belong to the page that renders and updates them. Shared types are reserved for stable app concepts independent of a page.
 
@@ -72,6 +72,6 @@ Admin routes are generated from `src/admin/pages`.
 
 ## Design Notes
 
-The main design note is [docs/unified-target-source.md](/Users/daverapin/projects/gleam/scoreboard-unified/docs/unified-target-source.md).
+The main design note is [docs/unified-target-source.md](/Users/daverapin/projects/gleam/rally-scoreboard-example/docs/unified-target-source.md).
 
-The primary architecture decision is [ADR 0001: Use Page Local Rally Contracts](/Users/daverapin/projects/gleam/scoreboard-unified/docs/adr/0001-use-page-local-rally-contracts.md).
+The primary architecture decision is [ADR 0001: Use Page Local Rally Contracts](/Users/daverapin/projects/gleam/rally-scoreboard-example/docs/adr/0001-use-page-local-rally-contracts.md).

@@ -40,9 +40,10 @@ pub type Message {
 /// Load the page for a route.
 ///
 /// The mount supplies page shared state and structured query params. This generated
-/// function forwards those inputs with any route params into the matching page
-/// module's conventional `init` function, then wraps the returned model and
-/// effect.
+/// function constructs the matching page and wraps its effect. Pages may expose
+/// `init` for client-side startup effects such as browser APIs or page-local
+/// event listeners. When `init` is absent, generated code uses `initial_model`
+/// and `effect.none()`.
 pub fn load(
   page_shared_state page_shared_state: AdminPageSharedState,
   query_params query_params: page_input.QueryParams,
@@ -50,18 +51,21 @@ pub fn load(
 ) -> #(Page, Effect(Message)) {
   case route {
     routes.AdminHome -> {
-      let #(page_model, page_effect) =
-        admin_home_page.init(page_shared_state, query_params)
+      let page_model =
+        admin_home_page.initial_model(page_shared_state, query_params)
+      let page_effect = effect.none()
       #(AdminHomePage(page_model), effect.map(page_effect, AdminHomeMsg))
     }
     routes.AdminGames -> {
-      let #(page_model, page_effect) =
-        admin_games_page.init(page_shared_state, query_params)
+      let page_model =
+        admin_games_page.initial_model(page_shared_state, query_params)
+      let page_effect = effect.none()
       #(AdminGamesPage(page_model), effect.map(page_effect, AdminGamesMsg))
     }
     routes.NotFound -> {
-      let #(page_model, page_effect) =
-        not_found_page.init(page_shared_state, query_params)
+      let page_model =
+        not_found_page.initial_model(page_shared_state, query_params)
+      let page_effect = effect.none()
       #(NotFoundPage(page_model), effect.map(page_effect, NotFoundMsg))
     }
   }

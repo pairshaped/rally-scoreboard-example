@@ -8,7 +8,7 @@ The target is not to make the current app prettier in place. The target is to ma
 
 1. Pages read like TEA SPA pages first.
 2. Shared page code appears before `// CLIENT`.
-3. JavaScript-only lifecycle and update code appears under `// CLIENT`.
+3. Browser update code appears under `// CLIENT`; optional page `init` exists only for page-specific client startup effects.
 4. Erlang-only load and server request handlers appear under `// SERVER`.
 5. Page data shapes stay page-local.
 6. Pages do not import domain models from other pages.

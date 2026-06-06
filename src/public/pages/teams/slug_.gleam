@@ -18,9 +18,6 @@ import generated/sql/public/pages/teams/slug__sql as teams_sql
 @target(erlang)
 import sqlight
 
-@target(javascript)
-import generated/rally/server
-
 // TYPES
 
 /// Libero wire payload nested in LoadResult.
@@ -103,80 +100,15 @@ pub type Message {
   NavigateGame(id: Int)
 }
 
-// INIT
-
-/// Proute page init function.
-/// generated/proute/public/pages calls this when it constructs the team detail
-/// page, then maps the returned page effect into pages.Message.
-pub fn init(
-  page_shared_state page_shared_state: PublicPageSharedState,
-  route_params route_params: page_input.TeamsSlugRouteParams,
-  query_params query_params: page_input.QueryParams,
-) -> #(Model, Effect(Message)) {
-  #(
-    initial_model(page_shared_state, route_params, query_params),
-    init_effect(route_params.slug),
-  )
-}
-
 /// Pure starting state for the team detail page.
-/// init adds the route-specific load effect on top; generated page and SSR glue
-/// can call this when they need the empty page model without starting a load.
+/// Generated browser and SSR glue call this to construct an empty page before
+/// Rally applies hydrated or freshly loaded data.
 pub fn initial_model(
   _page_shared_state: PublicPageSharedState,
   _route_params: page_input.TeamsSlugRouteParams,
   _query_params: page_input.QueryParams,
 ) -> Model {
   Model(team: None)
-}
-
-// LOAD LIFECYCLE
-
-/// Page-owned load hook for Rally/Proute route glue.
-/// Generated dispatch can call this after PublicTeamDetailLoaded arrives,
-/// keeping the state transition here instead of in app-level boot code.
-pub fn team_loaded(
-  model _model: Model,
-  team team: TeamDetail,
-) -> #(Model, Effect(Message)) {
-  #(Model(team: Some(team)), effect.none())
-}
-
-@target(javascript)
-fn init_effect(slug: String) -> Effect(Message) {
-  server.load_public_team_detail(
-    message: PublicTeamDetailLoad(slug:),
-    on_result: fn(result) { Loaded(map_load_result(result)) },
-  )
-}
-
-@target(erlang)
-fn init_effect(_slug: String) -> Effect(Message) {
-  effect.none()
-}
-
-@target(javascript)
-fn map_load_result(
-  result: Result(LoadResult, List(server.LoadError)),
-) -> Result(TeamDetail, LoadError) {
-  case result {
-    Ok(PublicTeamDetailLoaded(team)) -> Ok(team)
-    Error([server.LoadError(message: message), ..]) ->
-      Error(LoadError(message:))
-    Error([]) -> Error(LoadError(message: "Could not load team."))
-  }
-}
-
-@target(erlang)
-/// SSR load adapter.
-/// Generated Rally SSR load code calls this after the page load adapter runs,
-/// turning wire errors/results back into this page's Message type.
-pub fn loaded_from_wire(result: Result(LoadResult, List(String))) -> Message {
-  case result {
-    Ok(PublicTeamDetailLoaded(team)) -> Loaded(Ok(team))
-    Error([message, ..]) -> Loaded(Error(LoadError(message:)))
-    Error([]) -> Loaded(Error(LoadError(message: "Could not load team.")))
-  }
 }
 
 // UPDATE

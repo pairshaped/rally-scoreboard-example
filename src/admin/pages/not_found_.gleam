@@ -15,15 +15,6 @@ pub type Message {
   NoOp
 }
 
-/// Proute page init function for unmatched admin routes.
-/// generated/proute/admin/pages calls this when it constructs NotFoundPage.
-pub fn init(
-  _page_shared_state: AdminPageSharedState,
-  _query_params: page_input.QueryParams,
-) -> #(Model, Effect(Message)) {
-  #(Model(title: "Not found"), effect.none())
-}
-
 /// Pure starting state for the admin not-found page.
 pub fn initial_model(
   _page_shared_state: AdminPageSharedState,

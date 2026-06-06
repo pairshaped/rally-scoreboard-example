@@ -109,86 +109,14 @@ pub type Message {
   Saved(Result(GameUpdate, SaveError))
 }
 
-// INIT
-
-/// Proute page init function.
-/// generated/proute/admin/pages calls this when it constructs the admin root or
-/// games page, then maps the returned page effect into pages.Message.
-pub fn init(
-  page_shared_state page_shared_state: AdminPageSharedState,
-  query_params query_params: page_input.QueryParams,
-) -> #(Model, Effect(Message)) {
-  #(initial_model(page_shared_state, query_params), init_effect())
-}
-
 /// Pure starting state for the admin games page.
-/// init adds the load effect on top; generated page and SSR glue can call this
-/// when they need the empty page model without starting a load.
+/// Generated browser and SSR glue call this to construct an empty page before
+/// Rally applies hydrated or freshly loaded data.
 pub fn initial_model(
   _page_shared_state: AdminPageSharedState,
   _query_params: page_input.QueryParams,
 ) -> Model {
   Model(games: [])
-}
-
-// LOAD LIFECYCLE
-
-/// Page-owned load hook for Rally/Proute route glue.
-/// Generated dispatch can call this after AdminGamesLoadResult arrives, keeping
-/// the state transition here instead of in app-level boot code.
-pub fn admin_games_loaded(
-  model _model: Model,
-  games games: List(AdminGameSummary),
-) -> #(Model, Effect(Message)) {
-  #(Model(games:), effect.none())
-}
-
-@target(javascript)
-fn init_effect() -> Effect(Message) {
-  server.load_admin_games(message: AdminGamesLoad, on_result: fn(result) {
-    Loaded(map_load_result(result))
-  })
-}
-
-@target(erlang)
-fn init_effect() -> Effect(Message) {
-  effect.none()
-}
-
-@target(javascript)
-fn map_load_result(
-  result: Result(LoadResult, List(server.LoadError)),
-) -> Result(List(AdminGameSummary), LoadError) {
-  case result {
-    Ok(AdminGamesLoadResult(games)) -> Ok(games)
-    Error([server.LoadError(message: message), ..]) ->
-      Error(LoadError(message:))
-    Error([]) -> Error(LoadError(message: "Could not load admin games."))
-  }
-}
-
-@target(erlang)
-/// Wire-facing server load.
-/// Generated SSR code and the admin WS handler call this with the app load
-/// context, then pass the result through the Libero codec boundary.
-pub fn load_wire(db: sqlight.Connection) -> Result(LoadResult, List(String)) {
-  case load(db) {
-    Ok(games) -> Ok(AdminGamesLoadResult(games:))
-    Error(LoadError(message:)) -> Error([message])
-  }
-}
-
-@target(erlang)
-/// SSR load adapter.
-/// Generated Rally SSR load code calls this after load_wire runs, turning wire
-/// errors/results back into this page's Message type.
-pub fn loaded_from_wire(result: Result(LoadResult, List(String))) -> Message {
-  case result {
-    Ok(AdminGamesLoadResult(games)) -> Loaded(Ok(games))
-    Error([message, ..]) -> Loaded(Error(LoadError(message:)))
-    Error([]) ->
-      Loaded(Error(LoadError(message: "Could not load admin games.")))
-  }
 }
 
 // UPDATE
@@ -467,9 +395,8 @@ fn map_save_result(
 // SERVER
 
 @target(erlang)
-/// Server data loader behind load_wire.
-/// load_wire calls this before wrapping the page data in the Rally/Libero load
-/// result shape.
+/// Server data loader behind generated Rally SSR and websocket load adapters.
+/// Generated code wraps this data in the Rally/Libero load result shape.
 pub fn load(
   db: sqlight.Connection,
 ) -> Result(List(AdminGameSummary), LoadError) {

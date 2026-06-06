@@ -99,11 +99,45 @@ pub fn admin_load_route(route route: admin_routes.Route) -> AdminLoadRoute {
   case route {
     admin_routes.AdminGames ->
       AdminGamesLoad(to_message: fn(result) {
-        admin_pages.AdminGamesMsg(admin_games_wire.loaded_from_wire(result))
+        case result {
+          Ok(admin_games_wire.AdminGamesLoadResult(data)) ->
+            admin_pages.AdminGamesMsg(admin_games_wire.Loaded(Ok(data)))
+          Error([message, ..]) ->
+            admin_pages.AdminGamesMsg(
+              admin_games_wire.Loaded(
+                Error(admin_games_wire.LoadError(message: message)),
+              ),
+            )
+          Error([]) ->
+            admin_pages.AdminGamesMsg(
+              admin_games_wire.Loaded(
+                Error(admin_games_wire.LoadError(
+                  message: "Could not load page.",
+                )),
+              ),
+            )
+        }
       })
     admin_routes.AdminHome ->
       AdminGamesLoad(to_message: fn(result) {
-        admin_pages.AdminHomeMsg(admin_games_wire.loaded_from_wire(result))
+        case result {
+          Ok(admin_games_wire.AdminGamesLoadResult(data)) ->
+            admin_pages.AdminHomeMsg(admin_games_wire.Loaded(Ok(data)))
+          Error([message, ..]) ->
+            admin_pages.AdminHomeMsg(
+              admin_games_wire.Loaded(
+                Error(admin_games_wire.LoadError(message: message)),
+              ),
+            )
+          Error([]) ->
+            admin_pages.AdminHomeMsg(
+              admin_games_wire.Loaded(
+                Error(admin_games_wire.LoadError(
+                  message: "Could not load page.",
+                )),
+              ),
+            )
+        }
       })
     _ -> AdminNoLoad
   }
@@ -114,25 +148,108 @@ pub fn public_load_route(route route: public_routes.Route) -> PublicLoadRoute {
   case route {
     public_routes.GamesId(id: _) ->
       PublicGameDetailLoad(to_message: fn(result) {
-        public_pages.GamesIdMsg(public_game_detail_wire.loaded_from_wire(result))
+        case result {
+          Ok(public_game_detail_wire.PublicGameDetailLoaded(data)) ->
+            public_pages.GamesIdMsg(public_game_detail_wire.Loaded(Ok(data)))
+          Error([message, ..]) ->
+            public_pages.GamesIdMsg(
+              public_game_detail_wire.Loaded(
+                Error(public_game_detail_wire.LoadError(message: message)),
+              ),
+            )
+          Error([]) ->
+            public_pages.GamesIdMsg(
+              public_game_detail_wire.Loaded(
+                Error(public_game_detail_wire.LoadError(
+                  message: "Could not load page.",
+                )),
+              ),
+            )
+        }
       })
     public_routes.Games ->
       PublicGamesLoad(to_message: fn(result) {
-        public_pages.GamesMsg(public_games_wire.loaded_from_wire(result))
+        case result {
+          Ok(public_games_wire.PublicGamesLoaded(data)) ->
+            public_pages.GamesMsg(public_games_wire.Loaded(Ok(data)))
+          Error([message, ..]) ->
+            public_pages.GamesMsg(
+              public_games_wire.Loaded(
+                Error(public_games_wire.LoadError(message: message)),
+              ),
+            )
+          Error([]) ->
+            public_pages.GamesMsg(
+              public_games_wire.Loaded(
+                Error(public_games_wire.LoadError(
+                  message: "Could not load page.",
+                )),
+              ),
+            )
+        }
       })
     public_routes.Home ->
       PublicGamesLoad(to_message: fn(result) {
-        public_pages.HomeMsg(public_games_wire.loaded_from_wire(result))
+        case result {
+          Ok(public_games_wire.PublicGamesLoaded(data)) ->
+            public_pages.HomeMsg(public_games_wire.Loaded(Ok(data)))
+          Error([message, ..]) ->
+            public_pages.HomeMsg(
+              public_games_wire.Loaded(
+                Error(public_games_wire.LoadError(message: message)),
+              ),
+            )
+          Error([]) ->
+            public_pages.HomeMsg(
+              public_games_wire.Loaded(
+                Error(public_games_wire.LoadError(
+                  message: "Could not load page.",
+                )),
+              ),
+            )
+        }
       })
     public_routes.Standings ->
       PublicStandingsLoad(to_message: fn(result) {
-        public_pages.StandingsMsg(public_standings_wire.loaded_from_wire(result))
+        case result {
+          Ok(public_standings_wire.PublicStandingsLoaded(data)) ->
+            public_pages.StandingsMsg(public_standings_wire.Loaded(Ok(data)))
+          Error([message, ..]) ->
+            public_pages.StandingsMsg(
+              public_standings_wire.Loaded(
+                Error(public_standings_wire.LoadError(message: message)),
+              ),
+            )
+          Error([]) ->
+            public_pages.StandingsMsg(
+              public_standings_wire.Loaded(
+                Error(public_standings_wire.LoadError(
+                  message: "Could not load page.",
+                )),
+              ),
+            )
+        }
       })
     public_routes.TeamsSlug(slug: _) ->
       PublicTeamDetailLoad(to_message: fn(result) {
-        public_pages.TeamsSlugMsg(public_team_detail_wire.loaded_from_wire(
-          result,
-        ))
+        case result {
+          Ok(public_team_detail_wire.PublicTeamDetailLoaded(data)) ->
+            public_pages.TeamsSlugMsg(public_team_detail_wire.Loaded(Ok(data)))
+          Error([message, ..]) ->
+            public_pages.TeamsSlugMsg(
+              public_team_detail_wire.Loaded(
+                Error(public_team_detail_wire.LoadError(message: message)),
+              ),
+            )
+          Error([]) ->
+            public_pages.TeamsSlugMsg(
+              public_team_detail_wire.Loaded(
+                Error(public_team_detail_wire.LoadError(
+                  message: "Could not load page.",
+                )),
+              ),
+            )
+        }
       })
     _ -> PublicNoLoad
   }

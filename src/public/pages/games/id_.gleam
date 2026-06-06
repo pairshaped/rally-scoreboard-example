@@ -14,9 +14,6 @@ import generated/sql/public/pages/games/id__sql as games_sql
 @target(erlang)
 import sqlight
 
-@target(javascript)
-import generated/rally/server
-
 // TYPES
 
 /// Libero wire payload nested in LoadResult.
@@ -85,9 +82,12 @@ pub type Message {
 
 // INIT
 
-/// Proute page init function.
-/// generated/proute/public/pages calls this when it constructs the game detail
-/// page, then maps the returned page effect into pages.Message.
+/// Optional Proute page init hook.
+/// Most Rally pages omit this and let generated browser/SSR glue layer loaded
+/// data onto `initial_model`. Keep `init` only for page-specific client startup
+/// work, such as browser APIs, local storage, focus, measurement, or one-off DOM
+/// effects. This example shows a browser alert and deliberately does not start a
+/// data load; generated Rally load glue owns that.
 pub fn init(
   page_shared_state page_shared_state: PublicPageSharedState,
   route_params route_params: page_input.GamesIdRouteParams,
@@ -95,13 +95,13 @@ pub fn init(
 ) -> #(Model, Effect(Message)) {
   #(
     initial_model(page_shared_state, route_params, query_params),
-    init_effect(route_params.id),
+    alert_effect(route_params.id),
   )
 }
 
 /// Pure starting state for the game detail page.
-/// init adds the route-specific load effect on top; generated page and SSR glue
-/// can call this when they need the empty page model without starting a load.
+/// Generated browser and SSR glue call this to construct an empty page before
+/// Rally applies hydrated or freshly loaded data.
 pub fn initial_model(
   _page_shared_state: PublicPageSharedState,
   _route_params: page_input.GamesIdRouteParams,
@@ -110,58 +110,19 @@ pub fn initial_model(
   Model(game: None)
 }
 
-// LOAD LIFECYCLE
-
-/// Page-owned load hook for Rally/Proute route glue.
-/// Generated dispatch can call this after PublicGameDetailLoaded arrives,
-/// keeping the state transition here instead of in app-level boot code.
-pub fn game_loaded(
-  model _model: Model,
-  game game: GameDetail,
-) -> #(Model, Effect(Message)) {
-  #(Model(game: Some(game)), effect.none())
-}
-
 @target(javascript)
-fn init_effect(id: String) -> Effect(Message) {
-  case int.parse(id) {
-    Ok(game_id) ->
-      server.load_public_game_detail(
-        message: PublicGameDetailLoad(game_id:),
-        on_result: fn(result) { Loaded(map_load_result(result)) },
-      )
-    Error(Nil) -> effect.none()
-  }
+fn alert_effect(id: String) -> Effect(Message) {
+  effect.from(fn(_dispatch) { show_game_detail_alert(id) })
 }
 
 @target(erlang)
-fn init_effect(_id: String) -> Effect(Message) {
+fn alert_effect(_id: String) -> Effect(Message) {
   effect.none()
 }
 
 @target(javascript)
-fn map_load_result(
-  result: Result(LoadResult, List(server.LoadError)),
-) -> Result(GameDetail, LoadError) {
-  case result {
-    Ok(PublicGameDetailLoaded(game)) -> Ok(game)
-    Error([server.LoadError(message: message), ..]) ->
-      Error(LoadError(message:))
-    Error([]) -> Error(LoadError(message: "Could not load game."))
-  }
-}
-
-@target(erlang)
-/// SSR load adapter.
-/// Generated Rally SSR load code calls this after the page load adapter runs,
-/// turning wire errors/results back into this page's Message type.
-pub fn loaded_from_wire(result: Result(LoadResult, List(String))) -> Message {
-  case result {
-    Ok(PublicGameDetailLoaded(game)) -> Loaded(Ok(game))
-    Error([message, ..]) -> Loaded(Error(LoadError(message:)))
-    Error([]) -> Loaded(Error(LoadError(message: "Could not load game.")))
-  }
-}
+@external(javascript, "./id__ffi.mjs", "show_game_detail_alert")
+fn show_game_detail_alert(id: String) -> Nil
 
 // UPDATE
 

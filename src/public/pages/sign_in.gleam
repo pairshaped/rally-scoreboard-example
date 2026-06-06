@@ -19,16 +19,6 @@ pub type Message {
   NoOp
 }
 
-// nolint: label_possible -- generated page glue calls conventional page init positionally.
-/// Proute page init function for the sign-in route.
-/// generated/proute/public/pages calls this when it constructs SignInPage.
-pub fn init(
-  page_shared_state: PublicPageSharedState,
-  query_params: page_input.QueryParams,
-) -> #(Model, Effect(Message)) {
-  #(initial_model(page_shared_state, query_params), effect.none())
-}
-
 /// Pure starting state for the sign-in page.
 /// It keeps the return target and error flag in the model so SSR and browser
 /// hydration render the same form without needing any init effects.

@@ -23,8 +23,10 @@ A page module should read like a basic TEA SPA page with server handlers at the 
 
 ```gleam
 import components/ui
+import generated/proute/public/page_input
 import lustre/effect.{type Effect}
 import lustre/element.{type Element}
+import public/page_shared_state.{type PublicPageSharedState}
 
 @target(erlang)
 import generated/sql/games_sql
@@ -50,12 +52,30 @@ pub fn view(model: Model) -> Element(Msg) {
   todo
 }
 
-// CLIENT
+// INIT
 
-@target(javascript)
-pub fn init(games: List(Game)) -> #(Model, Effect(Msg)) {
-  #(Model(games: games, saving: False), effect.none())
+/// Pure starting state for this page.
+/// Generated Rally browser and SSR glue layer hydrated or freshly loaded data
+/// onto this model.
+pub fn initial_model(
+  _page_shared_state: PublicPageSharedState,
+  _query_params: page_input.QueryParams,
+) -> Model {
+  Model(games: [], saving: False)
 }
+
+/// Optional Proute page init hook.
+/// Most Rally pages omit this. Use it only for page-specific client startup
+/// effects such as browser APIs, local storage, focus, measurement, or one-off
+/// DOM effects. Standard page data loading is owned by generated Rally glue.
+pub fn init(
+  page_shared_state page_shared_state: PublicPageSharedState,
+  query_params query_params: page_input.QueryParams,
+) -> #(Model, Effect(Msg)) {
+  #(initial_model(page_shared_state, query_params), effect.none())
+}
+
+// CLIENT
 
 @target(javascript)
 pub fn update(msg: Msg, model: Model) -> #(Model, Effect(Msg)) {
@@ -84,9 +104,11 @@ pub fn handle(ctx, msg: ServerMsg) -> Result(Game, SaveError) {
 }
 ```
 
-Shared imports come first, followed by Erlang-targeted imports, then JavaScript-targeted imports. The module body follows the same target grouping when practical: shared declarations first, then server/client sections for target-specific behavior.
+Shared imports come first, followed by Erlang-targeted imports, then JavaScript-targeted imports. The module body follows the same target grouping when practical: shared declarations first, then init/shared declarations, then server/client sections for target-specific behavior.
 
 The section comments are for humans. Rally validates the page contract by function names, signatures, target availability, and wire-visible types.
+
+`initial_model` is the normal starting point for a page. `init` is optional. A page should define `init` only when it needs page-local browser startup work that cannot be represented as loaded page data or normal update behavior. Rally-generated browser glue calls `init` when it exists; otherwise it constructs the page with `initial_model` and no effect. Rally-generated SSR glue uses `initial_model` so server rendering never depends on browser-only effects.
 
 ## API/RPC Effects
 

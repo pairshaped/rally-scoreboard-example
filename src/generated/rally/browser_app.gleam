@@ -406,8 +406,15 @@ pub fn admin_load_client(
   query_params query_params: admin_page_input.QueryParams,
   route route: admin_routes.Route,
 ) -> #(admin_pages.Page, Effect(admin_pages.Message)) {
-  let page = admin_pages.load_sync(page_shared_state, query_params, route)
-  #(page, admin_request_effect(route, admin_load_route(route)))
+  let #(page, page_effect) =
+    admin_pages.load(page_shared_state, query_params, route)
+  #(
+    page,
+    effect.batch([
+      page_effect,
+      admin_request_effect(route, admin_load_route(route)),
+    ]),
+  )
 }
 
 @target(javascript)
@@ -434,13 +441,15 @@ pub fn admin_initial_page(
     admin_pages.Message,
   ) -> #(admin_pages.Page, Effect(admin_pages.Message)),
 ) -> #(admin_pages.Page, Effect(admin_pages.Message)) {
-  let page = admin_pages.load_sync(page_shared_state, query_params, route)
+  let #(page, page_effect) =
+    admin_pages.load(page_shared_state, query_params, route)
 
   case admin_load_route(route) {
-    AdminNoLoad -> #(page, effect.none())
+    AdminNoLoad -> #(page, page_effect)
     AdminGamesLoad(message: _, to_message:) -> {
       initial_loaded_page(
         page: page,
+        page_effect: page_effect,
         page_shared_state: page_shared_state,
         hydration: hydration.admin_games_load_result(),
         to_message: to_message,
@@ -490,8 +499,15 @@ pub fn public_load_client(
   query_params query_params: public_page_input.QueryParams,
   route route: public_routes.Route,
 ) -> #(public_pages.Page, Effect(public_pages.Message)) {
-  let page = public_pages.load_sync(page_shared_state, query_params, route)
-  #(page, public_request_effect(route, public_load_route(route)))
+  let #(page, page_effect) =
+    public_pages.load(page_shared_state, query_params, route)
+  #(
+    page,
+    effect.batch([
+      page_effect,
+      public_request_effect(route, public_load_route(route)),
+    ]),
+  )
 }
 
 @target(javascript)
@@ -518,13 +534,15 @@ pub fn public_initial_page(
     public_pages.Message,
   ) -> #(public_pages.Page, Effect(public_pages.Message)),
 ) -> #(public_pages.Page, Effect(public_pages.Message)) {
-  let page = public_pages.load_sync(page_shared_state, query_params, route)
+  let #(page, page_effect) =
+    public_pages.load(page_shared_state, query_params, route)
 
   case public_load_route(route) {
-    PublicNoLoad -> #(page, effect.none())
+    PublicNoLoad -> #(page, page_effect)
     PublicGameDetailLoad(message: _, to_message:) -> {
       initial_loaded_page(
         page: page,
+        page_effect: page_effect,
         page_shared_state: page_shared_state,
         hydration: hydration.public_game_detail_load_result(),
         to_message: to_message,
@@ -537,6 +555,7 @@ pub fn public_initial_page(
     PublicGamesLoad(message: _, to_message:) -> {
       initial_loaded_page(
         page: page,
+        page_effect: page_effect,
         page_shared_state: page_shared_state,
         hydration: hydration.public_games_load_result(),
         to_message: to_message,
@@ -549,6 +568,7 @@ pub fn public_initial_page(
     PublicStandingsLoad(message: _, to_message:) -> {
       initial_loaded_page(
         page: page,
+        page_effect: page_effect,
         page_shared_state: page_shared_state,
         hydration: hydration.public_standings_load_result(),
         to_message: to_message,
@@ -561,6 +581,7 @@ pub fn public_initial_page(
     PublicTeamDetailLoad(message: _, to_message:) -> {
       initial_loaded_page(
         page: page,
+        page_effect: page_effect,
         page_shared_state: page_shared_state,
         hydration: hydration.public_team_detail_load_result(),
         to_message: to_message,
@@ -1112,6 +1133,7 @@ pub fn navigation_effects(
 @target(javascript)
 fn initial_loaded_page(
   page page: page,
+  page_effect page_effect: Effect(message),
   page_shared_state page_shared_state: shared_state,
   hydration hydration: Result(result, Nil),
   to_message to_message: fn(result) -> message,
@@ -1122,9 +1144,9 @@ fn initial_loaded_page(
   case hydration {
     Ok(result) -> {
       let #(page, _) = update_page(page_shared_state, page, to_message(result))
-      #(page, effect.none())
+      #(page, page_effect)
     }
-    Error(Nil) -> #(page, load_client())
+    Error(Nil) -> #(page, effect.batch([page_effect, load_client()]))
   }
 }
 

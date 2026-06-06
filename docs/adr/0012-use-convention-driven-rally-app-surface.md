@@ -36,6 +36,8 @@ Rally owns the standard framework surface around that app code:
 - Browser lifecycle ceremony: mount startup, current-path boot, page effect
   wiring, server-frame handling, navigation effects, browser navigation
   listeners, dark-mode runtime effects, and topic sync.
+- Standard page data load effects, hydration application, and load-result
+  mapping into page `Loaded` messages.
 - Browser shell state creation and update. Shell state covers active path, dark
   mode, toast state, boot mechanics, and other mount/runtime concerns.
 - Websocket transport ceremony: upgrade handler shape, per-connection state
@@ -57,6 +59,11 @@ There is no separate `PageContext` adapter layer. Browser mounts build the
 page-visible shared state from boot facts. SSR builds the same page-visible
 shared state from request-derived facts. Pages receive that shared state
 directly, along with generated route params and query params.
+
+Pages expose `initial_model` as their normal starting point. `init` is optional
+and reserved for page-specific client startup effects such as browser APIs,
+local storage, focus, measurement, or one-off DOM effects. Standard page data
+loading belongs to Rally-generated glue.
 
 Rally should not pass browser shell state into pages. If a page needs a
 shell-derived product fact, the app exposes that fact through the mount page
