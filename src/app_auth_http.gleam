@@ -34,10 +34,14 @@ pub fn request_auth(
 /// Rally owns OAuth state cookies and redirects; Scoreboard owns credential
 /// selection and the provider identity callback.
 pub fn google_credentials() -> Result(auth_http.GoogleCredentials, Nil) {
-  case env.get("GOOGLE_CLIENT_ID"), env.get("GOOGLE_REDIRECT_URI") {
-    Ok(client_id), Ok(redirect_uri) ->
-      Ok(auth_http.GoogleCredentials(client_id:, redirect_uri:))
-    _, _ -> Error(Nil)
+  case
+    env.get("GOOGLE_CLIENT_ID"),
+    env.get("GOOGLE_CLIENT_SECRET"),
+    env.get("GOOGLE_REDIRECT_URI")
+  {
+    Ok(client_id), Ok(client_secret), Ok(redirect_uri) ->
+      Ok(auth_http.GoogleCredentials(client_id:, client_secret:, redirect_uri:))
+    _, _, _ -> Error(Nil)
   }
 }
 

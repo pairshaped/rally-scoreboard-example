@@ -7,6 +7,8 @@ import gleam/option.{type Option, None, Some}
 @target(erlang)
 import rally/runtime/auth as runtime_auth
 @target(erlang)
+import rally/runtime/auth_http
+@target(erlang)
 import sqlight.{type Connection}
 
 @target(javascript)
@@ -94,10 +96,10 @@ pub fn deliver_sign_in_code(
 /// demo has no Google client secret configured, so it rejects callback codes.
 pub fn sign_in_with_google_code(
   db db: Connection,
-  code code: String,
+  callback callback: auth_http.GoogleCallback,
 ) -> Result(Int, Nil) {
   let _ = db
-  let _ = code
+  let _ = callback
   Error(Nil)
 }
 

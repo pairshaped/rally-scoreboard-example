@@ -84,8 +84,8 @@ fn handle_auth_path(
       credentials: fn(_context: bootstrap.Context) {
         app_auth_http.google_credentials()
       },
-      sign_in: fn(code, context: bootstrap.Context) {
-        app_auth.sign_in_with_google_code(db: context.db, code:)
+      sign_in: fn(callback, context: bootstrap.Context) {
+        app_auth.sign_in_with_google_code(db: context.db, callback:)
       },
       sign_in_default_return_to: "/admin/games",
       sign_in_return_to: app_auth_http.admin_return_to,
