@@ -7,7 +7,7 @@ import lustre/effect.{type Effect}
 import lustre/element.{type Element}
 import lustre/element/html
 import lustre/event
-import page_context.{type PageContext}
+import public/page_shared_state.{type PublicPageSharedState}
 
 @target(erlang)
 import generated/sql/public/pages/games/id__sql as games_sql
@@ -89,12 +89,12 @@ pub type Message {
 /// generated/proute/public/pages calls this when it constructs the game detail
 /// page, then maps the returned page effect into pages.Message.
 pub fn init(
-  page_context page_context: PageContext,
+  page_shared_state page_shared_state: PublicPageSharedState,
   route_params route_params: page_input.GamesIdRouteParams,
   query_params query_params: page_input.QueryParams,
 ) -> #(Model, Effect(Message)) {
   #(
-    initial_model(page_context, route_params, query_params),
+    initial_model(page_shared_state, route_params, query_params),
     init_effect(route_params.id),
   )
 }
@@ -103,7 +103,7 @@ pub fn init(
 /// init adds the route-specific load effect on top; generated page and SSR glue
 /// can call this when they need the empty page model without starting a load.
 pub fn initial_model(
-  _page_context: PageContext,
+  _page_shared_state: PublicPageSharedState,
   _route_params: page_input.GamesIdRouteParams,
   _query_params: page_input.QueryParams,
 ) -> Model {

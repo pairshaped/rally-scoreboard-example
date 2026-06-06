@@ -3,7 +3,7 @@ import lustre/attribute
 import lustre/effect.{type Effect}
 import lustre/element.{type Element}
 import lustre/element/html
-import page_context.{type PageContext}
+import public/page_shared_state.{type PublicPageSharedState}
 
 /// Proute page model for unmatched public routes.
 pub type Model {
@@ -18,7 +18,7 @@ pub type Message {
 /// Proute page init function for unmatched public routes.
 /// generated/proute/public/pages calls this when it constructs NotFoundPage.
 pub fn init(
-  _page_context: PageContext,
+  _page_shared_state: PublicPageSharedState,
   _query_params: page_input.QueryParams,
 ) -> #(Model, Effect(Message)) {
   #(Model(title: "Not found"), effect.none())
@@ -26,7 +26,7 @@ pub fn init(
 
 /// Pure starting state for the public not-found page.
 pub fn initial_model(
-  _page_context: PageContext,
+  _page_shared_state: PublicPageSharedState,
   _query_params: page_input.QueryParams,
 ) -> Model {
   Model(title: "Not found")

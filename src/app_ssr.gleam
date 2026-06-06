@@ -1,4 +1,6 @@
 @target(erlang)
+import admin/page_shared_state as admin_page_shared_state
+@target(erlang)
 import app_auth
 @target(erlang)
 import app_auth_http
@@ -21,7 +23,7 @@ import lustre/element
 @target(erlang)
 import mist.{type Connection}
 @target(erlang)
-import page_context.{PageContext}
+import public/page_shared_state as public_page_shared_state
 @target(erlang)
 import rally/runtime/auth_http
 @target(erlang)
@@ -91,7 +93,10 @@ pub fn public_render(
 ) -> SsrApp {
   let page =
     server_ssr.public_render_path(
-      page_context: PageContext,
+      page_shared_state: public_page_shared_state.PublicPageSharedState(
+        authentication_context:,
+        can_access_admin:,
+      ),
       query_params:,
       path:,
       load_context: db,
@@ -153,7 +158,9 @@ pub fn admin_render(
 ) -> SsrApp {
   let page =
     server_ssr.admin_render_path(
-      page_context: PageContext,
+      page_shared_state: admin_page_shared_state.AdminPageSharedState(
+        authentication_context:,
+      ),
       query_params:,
       path:,
       load_context: db,

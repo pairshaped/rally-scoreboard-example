@@ -4,7 +4,7 @@ import lustre/attribute
 import lustre/effect.{type Effect}
 import lustre/element.{type Element}
 import lustre/element/html
-import page_context.{type PageContext}
+import public/page_shared_state.{type PublicPageSharedState}
 
 /// Proute page model for the sign-in route.
 /// generated/proute/public/pages stores this inside the SignInPage variant.
@@ -23,17 +23,17 @@ pub type Message {
 /// Proute page init function for the sign-in route.
 /// generated/proute/public/pages calls this when it constructs SignInPage.
 pub fn init(
-  page_context: PageContext,
+  page_shared_state: PublicPageSharedState,
   query_params: page_input.QueryParams,
 ) -> #(Model, Effect(Message)) {
-  #(initial_model(page_context, query_params), effect.none())
+  #(initial_model(page_shared_state, query_params), effect.none())
 }
 
 /// Pure starting state for the sign-in page.
 /// It keeps the return target and error flag in the model so SSR and browser
 /// hydration render the same form without needing any init effects.
 pub fn initial_model(
-  _page_context: PageContext,
+  _page_shared_state: PublicPageSharedState,
   query_params: page_input.QueryParams,
 ) -> Model {
   let page_input.QueryParams(values:) = query_params

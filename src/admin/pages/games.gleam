@@ -1,3 +1,4 @@
+import admin/page_shared_state.{type AdminPageSharedState}
 import broadcasts
 import generated/proute/admin/page_input
 import gleam/int
@@ -7,7 +8,6 @@ import lustre/effect.{type Effect}
 import lustre/element.{type Element}
 import lustre/element/html
 import lustre/event
-import page_context.{type PageContext}
 
 @target(erlang)
 import generated/sql/admin/pages/games_sql
@@ -115,17 +115,17 @@ pub type Message {
 /// generated/proute/admin/pages calls this when it constructs the admin root or
 /// games page, then maps the returned page effect into pages.Message.
 pub fn init(
-  page_context page_context: PageContext,
+  page_shared_state page_shared_state: AdminPageSharedState,
   query_params query_params: page_input.QueryParams,
 ) -> #(Model, Effect(Message)) {
-  #(initial_model(page_context, query_params), init_effect())
+  #(initial_model(page_shared_state, query_params), init_effect())
 }
 
 /// Pure starting state for the admin games page.
 /// init adds the load effect on top; generated page and SSR glue can call this
 /// when they need the empty page model without starting a load.
 pub fn initial_model(
-  _page_context: PageContext,
+  _page_shared_state: AdminPageSharedState,
   _query_params: page_input.QueryParams,
 ) -> Model {
   Model(games: [])
@@ -197,7 +197,7 @@ pub fn loaded_from_wire(result: Result(LoadResult, List(String))) -> Message {
 /// generated/proute/admin/pages calls this when an AdminHomeMsg or AdminGamesMsg
 /// is active on the current page.
 pub fn update(
-  _page_context: PageContext,
+  _page_shared_state: AdminPageSharedState,
   model model: Model,
   msg msg: Message,
 ) -> #(Model, Effect(Message)) {

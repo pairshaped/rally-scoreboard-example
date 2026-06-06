@@ -1,9 +1,9 @@
+import admin/page_shared_state.{type AdminPageSharedState}
 import admin/pages/games as games_page
 import broadcasts
 import generated/proute/admin/page_input
 import lustre/effect.{type Effect}
 import lustre/element.{type Element}
-import page_context.{type PageContext}
 
 /// Proute page model for the admin root route.
 /// generated/proute/admin/pages stores this inside AdminHomePage, while the page
@@ -20,30 +20,30 @@ pub type Message =
 /// Proute page init function for the admin root route.
 /// generated/proute/admin/pages calls this when it constructs AdminHomePage.
 pub fn init(
-  page_context page_context: PageContext,
+  page_shared_state page_shared_state: AdminPageSharedState,
   query_params query_params: page_input.QueryParams,
 ) -> #(Model, Effect(Message)) {
-  games_page.init(page_context, query_params)
+  games_page.init(page_shared_state, query_params)
 }
 
 /// Pure starting state for the admin root page.
 /// The root route is a real Proute page, but it reuses the games page model so
 /// SSR, hydration, and browser init all start from the same shape.
 pub fn initial_model(
-  page_context page_context: PageContext,
+  page_shared_state page_shared_state: AdminPageSharedState,
   query_params query_params: page_input.QueryParams,
 ) -> Model {
-  games_page.initial_model(page_context, query_params)
+  games_page.initial_model(page_shared_state, query_params)
 }
 
 /// Proute page update function for the admin root route.
 /// generated/proute/admin/pages calls this when AdminHomeMsg is active.
 pub fn update(
-  page_context page_context: PageContext,
+  page_shared_state page_shared_state: AdminPageSharedState,
   model model: Model,
   msg msg: Message,
 ) -> #(Model, Effect(Message)) {
-  games_page.update(page_context, model, msg)
+  games_page.update(page_shared_state, model, msg)
 }
 
 pub fn apply_push(

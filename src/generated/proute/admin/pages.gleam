@@ -8,6 +8,7 @@
 //// It owns the repetitive Lustre wiring: page unions, page messages, loading
 //// dispatch, update forwarding, and rendering dispatch.
 
+import admin/page_shared_state.{type AdminPageSharedState}
 import admin/pages/games as admin_games_page
 import admin/pages/home_ as admin_home_page
 import admin/pages/not_found_ as not_found_page
@@ -15,7 +16,6 @@ import generated/proute/admin/page_input
 import generated/proute/admin/routes
 import lustre/effect.{type Effect}
 import lustre/element
-import page_context.{type PageContext}
 
 /// Page models generated from the admin page tree.
 ///
@@ -39,29 +39,29 @@ pub type Message {
 
 /// Load the page for a route.
 ///
-/// The mount supplies page context and structured query params. This generated
+/// The mount supplies page shared state and structured query params. This generated
 /// function forwards those inputs with any route params into the matching page
 /// module's conventional `init` function, then wraps the returned model and
 /// effect.
 pub fn load(
-  page_context page_context: PageContext,
+  page_shared_state page_shared_state: AdminPageSharedState,
   query_params query_params: page_input.QueryParams,
   route route: routes.Route,
 ) -> #(Page, Effect(Message)) {
   case route {
     routes.AdminHome -> {
       let #(page_model, page_effect) =
-        admin_home_page.init(page_context, query_params)
+        admin_home_page.init(page_shared_state, query_params)
       #(AdminHomePage(page_model), effect.map(page_effect, AdminHomeMsg))
     }
     routes.AdminGames -> {
       let #(page_model, page_effect) =
-        admin_games_page.init(page_context, query_params)
+        admin_games_page.init(page_shared_state, query_params)
       #(AdminGamesPage(page_model), effect.map(page_effect, AdminGamesMsg))
     }
     routes.NotFound -> {
       let #(page_model, page_effect) =
-        not_found_page.init(page_context, query_params)
+        not_found_page.init(page_shared_state, query_params)
       #(NotFoundPage(page_model), effect.map(page_effect, NotFoundMsg))
     }
   }
@@ -74,19 +74,25 @@ pub fn load(
 /// page from the route; each page decides what model is safe to render before
 /// asynchronous effects have run.
 pub fn load_sync(
-  page_context page_context: PageContext,
+  page_shared_state page_shared_state: AdminPageSharedState,
   query_params query_params: page_input.QueryParams,
   route route: routes.Route,
 ) -> Page {
   case route {
     routes.AdminHome -> {
-      AdminHomePage(admin_home_page.initial_model(page_context, query_params))
+      AdminHomePage(admin_home_page.initial_model(
+        page_shared_state,
+        query_params,
+      ))
     }
     routes.AdminGames -> {
-      AdminGamesPage(admin_games_page.initial_model(page_context, query_params))
+      AdminGamesPage(admin_games_page.initial_model(
+        page_shared_state,
+        query_params,
+      ))
     }
     routes.NotFound -> {
-      NotFoundPage(not_found_page.initial_model(page_context, query_params))
+      NotFoundPage(not_found_page.initial_model(page_shared_state, query_params))
     }
   }
 }
@@ -97,23 +103,23 @@ pub fn load_sync(
 /// a hand-written mount would need, but generated here so user code does not
 /// repeat it for every page.
 ///
-/// Pages that need app dependencies during update receive `page_context`; the
-/// generated function passes it through without knowing what it contains.
+/// Pages that need shared app facts during update receive `page_shared_state`;
+/// the generated function passes it through without knowing what it contains.
 pub fn update(
-  page_context page_context: PageContext,
+  page_shared_state page_shared_state: AdminPageSharedState,
   page page: Page,
   message message: Message,
 ) -> #(Page, Effect(Message)) {
   case page, message {
     AdminHomePage(page_model), AdminHomeMsg(inner) -> {
       let #(new_model, page_effect) =
-        admin_home_page.update(page_context, page_model, inner)
+        admin_home_page.update(page_shared_state, page_model, inner)
       let page = AdminHomePage(new_model)
       #(page, effect.map(page_effect, AdminHomeMsg))
     }
     AdminGamesPage(page_model), AdminGamesMsg(inner) -> {
       let #(new_model, page_effect) =
-        admin_games_page.update(page_context, page_model, inner)
+        admin_games_page.update(page_shared_state, page_model, inner)
       let page = AdminGamesPage(new_model)
       #(page, effect.map(page_effect, AdminGamesMsg))
     }

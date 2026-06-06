@@ -8,8 +8,6 @@ import authentication_context.{type AuthenticationContext}
 import gleam/option.{type Option}
 
 /// Admin app facts shared with page construction on the browser.
-pub type AdminClientPageSharedState {
-  AdminClientPageSharedState(
-    authentication_context: Option(AuthenticationContext),
-  )
+pub type AdminPageSharedState {
+  AdminPageSharedState(authentication_context: Option(AuthenticationContext))
 }

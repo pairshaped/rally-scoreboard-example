@@ -11,24 +11,19 @@ import generated/rally/browser_app
 @target(javascript)
 import lustre/element.{type Element}
 @target(javascript)
-import page_context.{PageContext}
-@target(javascript)
-import public/client_page_shared_state.{
-  type PublicClientPageSharedState, PublicClientPageSharedState,
-}
-@target(javascript)
 import public/client_shell_state.{
   type PublicClientShellState, PublicClientShellState,
 }
+@target(javascript)
+import public/page_shared_state.{PublicPageSharedState}
 
 @target(javascript)
 /// Browser entrypoint for the public mount.
 /// The app configures shared state and shell rendering; Rally owns lifecycle.
 pub fn main() -> Nil {
   browser_app.start_public_mount(browser_app.PublicMountConfig(
-    page_context: fn(_page_shared_state) { PageContext },
     page_shared_state: fn() {
-      PublicClientPageSharedState(
+      PublicPageSharedState(
         authentication_context: browser_mount.boot_authentication_context(),
         can_access_admin: browser.boot_bool("canAccessAdmin"),
       )
@@ -46,7 +41,7 @@ pub fn main() -> Nil {
     set_dark_mode: fn(shell_state, dark_mode) {
       PublicClientShellState(..shell_state, dark_mode:)
     },
-    update_page: fn(_page_context, page, message) {
+    update_page: fn(_page_shared_state, page, message) {
       pages.update(page, message)
     },
     view:,
@@ -62,10 +57,7 @@ pub fn ensure() -> Nil {
 
 @target(javascript)
 fn view(
-  model: browser_app.PublicMountModel(
-    PublicClientShellState,
-    PublicClientPageSharedState,
-  ),
+  model: browser_app.PublicMountModel(PublicClientShellState),
   on_page: fn(pages.Message) -> browser_app.PublicMountMsg,
   on_dark_mode_change: fn(Bool) -> browser_app.PublicMountMsg,
   _on_navigate: fn(String) -> browser_app.PublicMountMsg,

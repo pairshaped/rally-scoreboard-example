@@ -1,50 +1,100 @@
 # Use Convention Driven Rally App Surface
 
-Rally applications should use strong framework conventions for the standard app shape. The authored application should describe product meaning, while Rally owns repeated bootstrap, transport, routing shell, document boot, and runtime mechanics.
+Rally applications should use strong framework conventions for the standard app
+shape. The authored application describes product meaning, while Rally owns
+repeated bootstrap, transport, routing shell, document boot, and runtime
+mechanics.
 
 The app-owned surface is:
 
 - DB schema, migrations, seeds, authored SQL, and page data mapping.
 - Layout, shell UI, page views, page UI state, and page update behavior.
 - Page load/save behavior and the domain rules inside those handlers.
-- Auth policy callbacks: user lookup, role checks, provider-specific product policy, and route narrowing where the product cares.
-- Broadcast topics, broadcast events, broadcast payload data, and page interest in those events.
-- Page-level interpretation of route params when those params have domain meaning.
+- Auth policy callbacks: user lookup, role checks, provider-specific product
+  policy, and route narrowing where the product cares.
+- Broadcast topics, broadcast events, broadcast payload data, and page interest
+  in those events.
+- Page-level interpretation of route params when those params have domain
+  meaning.
+- Mount-owned page shared-state types that expose page-visible product facts,
+  such as authenticated user data, authorization facts, and feature flags.
 
 Rally owns the standard framework surface around that app code:
 
 - App/package identity from `gleam.toml`.
 - Process bootstrap for the standard template app.
-- `PORT` override handling, parsing, fallback, and wiring into the HTTP listener.
-- DB path config from `gleam.toml` with environment override, DB opening, and request/server context construction.
+- `PORT` override handling, parsing, fallback, and wiring into the HTTP
+  listener.
+- DB path config from `gleam.toml` with environment override, DB opening, and
+  request/server context construction.
 - Auth session secret config and generic session runtime mechanics.
 - Static asset serving conventions such as `/assets` and `priv/static`.
-- HTTP routing shell, public/admin mount dispatch, and default fallback behavior.
-- SSR document boot mechanics, hydration attributes, boot data encoding, browser entrypoint selection, and query-param extraction.
-- Browser lifecycle ceremony: mount startup, current-path boot, page effect wiring, server-frame handling, navigation effects, browser navigation listeners, dark-mode runtime effects, and topic sync.
-- Browser shell state and page-visible shared state. The app may define client shell state for shell concerns such as active path, dark mode, or mount-specific shell data, and separate page-visible shared state for app facts pages may opt into. Rally owns when those values are created and updated, then calls an app-provided adapter to derive `PageContext` for page init and update.
-- Websocket transport ceremony: upgrade handler shape, per-connection state threading, topic selector setup, topic joins/leaves, custom-frame forwarding, load/save dispatch, request/result encoding, and broadcast delivery.
-- Generated route/page dispatch by consuming Proute output.
-- Generated page route context retention for dynamic routes, so route-backed page hooks can use route params without pushing that state into unrelated app shared state.
+- HTTP routing shell, public/admin mount dispatch, and default fallback
+  behavior.
+- SSR document boot mechanics, hydration attributes, boot data encoding,
+  browser entrypoint selection, and query-param extraction.
+- Browser lifecycle ceremony: mount startup, current-path boot, page effect
+  wiring, server-frame handling, navigation effects, browser navigation
+  listeners, dark-mode runtime effects, and topic sync.
+- Browser shell state creation and update. Shell state covers active path, dark
+  mode, toast state, boot mechanics, and other mount/runtime concerns.
+- Websocket transport ceremony: upgrade handler shape, per-connection state
+  threading, topic selector setup, topic joins/leaves, custom-frame forwarding,
+  load/save dispatch, request/result encoding, and broadcast delivery.
+- Generated Rally glue that consumes Proute's generated routes and pages for
+  browser lifecycle, hydration, transport, load/save wiring, SSR composition,
+  and websocket plumbing.
 
-Topic sync follows [0010: Separate Mutation Results From Broadcast Events](0010-separate-mutation-results-from-broadcast-events.md). App code declares typed topics and topic keys. Rally-generated glue maps those values to the text control frames used to keep each websocket connection's server-side topic set current. Rally owns the sync mechanics; the app owns the topic vocabulary and meaning.
+Proute owns route discovery, route params, query params, generated page enums,
+and route-to-page construction. Page shared state is passed to generated page
+hooks by convention 100 percent of the time. Scoreboard uses one mount-owned
+type per mount:
 
-Dynamic route params stay strings at the generated routing boundary. URLs are strings, and typed params such as integers, UUIDs, or slugs need explicit product semantics. Rally and Proute should not infer those semantics from names such as `id_`. Pages parse route params when a domain-specific type is needed.
+- `admin/page_shared_state.AdminPageSharedState`
+- `public/page_shared_state.PublicPageSharedState`
 
-Generated page state retains route params for dynamic pages. Route-derived hooks such as page topics may accept route params and the current model, following the Elm Land-style page construction idea that route context belongs to the page. Page models should not need to carry route identity solely to make framework lifecycle hooks work.
+There is no separate `PageContext` adapter layer. Browser mounts build the
+page-visible shared state from boot facts. SSR builds the same page-visible
+shared state from request-derived facts. Pages receive that shared state
+directly, along with generated route params and query params.
 
-Elm Land keeps generated app state as shared state beside the current page model, replaces the current page model on navigation, and passes route information into shared initialization, update, and subscriptions. Its pages and layouts can opt into `Shared.Model` and `Route` through their constructors. Rally should stay close to that shape where it fits Gleam and the unified client/server source tree.
+Rally should not pass browser shell state into pages. If a page needs a
+shell-derived product fact, the app exposes that fact through the mount page
+shared-state type deliberately. This keeps page-visible product facts separate
+from mount/runtime mechanics.
 
-Rally should distinguish browser shell state from page-visible shared app state. Browser shell state covers active path, dark mode, toast state, boot mechanics, and other mount/runtime concerns. Page-visible shared state covers app facts pages may intentionally depend on, such as authenticated user data, authorization facts, feature flags, or other shared product context. The existing `ClientSharedState` name was chosen to avoid confusing client state with server context or session state, but the model should not become a bag for both shell internals and page-facing app state.
+Topic sync follows
+[0010: Separate Mutation Results From Broadcast Events](0010-separate-mutation-results-from-broadcast-events.md).
+App code declares typed topics and topic keys. Rally-generated glue maps those
+values to the text control frames used to keep each websocket connection's
+server-side topic set current. Rally owns the sync mechanics; the app owns the
+topic vocabulary and meaning.
 
-The current `PageContext` adapter is a small compatibility slice: generated Rally browser mounts keep shell state and page-visible shared state beside the generated page enum, parse the current route before initialization, update shell state with the canonical route path on navigation, derive `PageContext` from page-visible shared state, and pass that context into page load and page update dispatch. The intended direction is closer to Elm Land: page construction should be able to pass page-visible shared state directly to pages that opt into it.
+Dynamic route params stay strings at the generated routing boundary. URLs are
+strings, and typed params such as integers, UUIDs, or slugs need explicit
+product semantics. Rally and Proute should not infer those semantics from names
+such as `id_`. Pages parse route params when a domain-specific type is needed.
 
-The Elm Land-inspired page-construction responsibility may belong in Proute rather than Rally. Proute owns route discovery, route params, query params, generated page enums, and route-to-page dispatch. Rally should consume those outputs for browser lifecycle, hydration, transport, load/save wiring, and SSR composition. If route-aware page construction grows beyond thin consumption of Proute modules, the API should move toward Proute ownership instead of making Rally a second routing framework.
+Generated page state retains route params for dynamic pages. Route-derived
+hooks such as page topics may accept route params and the current model,
+following the Elm Land-style page construction idea that route context belongs
+to the page. Page models should not need to carry route identity solely to make
+framework lifecycle hooks work.
 
-Rally should not pass the whole mount shared-state record into every page. Pages already receive the app-owned `PageContext`, route params, query params, and their own model. If a page needs shell-shared information, the app should expose that information through `PageContext` deliberately. SSR still passes request-built `PageContext` directly because server rendering already has request context and does not use browser shell shared state.
+Elm Land keeps generated app state beside the current page model, replaces the
+current page model on navigation, and passes route information into shared
+initialization, update, and subscriptions. Rally should stay close to that shape
+where it fits Gleam and the unified client/server source tree, with Proute
+owning route-driven page construction and Rally owning runtime lifecycle.
 
-An authored root module is acceptable only when it expresses a product decision. If the code would be copied almost unchanged into another Rally template app, it belongs in Rally runtime or generated Rally glue.
+An authored root module is acceptable only when it expresses a product decision.
+If the code would be copied almost unchanged into another Rally template app, it
+belongs in Rally runtime or generated Rally glue.
 
-Rally should prefer intelligent defaults over app configuration. Configuration should exist only for values the app or deployment actually chooses. The standard case should require little or no authored bootstrap code.
+Rally should prefer intelligent defaults over app configuration. Configuration
+should exist only for values the app or deployment actually chooses. The
+standard case should require little or no authored bootstrap code.
 
-This follows the framework shape used by Rails: conventions remove decisions users do not care about, while keeping app behavior explicit where the product has meaning.
+This follows the framework shape used by Rails: conventions remove decisions
+users do not care about, while keeping app behavior explicit where the product
+has meaning.

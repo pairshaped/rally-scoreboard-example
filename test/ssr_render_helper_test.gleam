@@ -1,4 +1,6 @@
 @target(erlang)
+import admin/page_shared_state as admin_page_shared_state
+@target(erlang)
 import generated/proute/admin/page_input as admin_page_input
 @target(erlang)
 import generated/proute/public/page_input as public_page_input
@@ -7,13 +9,15 @@ import generated/rally/server_ssr
 @target(erlang)
 import gleam/list
 @target(erlang)
+import gleam/option.{None}
+@target(erlang)
 import gleam/string
 @target(erlang)
 import gleeunit/should
 @target(erlang)
 import lustre/element
 @target(erlang)
-import page_context.{PageContext}
+import public/page_shared_state as public_page_shared_state
 @target(erlang)
 import sqlight
 @target(erlang)
@@ -29,7 +33,10 @@ pub fn generated_public_render_path_returns_shell_inputs_test() -> Nil {
   let assert Ok(db) = test_db.setup(name: "generated-public-render-path")
   let output =
     server_ssr.public_render_path(
-      page_context: PageContext,
+      page_shared_state: public_page_shared_state.PublicPageSharedState(
+        authentication_context: None,
+        can_access_admin: False,
+      ),
       query_params: public_page_input.empty_query_params(),
       path: "/games/",
       load_context: db,
@@ -53,7 +60,9 @@ pub fn generated_admin_render_path_returns_shell_inputs_test() -> Nil {
   let assert Ok(db) = test_db.setup(name: "generated-admin-render-path")
   let output =
     server_ssr.admin_render_path(
-      page_context: PageContext,
+      page_shared_state: admin_page_shared_state.AdminPageSharedState(
+        authentication_context: None,
+      ),
       query_params: admin_page_input.empty_query_params(),
       path: "/admin/games/",
       load_context: db,

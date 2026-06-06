@@ -1,11 +1,9 @@
 @target(javascript)
-import admin/client_page_shared_state.{
-  type AdminClientPageSharedState, AdminClientPageSharedState,
-}
-@target(javascript)
 import admin/client_shell_state.{
   type AdminClientShellState, AdminClientShellState,
 }
+@target(javascript)
+import admin/page_shared_state.{AdminPageSharedState}
 @target(javascript)
 import app_shell
 @target(javascript)
@@ -18,17 +16,14 @@ import generated/rally/browser_app
 import gleam/option.{None}
 @target(javascript)
 import lustre/element.{type Element}
-@target(javascript)
-import page_context.{PageContext}
 
 @target(javascript)
 /// Browser entrypoint for the admin mount.
 /// The app configures shared state and shell rendering; Rally owns lifecycle.
 pub fn main() -> Nil {
   browser_app.start_admin_mount(browser_app.AdminMountConfig(
-    page_context: fn(_page_shared_state) { PageContext },
     page_shared_state: fn() {
-      AdminClientPageSharedState(
+      AdminPageSharedState(
         authentication_context: browser_mount.boot_authentication_context(),
       )
     },
@@ -46,8 +41,8 @@ pub fn main() -> Nil {
     set_dark_mode: fn(shell_state, dark_mode) {
       AdminClientShellState(..shell_state, dark_mode:)
     },
-    update_page: fn(page_context, page, message) {
-      pages.update(page_context, page, message)
+    update_page: fn(page_shared_state, page, message) {
+      pages.update(page_shared_state, page, message)
     },
     view:,
   ))
@@ -62,10 +57,7 @@ pub fn ensure() -> Nil {
 
 @target(javascript)
 fn view(
-  model: browser_app.AdminMountModel(
-    AdminClientShellState,
-    AdminClientPageSharedState,
-  ),
+  model: browser_app.AdminMountModel(AdminClientShellState),
   on_page: fn(pages.Message) -> browser_app.AdminMountMsg,
   on_dark_mode_change: fn(Bool) -> browser_app.AdminMountMsg,
   _on_navigate: fn(String) -> browser_app.AdminMountMsg,
