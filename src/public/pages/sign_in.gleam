@@ -9,7 +9,7 @@ import public/page_shared_state.{type PublicPageSharedState}
 /// Proute page model for the sign-in route.
 /// generated/proute/public/pages stores this inside the SignInPage variant.
 pub type Model {
-  Model(return_to: String, invalid: Bool)
+  Model(return_to: String, invalid: Bool, sent: Bool)
 }
 
 /// Proute page message for the sign-in route.
@@ -30,6 +30,7 @@ pub fn initial_model(
   Model(
     return_to: find_query(values, "return_to") |> safe_admin_return_to,
     invalid: find_query(values, "error") == Ok("invalid"),
+    sent: find_query(values, "sent") == Ok("1"),
   )
 }
 
@@ -50,6 +51,13 @@ pub fn view(model model: Model) -> Element(Message) {
     html.p([attribute.class("muted")], [
       html.text("Use the demo admin code to open the score desk."),
     ]),
+    case model.sent {
+      True ->
+        html.p([attribute.class("muted")], [
+          html.text("If that email is known, the sign-in code was sent."),
+        ])
+      False -> html.text("")
+    },
     case model.invalid {
       True ->
         html.p([attribute.class("auth-error")], [
@@ -57,6 +65,30 @@ pub fn view(model model: Model) -> Element(Message) {
         ])
       False -> html.text("")
     },
+    html.form(
+      [
+        attribute.method("post"),
+        attribute.action("/sign_in/code"),
+        attribute.class("sign-in-form"),
+      ],
+      [
+        html.input([
+          attribute.type_("hidden"),
+          attribute.name("return_to"),
+          attribute.value(model.return_to),
+        ]),
+        html.label([attribute.for("email")], [html.text("Email")]),
+        html.input([
+          attribute.id("email"),
+          attribute.name("email"),
+          attribute.type_("email"),
+          attribute.autocomplete("email"),
+          attribute.placeholder("admin@example.com"),
+          attribute.required(True),
+        ]),
+        html.button([attribute.type_("submit")], [html.text("Send Code")]),
+      ],
+    ),
     html.form(
       [
         attribute.method("post"),

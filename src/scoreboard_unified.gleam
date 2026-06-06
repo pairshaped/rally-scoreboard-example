@@ -71,6 +71,9 @@ fn handle_auth_path(
       verify_code: fn(code, context: bootstrap.Context) {
         app_auth.verify_sign_in_code(db: context.db, code:)
       },
+      deliver_code: fn(email, context: bootstrap.Context) {
+        app_auth.deliver_sign_in_code(db: context.db, email:)
+      },
       sign_in_default_return_to: "/admin/games",
       sign_in_return_to: app_auth_http.admin_return_to,
       sign_out_default_return_to: "/games",

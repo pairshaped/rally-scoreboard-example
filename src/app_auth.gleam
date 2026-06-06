@@ -62,6 +62,32 @@ pub fn verify_sign_in_code(
 }
 
 @target(erlang)
+/// Demo email-code delivery callback for Rally provider routing.
+/// A production app would generate/store a fresh code and send it through a
+/// mail provider here. Scoreboard keeps seeded demo codes, so this callback
+/// verifies that the normalized email belongs to a known user.
+pub fn deliver_sign_in_code(
+  db db: Connection,
+  email email: String,
+) -> Result(Nil, Nil) {
+  let email = authentication_context.normalize_email(email)
+  case
+    sqlight.query(
+      "SELECT id FROM users WHERE email = ?1 LIMIT 1",
+      on: db,
+      with: [sqlight.text(email)],
+      expecting: {
+        use id <- decode.field(0, decode.int)
+        decode.success(id)
+      },
+    )
+  {
+    Ok([_, ..]) -> Ok(Nil)
+    _ -> Error(Nil)
+  }
+}
+
+@target(erlang)
 /// Loads the authenticated user record after a session cookie decodes.
 /// Rally request auth callbacks use this to build request identity.
 pub fn user_by_id(

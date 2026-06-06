@@ -53,6 +53,12 @@ hydration_count: 0
 <h1>Sign in</h1>
 <p class="muted">Use the demo admin code to open the score desk.</p>
 <p class="auth-error">Invalid sign-in code.</p>
+<form action="/sign_in/code" class="sign-in-form" method="post">
+<input name="return_to" type="hidden" value="/admin/games">
+<label for="email">Email</label>
+<input autocomplete="email" id="email" name="email" placeholder="admin@example.com" required type="email">
+<button type="submit">Send Code</button>
+</form>
 <form action="/sign_in" class="sign-in-form" method="post">
 <input name="return_to" type="hidden" value="/admin/games">
 <label for="code">Sign-in code</label>
