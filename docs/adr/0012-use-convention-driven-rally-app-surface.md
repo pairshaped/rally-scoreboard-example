@@ -10,7 +10,8 @@ The app-owned surface is:
 - DB schema, migrations, seeds, authored SQL, and page data mapping.
 - Layout, shell UI, page views, page UI state, and page update behavior.
 - Page load/save behavior and the domain rules inside those handlers.
-- Auth policy callbacks: user lookup, role checks, provider-specific product
+- Auth policy callbacks: user lookup/upsert, role checks, provider
+  credentials, provider identity verification, provider-specific product
   policy, and route narrowing where the product cares.
 - Broadcast topics, broadcast events, broadcast payload data, and page interest
   in those events.
@@ -28,6 +29,9 @@ Rally owns the standard framework surface around that app code:
 - DB path config from `gleam.toml` with environment override, DB opening, and
   request/server context construction.
 - Auth session secret config and generic session runtime mechanics.
+- Standard auth provider route mechanics, including email-code form handling,
+  sign-out, Google OAuth redirects, state cookies, provider callback
+  invocation, and Rally session issuing.
 - Static asset serving conventions such as `/assets` and `priv/static`.
 - HTTP routing shell, public/admin mount dispatch, and default fallback
   behavior.

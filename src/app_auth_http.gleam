@@ -3,6 +3,8 @@ import app_auth
 @target(erlang)
 import rally/runtime/auth_http
 @target(erlang)
+import rally/runtime/env
+@target(erlang)
 import rally/runtime/session
 @target(erlang)
 import sqlight
@@ -25,6 +27,18 @@ pub fn request_auth(
     load_user: fn(user_id) { app_auth.user_by_id(db:, user_id:) },
     can_access: app_auth.can_access_admin,
   )
+}
+
+@target(erlang)
+/// App-owned Google provider credentials for Rally provider routing.
+/// Rally owns OAuth state cookies and redirects; Scoreboard owns credential
+/// selection and the provider identity callback.
+pub fn google_credentials() -> Result(auth_http.GoogleCredentials, Nil) {
+  case env.get("GOOGLE_CLIENT_ID"), env.get("GOOGLE_REDIRECT_URI") {
+    Ok(client_id), Ok(redirect_uri) ->
+      Ok(auth_http.GoogleCredentials(client_id:, redirect_uri:))
+    _, _ -> Error(Nil)
+  }
 }
 
 @target(erlang)

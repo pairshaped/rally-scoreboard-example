@@ -88,6 +88,20 @@ pub fn deliver_sign_in_code(
 }
 
 @target(erlang)
+/// Google provider sign-in callback for Rally provider routing.
+/// A production app would exchange the provider code, verify the Google
+/// identity token, and lookup or upsert the local user here. The Scoreboard
+/// demo has no Google client secret configured, so it rejects callback codes.
+pub fn sign_in_with_google_code(
+  db db: Connection,
+  code code: String,
+) -> Result(Int, Nil) {
+  let _ = db
+  let _ = code
+  Error(Nil)
+}
+
+@target(erlang)
 /// Loads the authenticated user record after a session cookie decodes.
 /// Rally request auth callbacks use this to build request identity.
 pub fn user_by_id(

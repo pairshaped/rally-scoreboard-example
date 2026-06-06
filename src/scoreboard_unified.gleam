@@ -63,10 +63,8 @@ fn handle_auth_path(
   req req: Request(Connection),
   context context: bootstrap.Context,
 ) -> Result(Response(ResponseData), Nil) {
-  auth_http.route_code_auth(
-    req:,
-    context:,
-    routes: auth_http.CodeAuthRoutes(
+  let code_routes =
+    auth_http.CodeAuthRoutes(
       session: fn(context: bootstrap.Context) { context.session },
       verify_code: fn(code, context: bootstrap.Context) {
         app_auth.verify_sign_in_code(db: context.db, code:)
@@ -78,8 +76,27 @@ fn handle_auth_path(
       sign_in_return_to: app_auth_http.admin_return_to,
       sign_out_default_return_to: "/games",
       secure: False,
-    ),
-  )
+    )
+
+  let google_routes =
+    auth_http.GoogleAuthRoutes(
+      session: fn(context: bootstrap.Context) { context.session },
+      credentials: fn(_context: bootstrap.Context) {
+        app_auth_http.google_credentials()
+      },
+      sign_in: fn(code, context: bootstrap.Context) {
+        app_auth.sign_in_with_google_code(db: context.db, code:)
+      },
+      sign_in_default_return_to: "/admin/games",
+      sign_in_return_to: app_auth_http.admin_return_to,
+      secure: False,
+    )
+
+  case auth_http.route_code_auth(req:, context:, routes: code_routes) {
+    Ok(resp) -> Ok(resp)
+    Error(Nil) ->
+      auth_http.route_google_auth(req:, context:, routes: google_routes)
+  }
 }
 
 @target(erlang)
