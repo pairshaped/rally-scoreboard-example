@@ -75,4 +75,4 @@ Admin routes are generated from `src/admin/pages`.
 
 The main design note is [docs/unified-target-source.md](docs/unified-target-source.md).
 
-The primary architecture decision is [ADR 0001: Use Page Local Rally Contracts](docs/adr/0001-use-page-local-rally-contracts.md).
+Local ADRs cover example-owned choices such as page data ownership and SQL ownership. Rally framework ADRs live in the Rally repository.
