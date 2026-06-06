@@ -329,9 +329,8 @@ Expected changes:
 Acceptance:
 
 ```sh
-gleam run -m proute
-gleam build --target javascript
-gleam build --target erlang
+gleam run -m rally gen
+gleam run -m rally build
 ```
 
 Generated Rally glue should consume Proute output instead of re-describing routes.
@@ -361,13 +360,11 @@ message roots.
 Run:
 
 ```sh
-gleam run -m marmot
-gleam run -m proute
+gleam run -m rally reset
 gleam run -m rally regen
 gleam run -m rally build
-gleam build --target javascript
-gleam build --target erlang
-gleam test
+mkdir -p tmp
+TEMP=$PWD/tmp gleam test
 ```
 
 The app should compile for both targets, tests should pass, and the source should make the Rally chase target obvious without reading generated code first.
