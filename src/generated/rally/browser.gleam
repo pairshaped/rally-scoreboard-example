@@ -46,6 +46,12 @@ pub fn query_string() -> String {
 }
 
 @target(javascript)
+@external(javascript, "./browser_ffi.mjs", "query_string_for_path")
+pub fn query_string_for_path(_path: String) -> String {
+  ""
+}
+
+@target(javascript)
 @external(javascript, "./browser_ffi.mjs", "push_path")
 pub fn push_path(_path: String) -> Nil {
   Nil

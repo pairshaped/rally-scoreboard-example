@@ -1,5 +1,7 @@
 export function path() {
-  return globalThis.location?.pathname || "/";
+  const location = globalThis.location;
+  if (!location) return "/";
+  return location.pathname + location.search;
 }
 
 export function websocket_url() {
@@ -35,16 +37,20 @@ export function take_boot_string(name) {
 
 export function query_string() {
   const search = globalThis.location?.search ?? "";
-  const params = new URLSearchParams(search);
-  return Array.from(params.entries())
-    .map(([key, value]) => `${key}=${value}`)
-    .join("&");
+  return new URLSearchParams(search).toString();
+}
+
+export function query_string_for_path(path) {
+  const base = globalThis.location?.href ?? "http://localhost/";
+  return new URL(path, base).searchParams.toString();
 }
 
 export function push_path(path) {
   const history = globalThis.history;
   const location = globalThis.location;
-  if (!history || !location || location.pathname === path) return;
+  if (!history || !location) return;
+  const current = location.pathname + location.search;
+  if (current === path) return;
   history.pushState(null, "", path);
 }
 

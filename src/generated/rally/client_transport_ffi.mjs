@@ -8,9 +8,12 @@ let reconnectAttempts = 0;
 let requestId = 0;
 let currentTopicFrame = null;
 let sentTopicFrame = null;
+const REQUEST_TIMEOUT_MS = 30_000;
 
-import { BitArray, Ok } from "../../gleam.mjs";
+import { BitArray, Error as ResultError, List, Ok } from "../../gleam.mjs";
+import { None } from "../../../gleam_stdlib/gleam/option.mjs";
 import { decode_result_envelope } from "./client_protocol.mjs";
+import { ApiLoadError, ApiSaveError } from "./result.mjs";
 
 export function next_request_id() {
   requestId += 1;
@@ -43,6 +46,25 @@ export function send_frame(frame) {
   return undefined;
 }
 
+function send_request_frame(requestId, frame) {
+  const bytes = bytes_from_bit_array(frame);
+
+  if (socket && socket.readyState === WebSocket.OPEN) {
+    socket.send(bytes);
+    return undefined;
+  }
+
+  pending.push({ kind: "request", requestId, bytes });
+  ensure_socket();
+
+  globalThis.dispatchEvent(
+    new CustomEvent("rally:to-server", {
+      detail: { bytes, frame },
+    }),
+  );
+  return undefined;
+}
+
 export function send_topic_frame(topics) {
   const names = Array.from(topics);
   const text = names.length === 0 ? "unsub" : "sub:" + names.join(",");
@@ -62,15 +84,35 @@ export function send_topic_frame(topics) {
 }
 
 export function send_load_frame(requestId, frame, onResult, dispatch) {
-  pendingResults.set(requestId, { onResult, dispatch });
-  send_frame(frame);
+  pendingResults.set(requestId, pending_result("load", requestId, onResult, dispatch));
+  send_request_frame(requestId, frame);
   return undefined;
 }
 
 export function send_save_frame(requestId, frame, onResult, dispatch) {
-  pendingResults.set(requestId, { onResult, dispatch });
-  send_frame(frame);
+  pendingResults.set(requestId, pending_result("save", requestId, onResult, dispatch));
+  send_request_frame(requestId, frame);
   return undefined;
+}
+
+function pending_result(kind, requestId, onResult, dispatch) {
+  const timer = setTimeout(() => {
+    pendingResults.delete(requestId);
+    pending = pending.filter(frame =>
+      !(frame && frame.kind === "request" && frame.requestId === requestId)
+    );
+    dispatch(onResult(timeout_result(kind)));
+  }, REQUEST_TIMEOUT_MS);
+
+  return { kind, onResult, dispatch, timer };
+}
+
+function timeout_result(kind) {
+  const message = "Rally request timed out after 30 seconds.";
+  if (kind === "save") {
+    return new ResultError(List.fromArray([new ApiSaveError(new None(), message)]));
+  }
+  return new ResultError(List.fromArray([new ApiLoadError(message)]));
 }
 
 function ensure_socket() {
@@ -93,8 +135,14 @@ function ensure_socket() {
     const queued = pending;
     pending = [];
     for (const frame of queued) {
-      socket.send(frame);
-      if (is_topic_frame(frame)) sentTopicFrame = frame;
+      if (is_topic_frame(frame)) {
+        socket.send(frame);
+        sentTopicFrame = frame;
+      } else if (frame && frame.kind === "request") {
+        if (pendingResults.has(frame.requestId)) socket.send(frame.bytes);
+      } else {
+        socket.send(frame);
+      }
     }
     if (currentTopicFrame && currentTopicFrame !== sentTopicFrame) {
       socket.send(currentTopicFrame);
@@ -148,6 +196,7 @@ function dispatch_result_frame(frame) {
   if (!pending) return true;
 
   pendingResults.delete(requestId);
+  clearTimeout(pending.timer);
   pending.dispatch(pending.onResult(result));
   return true;
 }

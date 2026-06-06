@@ -811,7 +811,9 @@ fn admin_mount_navigate(
   let #(page, page_effect) =
     admin_load_client(
       page_shared_state: model.page_shared_state,
-      query_params: admin_page_input.empty_query_params(),
+      query_params: admin_page_input.QueryParams(
+        values: browser_mount.query_pairs_for_path(path),
+      ),
       route:,
     )
 
@@ -823,7 +825,7 @@ fn admin_mount_navigate(
     ),
     effect.batch([
       navigation_effects(
-        path: canonical_path,
+        path: path,
         push_history: push_history,
         page_effect: page_effect,
         on_page: AdminPageMsg,
@@ -1012,7 +1014,9 @@ fn public_mount_navigate(
   let #(page, page_effect) =
     public_load_client(
       page_shared_state: model.page_shared_state,
-      query_params: public_page_input.empty_query_params(),
+      query_params: public_page_input.QueryParams(
+        values: browser_mount.query_pairs_for_path(path),
+      ),
       route:,
     )
 
@@ -1024,7 +1028,7 @@ fn public_mount_navigate(
     ),
     effect.batch([
       navigation_effects(
-        path: canonical_path,
+        path: path,
         push_history: push_history,
         page_effect: page_effect,
         on_page: PublicPageMsg,
@@ -1134,8 +1138,9 @@ fn initial_loaded_page(
 ) -> #(page, Effect(message)) {
   case hydration {
     Ok(result) -> {
-      let #(page, _) = update_page(page_shared_state, page, to_message(result))
-      #(page, page_effect)
+      let #(page, loaded_effect) =
+        update_page(page_shared_state, page, to_message(result))
+      #(page, effect.batch([page_effect, loaded_effect]))
     }
     Error(Nil) -> #(page, effect.batch([page_effect, load_client()]))
   }

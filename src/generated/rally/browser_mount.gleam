@@ -8,9 +8,9 @@ import generated/rally/browser
 @target(javascript)
 import generated/rally/client_transport
 @target(javascript)
-import gleam/list
+import gleam/result
 @target(javascript)
-import gleam/string
+import gleam/uri
 @target(javascript)
 import lustre/effect.{type Effect}
 
@@ -74,11 +74,17 @@ fn listen_for_shell_navigation(to_message: fn(String) -> msg) -> Effect(msg) {
 @target(javascript)
 pub fn query_pairs() -> List(#(String, String)) {
   browser.query_string()
-  |> string.split("&")
-  |> list.filter_map(fn(pair) {
-    case string.split(pair, "=") {
-      [key, value] -> Ok(#(key, value))
-      _ -> Error(Nil)
-    }
-  })
+  |> parse_query_pairs
+}
+
+@target(javascript)
+pub fn query_pairs_for_path(path path: String) -> List(#(String, String)) {
+  browser.query_string_for_path(path)
+  |> parse_query_pairs
+}
+
+@target(javascript)
+fn parse_query_pairs(query query: String) -> List(#(String, String)) {
+  uri.parse_query(query)
+  |> result.unwrap([])
 }
