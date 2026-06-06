@@ -122,13 +122,12 @@ pub fn load(
   }
 }
 
-/// Build the first page model for server rendering.
+/// Build the pure initial page for a route.
 ///
-/// Server-rendered fallback documents cannot wait for Lustre effects, so pages
-/// expose synchronous initial models. The generated dispatcher still chooses the
-/// page from the route; each page decides what model is safe to render before
-/// asynchronous effects have run.
-pub fn load_sync(
+/// SSR and other fallback paths cannot run Lustre effects, so this dispatcher
+/// always calls the page's pure `initial_model`. Use `load` when browser page
+/// startup effects should run.
+pub fn initial_page(
   page_shared_state page_shared_state: PublicPageSharedState,
   query_params query_params: page_input.QueryParams,
   route route: routes.Route,
