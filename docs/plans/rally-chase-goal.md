@@ -83,6 +83,7 @@ Examples:
 // TYPES
 // INIT
 // UPDATE
+// BROADCAST
 // VIEW
 // EFFECTS
 // HELPERS

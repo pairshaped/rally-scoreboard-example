@@ -273,7 +273,7 @@ for (const browserApp of ["src/admin_app.gleam", "src/public_app.gleam"]) {
       reason: "browser lifecycle message variants belong in generated browser_app",
     },
     {
-      pattern: /browser\.path|device_dark_mode|initial_page_from_path|load_path|message_path|server_frame_effect|navigation_effects|startup_effects|sync_topics|page_topics/,
+      pattern: /browser\.path|device_dark_mode|initial_page_from_path|load_path|message_path|server_frame_effect|navigation_effects|startup_effects|sync_topics|page_broadcast_subscriptions/,
       reason: "current-path boot, loads, navigation, server frames, and topic sync belong in browser_app",
     },
     {

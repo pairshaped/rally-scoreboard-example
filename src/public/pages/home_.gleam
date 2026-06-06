@@ -30,15 +30,18 @@ pub fn update(
   games_page.update(model:, msg:)
 }
 
+// BROADCAST
+
+/// Required because generated/rally/browser_app module calls this to sync active broadcast topics.
+pub fn broadcast_subscriptions(model: Model) -> List(broadcasts.Topic) {
+  games_page.broadcast_subscriptions(model)
+}
+
 pub fn apply_broadcast(
   model model: Model,
   message message: broadcasts.Event,
 ) -> #(Model, Effect(Message)) {
   games_page.apply_broadcast(model:, message:)
-}
-
-pub fn topics(model: Model) -> List(broadcasts.Topic) {
-  games_page.topics(model)
 }
 
 pub fn view(model model: Model) -> Element(Message) {

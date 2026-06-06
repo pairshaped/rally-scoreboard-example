@@ -55,9 +55,8 @@ pub fn view(model: Model) -> Element(Msg) {
 
 // INIT
 
-/// Pure starting state for this page.
-/// Generated Rally browser and SSR glue layer hydrated or freshly loaded data
-/// onto this model.
+/// generated/proute/public/pages module calls this to construct an empty page
+/// before Rally applies hydrated or freshly loaded data.
 pub fn initial_model(
   _page_shared_state: PublicPageSharedState,
   _query_params: page_input.QueryParams,
@@ -65,7 +64,8 @@ pub fn initial_model(
   Model(games: [], saving: False)
 }
 
-/// Optional Proute page init hook.
+/// generated/proute/public/pages module calls this when the route first builds
+/// the page.
 /// Most Rally pages omit this. Use it only for page-specific client startup
 /// effects such as browser APIs, local storage, focus, measurement, or one-off
 /// DOM effects. Standard page data loading is owned by generated Rally glue.
@@ -144,6 +144,7 @@ Use the existing Rally/Gleam house style for module layout. Large modules use se
 // TYPES
 // INIT
 // UPDATE
+// BROADCAST
 // VIEW
 // EFFECTS
 // HELPERS

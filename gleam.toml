@@ -31,10 +31,10 @@ scan_paths = ["src"]
 database = "db/scoreboard.db"
 output = "src/generated/sql"
 
-[tools.rally.load_rpc.push]
+[tools.rally.push]
 module = "broadcasts"
 type = "Event"
 
-[tools.rally.load_rpc.context]
+[tools.rally.context]
 module = "sqlight"
 type = "Connection"

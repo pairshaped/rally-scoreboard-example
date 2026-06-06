@@ -8,6 +8,7 @@ Large modules use section comment headers when the regions are large enough to b
 // TYPES
 // INIT
 // UPDATE
+// BROADCAST
 // VIEW
 // EFFECTS
 // HELPERS

@@ -74,8 +74,7 @@ pub type Message {
   NavigateGame(id: Int)
 }
 
-/// Pure starting state for the team detail page.
-/// Generated browser and SSR glue call this to construct an empty page before
+/// generated/proute/public/pages module calls this to construct an empty page before
 /// Rally applies hydrated or freshly loaded data.
 pub fn initial_model(
   _page_shared_state: PublicPageSharedState,
@@ -87,8 +86,7 @@ pub fn initial_model(
 
 // UPDATE
 
-/// Proute page update function.
-/// generated/proute/public/pages calls this when a TeamsSlugMsg is active on the
+/// generated/proute/public/pages module calls this when a TeamsSlugMsg is active on the
 /// current page.
 pub fn update(
   model model: Model,
@@ -101,8 +99,17 @@ pub fn update(
   }
 }
 
-/// Page-owned broadcast hook.
-/// Generated Rally browser broadcast dispatch calls this after a game update frame
+// BROADCAST
+
+/// Required because generated/rally/browser_app module calls this to sync active broadcast topics.
+pub fn broadcast_subscriptions(
+  route_params: page_input.TeamsSlugRouteParams,
+  _model: Model,
+) -> List(broadcasts.Topic) {
+  [broadcasts.team_topic(route_params.slug)]
+}
+
+/// Required because generated/rally/browser_app module calls this after a game update frame
 /// is decoded for this page's route team topic.
 pub fn apply_broadcast(
   model model: Model,
@@ -111,14 +118,6 @@ pub fn apply_broadcast(
   case message {
     broadcasts.BroadcastGameUpdated(game) -> game_updated(model, game)
   }
-}
-
-/// Subscribes the team detail page to the team named by its route slug.
-pub fn topics(
-  route_params: page_input.TeamsSlugRouteParams,
-  _model: Model,
-) -> List(broadcasts.Topic) {
-  [broadcasts.team_topic(route_params.slug)]
 }
 
 /// Applies a broadcast game snapshot to the loaded team detail.
@@ -381,8 +380,8 @@ fn status_badge(status: GameStatus) -> Element(msg) {
 // SERVER
 
 @target(erlang)
-/// Server data loader behind the generated Rally SSR and WS load adapters.
-/// Rally calls this, then wraps page data in the Rally/Libero load result shape.
+/// Required because generated/rally/server_ssr and generated/rally/server_ws
+/// modules call this, then wrap page data in the Rally/Libero load result shape.
 pub fn load(
   db: sqlight.Connection,
   slug: String,

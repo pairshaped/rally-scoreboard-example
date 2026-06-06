@@ -58,7 +58,8 @@ pub type Message {
 
 // INIT
 
-/// Optional Proute page init hook.
+/// generated/proute/public/pages module calls this when the route first builds
+/// the page.
 /// Most Rally pages omit this and let generated browser/SSR glue layer loaded
 /// data onto `initial_model`. Keep `init` only for page-specific client startup
 /// work, such as browser APIs, local storage, focus, measurement, or one-off DOM
@@ -75,8 +76,7 @@ pub fn init(
   )
 }
 
-/// Pure starting state for the game detail page.
-/// Generated browser and SSR glue call this to construct an empty page before
+/// generated/proute/public/pages module calls this to construct an empty page before
 /// Rally applies hydrated or freshly loaded data.
 pub fn initial_model(
   _page_shared_state: PublicPageSharedState,
@@ -99,8 +99,7 @@ fn show_game_detail_alert(_id: String) -> Nil {
 
 // UPDATE
 
-/// Proute page update function.
-/// generated/proute/public/pages calls this when a GamesIdMsg is active on the
+/// generated/proute/public/pages module calls this when a GamesIdMsg is active on the
 /// current page.
 pub fn update(
   model model: Model,
@@ -113,8 +112,20 @@ pub fn update(
   }
 }
 
-/// Page-owned broadcast hook.
-/// Generated Rally browser broadcast dispatch calls this after a game update frame
+// BROADCAST
+
+/// Required because generated/rally/browser_app module calls this to sync active broadcast topics.
+pub fn broadcast_subscriptions(
+  route_params: page_input.GamesIdRouteParams,
+  _model: Model,
+) -> List(broadcasts.Topic) {
+  case int.parse(route_params.id) {
+    Ok(game_id) -> [broadcasts.game_topic(game_id)]
+    Error(Nil) -> []
+  }
+}
+
+/// Required because generated/rally/browser_app module calls this after a game update frame
 /// is decoded for this page's route game topic.
 pub fn apply_broadcast(
   model model: Model,
@@ -122,17 +133,6 @@ pub fn apply_broadcast(
 ) -> #(Model, Effect(Message)) {
   case message {
     broadcasts.BroadcastGameUpdated(game) -> game_updated(model, game)
-  }
-}
-
-/// Subscribes the game detail page to the game named by its route id.
-pub fn topics(
-  route_params: page_input.GamesIdRouteParams,
-  _model: Model,
-) -> List(broadcasts.Topic) {
-  case int.parse(route_params.id) {
-    Ok(game_id) -> [broadcasts.game_topic(game_id)]
-    Error(Nil) -> []
   }
 }
 
@@ -245,8 +245,8 @@ fn status_badge(status: GameStatus) -> Element(msg) {
 // SERVER
 
 @target(erlang)
-/// Server data loader behind the generated Rally SSR and WS load adapters.
-/// Rally calls this, then wraps page data in the Rally/Libero load result shape.
+/// Required because generated/rally/server_ssr and generated/rally/server_ws
+/// modules call this, then wrap page data in the Rally/Libero load result shape.
 pub fn load(
   db: sqlight.Connection,
   game_id: Int,

@@ -14,7 +14,6 @@ pub type Message {
   NoOp
 }
 
-/// Pure starting state for the sign-in page.
 /// It keeps the return target and error flag in the model so SSR and browser
 /// hydration render the same form without needing any init effects.
 pub fn initial_model(
@@ -29,8 +28,7 @@ pub fn initial_model(
   )
 }
 
-/// Proute page update function for the sign-in route.
-/// generated/proute/public/pages calls this when SignInMsg is active.
+/// generated/proute/public/pages module calls this when SignInMsg is active.
 pub fn update(
   model model: Model,
   msg _msg: Message,

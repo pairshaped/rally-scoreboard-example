@@ -64,10 +64,11 @@ page-visible shared state from boot facts. SSR builds the same page-visible
 shared state from request-derived facts. Pages receive that shared state
 directly, along with generated route params and query params.
 
-Pages expose `initial_model` as their normal starting point. `init` is optional
-and reserved for page-specific client startup effects such as browser APIs,
-local storage, focus, measurement, or one-off DOM effects. Standard page data
-loading belongs to Rally-generated glue.
+Pages expose `initial_model` as their required starting point because generated
+Proute page modules call it to construct empty page models for browser routing
+and SSR. `init` is optional and reserved for page-specific client startup
+effects such as browser APIs, local storage, focus, measurement, or one-off DOM
+effects. Standard page data loading belongs to Rally-generated glue.
 
 Rally should not pass browser shell state into pages. If a page needs a
 shell-derived product fact, the app exposes that fact through the mount page
@@ -87,10 +88,10 @@ product semantics. Rally and Proute should not infer those semantics from names
 such as `id_`. Pages parse route params when a domain-specific type is needed.
 
 Generated page state retains route params for dynamic pages. Route-derived
-hooks such as page topics may accept route params and the current model,
-following the Elm Land-style page construction idea that route context belongs
-to the page. Page models should not need to carry route identity solely to make
-framework lifecycle hooks work.
+hooks such as `broadcast_subscriptions` may accept route params and the current
+model, following the Elm Land-style page construction idea that route context
+belongs to the page. Page models should not need to carry route identity solely
+to make framework lifecycle hooks work.
 
 Elm Land keeps generated app state beside the current page model, replaces the
 current page model on navigation, and passes route information into shared

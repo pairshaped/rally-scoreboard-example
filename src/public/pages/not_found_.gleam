@@ -13,7 +13,6 @@ pub type Message {
   NoOp
 }
 
-/// Pure starting state for the public not-found page.
 pub fn initial_model(
   _page_shared_state: PublicPageSharedState,
   _query_params: page_input.QueryParams,
@@ -21,8 +20,7 @@ pub fn initial_model(
   Model(title: "Not found")
 }
 
-/// Proute page update function for unmatched public routes.
-/// generated/proute/public/pages calls this when NotFoundMsg is active.
+/// generated/proute/public/pages module calls this when NotFoundMsg is active.
 pub fn update(
   model model: Model,
   msg _msg: Message,

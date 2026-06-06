@@ -58,8 +58,7 @@ pub type Message {
   Loaded(Result(List(GameSummary), runtime_load.LoadError))
 }
 
-/// Pure starting state for the games list page.
-/// Generated browser and SSR glue call this to construct an empty page before
+/// generated/proute/public/pages module calls this to construct an empty page before
 /// Rally applies hydrated or freshly loaded data.
 pub fn initial_model(
   _page_shared_state: PublicPageSharedState,
@@ -70,8 +69,7 @@ pub fn initial_model(
 
 // UPDATE
 
-/// Proute page update function.
-/// generated/proute/public/pages calls this when a HomeMsg or GamesMsg is active
+/// generated/proute/public/pages module calls this when a HomeMsg or GamesMsg is active
 /// on the current page.
 pub fn update(
   model model: Model,
@@ -84,8 +82,14 @@ pub fn update(
   }
 }
 
-/// Page-owned broadcast hook.
-/// Generated Rally browser broadcast dispatch calls this after a game update frame
+// BROADCAST
+
+/// Required because generated/rally/browser_app module calls this to sync active broadcast topics.
+pub fn broadcast_subscriptions(_model: Model) -> List(broadcasts.Topic) {
+  [broadcasts.all_games_topic()]
+}
+
+/// Required because generated/rally/browser_app module calls this after a game update frame
 /// is decoded for one of this page's topics.
 pub fn apply_broadcast(
   model model: Model,
@@ -94,11 +98,6 @@ pub fn apply_broadcast(
   case message {
     broadcasts.BroadcastGameUpdated(game) -> game_updated(model, game)
   }
-}
-
-/// Subscribes the games list to all game score changes.
-pub fn topics(_model: Model) -> List(broadcasts.Topic) {
-  [broadcasts.all_games_topic()]
 }
 
 /// Applies one broadcast game snapshot to the loaded games list.
@@ -228,8 +227,8 @@ fn broadcast_game_status(status: broadcasts.GameStatus) -> GameStatus {
 // SERVER
 
 @target(erlang)
-/// Server data loader behind the generated Rally SSR and WS load adapters.
-/// Rally calls this, then wraps page data in the Rally/Libero load result shape.
+/// Required because generated/rally/server_ssr and generated/rally/server_ws
+/// modules call this, then wrap page data in the Rally/Libero load result shape.
 pub fn load(
   db: sqlight.Connection,
 ) -> Result(List(GameSummary), runtime_load.LoadError) {

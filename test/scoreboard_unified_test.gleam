@@ -150,24 +150,24 @@ pub fn rally_topics_deliver_to_peer_connection_test() {
 }
 
 @target(erlang)
-pub fn page_topics_follow_route_params_test() {
+pub fn page_broadcast_subscriptions_follow_route_params_test() {
   let game_route = page_input.GamesIdRouteParams(id: "1")
   let invalid_game_route = page_input.GamesIdRouteParams(id: "abc")
   let team_route = page_input.TeamsSlugRouteParams(slug: "toronto-towers")
 
-  public_game_detail_page.topics(
+  public_game_detail_page.broadcast_subscriptions(
     game_route,
     public_game_detail_page.Model(game: None),
   )
   |> should.equal([broadcasts.Game(1)])
 
-  public_game_detail_page.topics(
+  public_game_detail_page.broadcast_subscriptions(
     invalid_game_route,
     public_game_detail_page.Model(game: None),
   )
   |> should.equal([])
 
-  public_game_detail_page.topics(
+  public_game_detail_page.broadcast_subscriptions(
     game_route,
     public_game_detail_page.Model(
       game: Some(public_game_detail_page.GameDetail(
@@ -190,13 +190,13 @@ pub fn page_topics_follow_route_params_test() {
   )
   |> should.equal([broadcasts.Game(1)])
 
-  public_team_detail_page.topics(
+  public_team_detail_page.broadcast_subscriptions(
     team_route,
     public_team_detail_page.Model(team: None),
   )
   |> should.equal([broadcasts.Team("toronto-towers")])
 
-  public_team_detail_page.topics(
+  public_team_detail_page.broadcast_subscriptions(
     team_route,
     public_team_detail_page.Model(
       team: Some(

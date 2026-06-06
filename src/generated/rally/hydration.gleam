@@ -9,6 +9,16 @@ import gleam/bit_array
 @target(javascript)
 import gleam/string
 
+@target(erlang)
+pub fn ensure() -> Nil {
+  Nil
+}
+
+@target(javascript)
+pub fn ensure() -> Nil {
+  Nil
+}
+
 @target(javascript)
 pub fn admin_games_load_result() -> Result(
   Result(load_result, List(ApiLoadError)),

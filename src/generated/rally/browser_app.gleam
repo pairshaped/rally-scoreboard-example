@@ -282,12 +282,14 @@ pub fn public_message_path(
 }
 
 @target(javascript)
-pub fn admin_page_topics(
+pub fn admin_page_broadcast_subscriptions(
   page page: admin_pages.Page,
 ) -> List(push_payload.Topic) {
   case page {
-    admin_pages.AdminGamesPage(model) -> admin_games_wire.topics(model)
-    admin_pages.AdminHomePage(model) -> admin_pages_home__page.topics(model)
+    admin_pages.AdminGamesPage(model) ->
+      admin_games_wire.broadcast_subscriptions(model)
+    admin_pages.AdminHomePage(model) ->
+      admin_pages_home__page.broadcast_subscriptions(model)
     _ -> []
   }
 }
@@ -320,17 +322,20 @@ pub fn admin_apply_broadcast(
 }
 
 @target(javascript)
-pub fn public_page_topics(
+pub fn public_page_broadcast_subscriptions(
   page page: public_pages.Page,
 ) -> List(push_payload.Topic) {
   case page {
     public_pages.GamesIdPage(route_params:, model:) ->
-      public_game_detail_wire.topics(route_params, model)
-    public_pages.GamesPage(model) -> public_games_wire.topics(model)
-    public_pages.HomePage(model) -> public_pages_home__page.topics(model)
-    public_pages.StandingsPage(model) -> public_standings_wire.topics(model)
+      public_game_detail_wire.broadcast_subscriptions(route_params, model)
+    public_pages.GamesPage(model) ->
+      public_games_wire.broadcast_subscriptions(model)
+    public_pages.HomePage(model) ->
+      public_pages_home__page.broadcast_subscriptions(model)
+    public_pages.StandingsPage(model) ->
+      public_standings_wire.broadcast_subscriptions(model)
     public_pages.TeamsSlugPage(route_params:, model:) ->
-      public_team_detail_wire.topics(route_params, model)
+      public_team_detail_wire.broadcast_subscriptions(route_params, model)
     _ -> []
   }
 }
@@ -714,7 +719,7 @@ fn admin_mount_init(
         on_shell_navigation: AdminShellNavigate,
         on_browser_navigation: AdminBrowserPathChanged,
       ),
-      sync_topics(admin_page_topics(page)),
+      sync_topics(admin_page_broadcast_subscriptions(page)),
     ]),
   )
 }
@@ -745,7 +750,7 @@ fn admin_mount_update(
             AdminMountModel(..model, page: page),
             effect.batch([
               page_effect,
-              sync_topics(admin_page_topics(page)),
+              sync_topics(admin_page_broadcast_subscriptions(page)),
             ]),
           )
         }
@@ -763,7 +768,7 @@ fn admin_mount_update(
         AdminMountModel(..model, page: page),
         effect.batch([
           page_effect,
-          sync_topics(admin_page_topics(page)),
+          sync_topics(admin_page_broadcast_subscriptions(page)),
         ]),
       )
     }
@@ -823,7 +828,7 @@ fn admin_mount_navigate(
         page_effect: page_effect,
         on_page: AdminPageMsg,
       ),
-      sync_topics(admin_page_topics(page)),
+      sync_topics(admin_page_broadcast_subscriptions(page)),
     ]),
   )
 }
@@ -915,7 +920,7 @@ fn public_mount_init(
         on_shell_navigation: PublicShellNavigate,
         on_browser_navigation: PublicBrowserPathChanged,
       ),
-      sync_topics(public_page_topics(page)),
+      sync_topics(public_page_broadcast_subscriptions(page)),
     ]),
   )
 }
@@ -946,7 +951,7 @@ fn public_mount_update(
             PublicMountModel(..model, page: page),
             effect.batch([
               page_effect,
-              sync_topics(public_page_topics(page)),
+              sync_topics(public_page_broadcast_subscriptions(page)),
             ]),
           )
         }
@@ -964,7 +969,7 @@ fn public_mount_update(
         PublicMountModel(..model, page: page),
         effect.batch([
           page_effect,
-          sync_topics(public_page_topics(page)),
+          sync_topics(public_page_broadcast_subscriptions(page)),
         ]),
       )
     }
@@ -1024,7 +1029,7 @@ fn public_mount_navigate(
         page_effect: page_effect,
         on_page: PublicPageMsg,
       ),
-      sync_topics(public_page_topics(page)),
+      sync_topics(public_page_broadcast_subscriptions(page)),
     ]),
   )
 }

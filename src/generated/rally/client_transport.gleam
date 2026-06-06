@@ -5,6 +5,16 @@ import generated/rally/result.{type ApiLoadError, type ApiSaveError}
 @target(javascript)
 import lustre/effect.{type Effect}
 
+@target(erlang)
+pub fn ensure() -> Nil {
+  Nil
+}
+
+@target(javascript)
+pub fn ensure() -> Nil {
+  Nil
+}
+
 @target(javascript)
 pub fn connect(
   url url: String,

@@ -13,7 +13,6 @@ pub type Message {
   NoOp
 }
 
-/// Pure starting state for the admin not-found page.
 pub fn initial_model(
   _page_shared_state: AdminPageSharedState,
   _query_params: page_input.QueryParams,
@@ -21,8 +20,7 @@ pub fn initial_model(
   Model(title: "Not found")
 }
 
-/// Proute page update function for unmatched admin routes.
-/// generated/proute/admin/pages calls this when NotFoundMsg is active.
+/// generated/proute/admin/pages module calls this when NotFoundMsg is active.
 pub fn update(
   model model: Model,
   msg _msg: Message,

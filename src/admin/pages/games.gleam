@@ -87,8 +87,7 @@ pub type Message {
   Saved(Result(GameUpdate, SaveError))
 }
 
-/// Pure starting state for the admin games page.
-/// Generated browser and SSR glue call this to construct an empty page before
+/// generated/proute/admin/pages module calls this to construct an empty page before
 /// Rally applies hydrated or freshly loaded data.
 pub fn initial_model(
   _page_shared_state: AdminPageSharedState,
@@ -99,8 +98,7 @@ pub fn initial_model(
 
 // UPDATE
 
-/// Proute page update function.
-/// generated/proute/admin/pages calls this when an AdminHomeMsg or AdminGamesMsg
+/// generated/proute/admin/pages module calls this when an AdminHomeMsg or AdminGamesMsg
 /// is active on the current page.
 pub fn update(
   _page_shared_state: AdminPageSharedState,
@@ -122,8 +120,14 @@ pub fn update(
   }
 }
 
-/// Page-owned broadcast hook.
-/// Generated Rally browser broadcast dispatch calls this after a game update frame
+// BROADCAST
+
+/// Required because generated/rally/browser_app module calls this to sync active broadcast topics.
+pub fn broadcast_subscriptions(_model: Model) -> List(broadcasts.Topic) {
+  [broadcasts.admin_games_topic()]
+}
+
+/// Required because generated/rally/browser_app module calls this after a game update frame
 /// is decoded for the admin games topic.
 pub fn apply_broadcast(
   model model: Model,
@@ -133,11 +137,6 @@ pub fn apply_broadcast(
     broadcasts.BroadcastGameUpdated(game) ->
       game_updated(model, admin_game_update(game))
   }
-}
-
-/// Subscribes the admin board to private admin game updates.
-pub fn topics(_model: Model) -> List(broadcasts.Topic) {
-  [broadcasts.admin_games_topic()]
 }
 
 /// Applies one admin game update to the loaded admin games list.
@@ -375,8 +374,8 @@ fn map_save_result(
 // SERVER
 
 @target(erlang)
-/// Server data loader behind generated Rally SSR and websocket load adapters.
-/// Generated code wraps this data in the Rally/Libero load result shape.
+/// Required because generated/rally/server_ssr and generated/rally/server_ws
+/// modules call this, then wrap page data in the Rally/Libero load result shape.
 pub fn load(
   db: sqlight.Connection,
 ) -> Result(List(AdminGameSummary), runtime_load.LoadError) {
@@ -388,9 +387,8 @@ pub fn load(
 }
 
 @target(erlang)
-/// Server mutation handler for this page's ServerMsg values.
-/// app_ws calls this after generated Rally websocket code decodes an admin save
-/// request and verifies the connection is authorized.
+/// Required because generated/rally/server_ws module calls this after decoding
+/// an admin save request and verifying that the connection is authorized.
 pub fn handle(
   db: sqlight.Connection,
   msg: ServerMsg,
