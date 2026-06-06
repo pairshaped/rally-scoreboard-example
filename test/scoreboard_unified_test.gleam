@@ -19,6 +19,8 @@ import public/pages/standings as public_standings_page
 @target(erlang)
 import public/pages/teams/slug_ as public_team_detail_page
 @target(erlang)
+import rally/runtime/load as runtime_load
+@target(erlang)
 import rally/runtime/topics
 @target(erlang)
 import sqlight
@@ -237,7 +239,7 @@ pub fn load_standings_returns_page_owned_game_summaries_test() {
 fn has_toronto_game_summary(
   result: Result(
     List(public_standings_page.GameSummary),
-    public_standings_page.LoadError,
+    runtime_load.LoadError,
   ),
   home_score home_score: Int,
   away_score away_score: Int,

@@ -8,6 +8,7 @@ import lustre/effect.{type Effect}
 import lustre/element.{type Element}
 import lustre/element/html
 import lustre/event
+import rally/runtime/load as runtime_load
 
 @target(erlang)
 import generated/sql/admin/pages/games_sql
@@ -63,13 +64,6 @@ pub type LoadResult {
   AdminGamesLoadResult(games: List(AdminGameSummary))
 }
 
-/// Page-local load error carried by Message.Loaded.
-/// SSR and websocket load adapters translate Rally/Libero load failures into
-/// this type before calling update.
-pub type LoadError {
-  LoadError(message: String)
-}
-
 /// Page-local save error carried by Message.Saved and returned by handle.
 /// app_ws translates this into generated Rally websocket SaveError values for
 /// browser responses.
@@ -104,7 +98,7 @@ pub type Model {
 pub type Message {
   AdjustAway(id: Int, home_score: Int, away_score: Int, delta: Int)
   AdjustHome(id: Int, home_score: Int, away_score: Int, delta: Int)
-  Loaded(Result(List(AdminGameSummary), LoadError))
+  Loaded(Result(List(AdminGameSummary), runtime_load.LoadError))
   MarkFinal(id: Int)
   Saved(Result(GameUpdate, SaveError))
 }
@@ -399,11 +393,11 @@ fn map_save_result(
 /// Generated code wraps this data in the Rally/Libero load result shape.
 pub fn load(
   db: sqlight.Connection,
-) -> Result(List(AdminGameSummary), LoadError) {
+) -> Result(List(AdminGameSummary), runtime_load.LoadError) {
   case games_sql.list_admin_games(db:) {
     Ok(rows) -> Ok(list.map(rows, admin_game_summary_from_row))
     Error(sqlight.SqlightError(..)) ->
-      Error(LoadError(message: "Could not load games."))
+      Error(runtime_load.LoadError(message: "Could not load games."))
   }
 }
 

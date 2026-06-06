@@ -10,6 +10,7 @@ import lustre/element.{type Element}
 import lustre/element/html
 import lustre/event
 import public/page_shared_state.{type PublicPageSharedState}
+import rally/runtime/load as runtime_load
 
 @target(erlang)
 import generated/sql/public/pages/games_sql
@@ -62,13 +63,6 @@ pub type StandingRow {
   )
 }
 
-/// Page-local load error carried by Message.Loaded.
-/// Browser and SSR load adapters translate Rally/Libero load failures into this
-/// type before calling update.
-pub type LoadError {
-  LoadError(message: String)
-}
-
 /// Rally load request message.
 /// generated/rally browser and server protocol code encodes this for standings
 /// load requests, and load_route builds it for the Proute route.
@@ -93,7 +87,7 @@ pub type Model {
 /// generated/proute/public/pages wraps this as StandingsMsg and routes it back
 /// into this module's update function.
 pub type Message {
-  Loaded(Result(List(GameSummary), LoadError))
+  Loaded(Result(List(GameSummary), runtime_load.LoadError))
   NavigateTeam(slug: String)
 }
 
@@ -367,11 +361,13 @@ fn section_head(title: String) -> Element(msg) {
 /// Server data loader behind the generated Rally SSR and WS load adapters.
 /// Rally calls this, then wraps page data in the Rally/Libero load result shape;
 /// focused tests also call it directly.
-pub fn load(db: sqlight.Connection) -> Result(List(GameSummary), LoadError) {
+pub fn load(
+  db: sqlight.Connection,
+) -> Result(List(GameSummary), runtime_load.LoadError) {
   case games_sql.list_public_games(db:, team_filter: "") {
     Ok(rows) -> Ok(list.map(rows, game_summary_from_row))
     Error(sqlight.SqlightError(..)) ->
-      Error(LoadError(message: "Could not load standings."))
+      Error(runtime_load.LoadError(message: "Could not load standings."))
   }
 }
 

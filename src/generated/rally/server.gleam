@@ -8,15 +8,12 @@ import gleam/list
 import gleam/option.{type Option}
 @target(javascript)
 import lustre/effect.{type Effect}
+@target(javascript)
+import rally/runtime/load as runtime_load
 
 @target(erlang)
 pub fn ensure() -> Nil {
   Nil
-}
-
-@target(javascript)
-pub type LoadError {
-  LoadError(message: String)
 }
 
 @target(javascript)
@@ -27,7 +24,8 @@ pub type SaveError {
 @target(javascript)
 pub fn load_admin_games(
   message message: a,
-  on_result on_result: fn(Result(load_result, List(LoadError))) -> msg,
+  on_result on_result: fn(Result(load_result, List(runtime_load.LoadError))) ->
+    msg,
 ) -> Effect(msg) {
   client_transport.send_admin_games_load(
     message: message,
@@ -38,7 +36,8 @@ pub fn load_admin_games(
 @target(javascript)
 pub fn load_public_game_detail(
   message message: a,
-  on_result on_result: fn(Result(load_result, List(LoadError))) -> msg,
+  on_result on_result: fn(Result(load_result, List(runtime_load.LoadError))) ->
+    msg,
 ) -> Effect(msg) {
   client_transport.send_public_game_detail_load(
     message: message,
@@ -49,7 +48,8 @@ pub fn load_public_game_detail(
 @target(javascript)
 pub fn load_public_games(
   message message: a,
-  on_result on_result: fn(Result(load_result, List(LoadError))) -> msg,
+  on_result on_result: fn(Result(load_result, List(runtime_load.LoadError))) ->
+    msg,
 ) -> Effect(msg) {
   client_transport.send_public_games_load(
     message: message,
@@ -60,7 +60,8 @@ pub fn load_public_games(
 @target(javascript)
 pub fn load_public_standings(
   message message: a,
-  on_result on_result: fn(Result(load_result, List(LoadError))) -> msg,
+  on_result on_result: fn(Result(load_result, List(runtime_load.LoadError))) ->
+    msg,
 ) -> Effect(msg) {
   client_transport.send_public_standings_load(
     message: message,
@@ -71,7 +72,8 @@ pub fn load_public_standings(
 @target(javascript)
 pub fn load_public_team_detail(
   message message: a,
-  on_result on_result: fn(Result(load_result, List(LoadError))) -> msg,
+  on_result on_result: fn(Result(load_result, List(runtime_load.LoadError))) ->
+    msg,
 ) -> Effect(msg) {
   client_transport.send_public_team_detail_load(
     message: message,
@@ -93,14 +95,14 @@ pub fn save_admin_games(
 @target(javascript)
 fn map_load_result(
   result: Result(a, List(transport_result.ApiLoadError)),
-) -> Result(a, List(LoadError)) {
+) -> Result(a, List(runtime_load.LoadError)) {
   case result {
     Ok(value) -> Ok(value)
     Error(errors) ->
       Error(
         list.map(errors, fn(error) {
           let transport_result.ApiLoadError(message:) = error
-          LoadError(message:)
+          runtime_load.LoadError(message:)
         }),
       )
   }

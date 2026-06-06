@@ -44,6 +44,8 @@ import public/pages/standings as public_standings_wire
 @target(erlang)
 import public/pages/teams/slug_ as public_team_detail_wire
 @target(erlang)
+import rally/runtime/load as runtime_load
+@target(erlang)
 import sqlight as load_context
 
 @target(erlang)
@@ -105,15 +107,13 @@ pub fn admin_load_route(route route: admin_routes.Route) -> AdminLoadRoute {
           Error([message, ..]) ->
             admin_pages.AdminGamesMsg(
               admin_games_wire.Loaded(
-                Error(admin_games_wire.LoadError(message: message)),
+                Error(runtime_load.LoadError(message: message)),
               ),
             )
           Error([]) ->
             admin_pages.AdminGamesMsg(
               admin_games_wire.Loaded(
-                Error(admin_games_wire.LoadError(
-                  message: "Could not load page.",
-                )),
+                Error(runtime_load.LoadError(message: "Could not load page.")),
               ),
             )
         }
@@ -126,15 +126,13 @@ pub fn admin_load_route(route route: admin_routes.Route) -> AdminLoadRoute {
           Error([message, ..]) ->
             admin_pages.AdminHomeMsg(
               admin_games_wire.Loaded(
-                Error(admin_games_wire.LoadError(message: message)),
+                Error(runtime_load.LoadError(message: message)),
               ),
             )
           Error([]) ->
             admin_pages.AdminHomeMsg(
               admin_games_wire.Loaded(
-                Error(admin_games_wire.LoadError(
-                  message: "Could not load page.",
-                )),
+                Error(runtime_load.LoadError(message: "Could not load page.")),
               ),
             )
         }
@@ -154,15 +152,13 @@ pub fn public_load_route(route route: public_routes.Route) -> PublicLoadRoute {
           Error([message, ..]) ->
             public_pages.GamesIdMsg(
               public_game_detail_wire.Loaded(
-                Error(public_game_detail_wire.LoadError(message: message)),
+                Error(runtime_load.LoadError(message: message)),
               ),
             )
           Error([]) ->
             public_pages.GamesIdMsg(
               public_game_detail_wire.Loaded(
-                Error(public_game_detail_wire.LoadError(
-                  message: "Could not load page.",
-                )),
+                Error(runtime_load.LoadError(message: "Could not load page.")),
               ),
             )
         }
@@ -175,15 +171,13 @@ pub fn public_load_route(route route: public_routes.Route) -> PublicLoadRoute {
           Error([message, ..]) ->
             public_pages.GamesMsg(
               public_games_wire.Loaded(
-                Error(public_games_wire.LoadError(message: message)),
+                Error(runtime_load.LoadError(message: message)),
               ),
             )
           Error([]) ->
             public_pages.GamesMsg(
               public_games_wire.Loaded(
-                Error(public_games_wire.LoadError(
-                  message: "Could not load page.",
-                )),
+                Error(runtime_load.LoadError(message: "Could not load page.")),
               ),
             )
         }
@@ -196,15 +190,13 @@ pub fn public_load_route(route route: public_routes.Route) -> PublicLoadRoute {
           Error([message, ..]) ->
             public_pages.HomeMsg(
               public_games_wire.Loaded(
-                Error(public_games_wire.LoadError(message: message)),
+                Error(runtime_load.LoadError(message: message)),
               ),
             )
           Error([]) ->
             public_pages.HomeMsg(
               public_games_wire.Loaded(
-                Error(public_games_wire.LoadError(
-                  message: "Could not load page.",
-                )),
+                Error(runtime_load.LoadError(message: "Could not load page.")),
               ),
             )
         }
@@ -217,15 +209,13 @@ pub fn public_load_route(route route: public_routes.Route) -> PublicLoadRoute {
           Error([message, ..]) ->
             public_pages.StandingsMsg(
               public_standings_wire.Loaded(
-                Error(public_standings_wire.LoadError(message: message)),
+                Error(runtime_load.LoadError(message: message)),
               ),
             )
           Error([]) ->
             public_pages.StandingsMsg(
               public_standings_wire.Loaded(
-                Error(public_standings_wire.LoadError(
-                  message: "Could not load page.",
-                )),
+                Error(runtime_load.LoadError(message: "Could not load page.")),
               ),
             )
         }
@@ -238,15 +228,13 @@ pub fn public_load_route(route route: public_routes.Route) -> PublicLoadRoute {
           Error([message, ..]) ->
             public_pages.TeamsSlugMsg(
               public_team_detail_wire.Loaded(
-                Error(public_team_detail_wire.LoadError(message: message)),
+                Error(runtime_load.LoadError(message: message)),
               ),
             )
           Error([]) ->
             public_pages.TeamsSlugMsg(
               public_team_detail_wire.Loaded(
-                Error(public_team_detail_wire.LoadError(
-                  message: "Could not load page.",
-                )),
+                Error(runtime_load.LoadError(message: "Could not load page.")),
               ),
             )
         }
@@ -321,7 +309,7 @@ pub fn admin_boot_page(
     AdminGamesLoad(to_message:) -> {
       let result = case admin_games_wire.load(load_context) {
         Ok(data) -> Ok(admin_games_wire.AdminGamesLoadResult(data))
-        Error(admin_games_wire.LoadError(message: message)) -> Error([message])
+        Error(runtime_load.LoadError(message: message)) -> Error([message])
       }
       boot_loaded_page(
         page: page,
@@ -355,7 +343,7 @@ pub fn public_boot_page(
               case public_game_detail_wire.load(load_context, game_id) {
                 Ok(data) ->
                   Ok(public_game_detail_wire.PublicGameDetailLoaded(data))
-                Error(public_game_detail_wire.LoadError(message: message)) ->
+                Error(runtime_load.LoadError(message: message)) ->
                   Error([message])
               }
             Error(Nil) -> Error(["Invalid route parameter."])
@@ -373,7 +361,7 @@ pub fn public_boot_page(
     PublicGamesLoad(to_message:) -> {
       let result = case public_games_wire.load(load_context) {
         Ok(data) -> Ok(public_games_wire.PublicGamesLoaded(data))
-        Error(public_games_wire.LoadError(message: message)) -> Error([message])
+        Error(runtime_load.LoadError(message: message)) -> Error([message])
       }
       boot_loaded_page(
         page: page,
@@ -386,8 +374,7 @@ pub fn public_boot_page(
     PublicStandingsLoad(to_message:) -> {
       let result = case public_standings_wire.load(load_context) {
         Ok(data) -> Ok(public_standings_wire.PublicStandingsLoaded(data))
-        Error(public_standings_wire.LoadError(message: message)) ->
-          Error([message])
+        Error(runtime_load.LoadError(message: message)) -> Error([message])
       }
       boot_loaded_page(
         page: page,
@@ -402,8 +389,7 @@ pub fn public_boot_page(
         public_routes.TeamsSlug(slug:) ->
           case public_team_detail_wire.load(load_context, slug) {
             Ok(data) -> Ok(public_team_detail_wire.PublicTeamDetailLoaded(data))
-            Error(public_team_detail_wire.LoadError(message: message)) ->
-              Error([message])
+            Error(runtime_load.LoadError(message: message)) -> Error([message])
           }
         _ -> Error(["Unexpected route."])
       }

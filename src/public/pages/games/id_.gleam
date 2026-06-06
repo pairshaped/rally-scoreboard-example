@@ -8,6 +8,7 @@ import lustre/element.{type Element}
 import lustre/element/html
 import lustre/event
 import public/page_shared_state.{type PublicPageSharedState}
+import rally/runtime/load as runtime_load
 
 @target(erlang)
 import generated/sql/public/pages/games/id__sql as games_sql
@@ -45,13 +46,6 @@ pub type GameDetail {
   )
 }
 
-/// Page-local load error carried by Message.Loaded.
-/// Browser and SSR load adapters translate Rally/Libero load failures into this
-/// type before calling update.
-pub type LoadError {
-  LoadError(message: String)
-}
-
 /// Rally load request message.
 /// generated/rally browser and server protocol code encodes this for detail page
 /// load requests, and load_route builds it from Proute route params.
@@ -76,7 +70,7 @@ pub type Model {
 /// generated/proute/public/pages wraps this as GamesIdMsg and routes it back
 /// into this module's update function.
 pub type Message {
-  Loaded(Result(GameDetail, LoadError))
+  Loaded(Result(GameDetail, runtime_load.LoadError))
   NavigateTeam(slug: String)
 }
 
@@ -278,12 +272,12 @@ fn status_badge(status: GameStatus) -> Element(msg) {
 pub fn load(
   db: sqlight.Connection,
   game_id: Int,
-) -> Result(GameDetail, LoadError) {
+) -> Result(GameDetail, runtime_load.LoadError) {
   case games_sql.get_game(db:, game_id:) {
     Ok([row, ..]) -> Ok(game_detail_from_row(row))
-    Ok([]) -> Error(LoadError(message: "Game not found."))
+    Ok([]) -> Error(runtime_load.LoadError(message: "Game not found."))
     Error(sqlight.SqlightError(..)) ->
-      Error(LoadError(message: "Could not load game."))
+      Error(runtime_load.LoadError(message: "Could not load game."))
   }
 }
 

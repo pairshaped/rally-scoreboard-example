@@ -30,14 +30,11 @@ import public/pages/standings as public_standings_wire
 @target(erlang)
 import public/pages/teams/slug_ as public_team_detail_wire
 @target(erlang)
+import rally/runtime/load as runtime_load
+@target(erlang)
 import rally/runtime/topics
 @target(erlang)
 import sqlight as load_context
-
-@target(erlang)
-pub type LoadError {
-  LoadError(message: String)
-}
 
 @target(erlang)
 pub type SaveError {
@@ -385,12 +382,11 @@ fn send_admin_games_load_result(
 ) -> Nil {
   let result =
     case handlers.admin_auth(state) {
-      None -> Error([LoadError(message: "Unauthorized.")])
+      None -> Error([runtime_load.LoadError(message: "Unauthorized.")])
       Some(_) ->
         case admin_games_wire.load(handlers.load_context(state)) {
           Ok(data) -> Ok(admin_games_wire.AdminGamesLoadResult(data))
-          Error(admin_games_wire.LoadError(message: message)) ->
-            Error([message])
+          Error(runtime_load.LoadError(message: message)) -> Error([message])
         }
         |> map_page_load_result
     }
@@ -418,8 +414,7 @@ fn send_public_game_detail_load_result(
   let result =
     case public_game_detail_wire.load(handlers.load_context(state), game_id) {
       Ok(data) -> Ok(public_game_detail_wire.PublicGameDetailLoaded(data))
-      Error(public_game_detail_wire.LoadError(message: message)) ->
-        Error([message])
+      Error(runtime_load.LoadError(message: message)) -> Error([message])
     }
     |> map_page_load_result
     |> map_load_result
@@ -445,7 +440,7 @@ fn send_public_games_load_result(
   let result =
     case public_games_wire.load(handlers.load_context(state)) {
       Ok(data) -> Ok(public_games_wire.PublicGamesLoaded(data))
-      Error(public_games_wire.LoadError(message: message)) -> Error([message])
+      Error(runtime_load.LoadError(message: message)) -> Error([message])
     }
     |> map_page_load_result
     |> map_load_result
@@ -471,8 +466,7 @@ fn send_public_standings_load_result(
   let result =
     case public_standings_wire.load(handlers.load_context(state)) {
       Ok(data) -> Ok(public_standings_wire.PublicStandingsLoaded(data))
-      Error(public_standings_wire.LoadError(message: message)) ->
-        Error([message])
+      Error(runtime_load.LoadError(message: message)) -> Error([message])
     }
     |> map_page_load_result
     |> map_load_result
@@ -499,8 +493,7 @@ fn send_public_team_detail_load_result(
   let result =
     case public_team_detail_wire.load(handlers.load_context(state), slug) {
       Ok(data) -> Ok(public_team_detail_wire.PublicTeamDetailLoaded(data))
-      Error(public_team_detail_wire.LoadError(message: message)) ->
-        Error([message])
+      Error(runtime_load.LoadError(message: message)) -> Error([message])
     }
     |> map_page_load_result
     |> map_load_result
@@ -564,24 +557,24 @@ fn send_admin_games_save_result(
 @target(erlang)
 fn map_page_load_result(
   result: Result(a, List(String)),
-) -> Result(a, List(LoadError)) {
+) -> Result(a, List(runtime_load.LoadError)) {
   case result {
     Ok(value) -> Ok(value)
     Error(errors) ->
-      Error(list.map(errors, fn(message) { LoadError(message:) }))
+      Error(list.map(errors, fn(message) { runtime_load.LoadError(message:) }))
   }
 }
 
 @target(erlang)
 fn map_load_result(
-  result: Result(a, List(LoadError)),
+  result: Result(a, List(runtime_load.LoadError)),
 ) -> Result(a, List(transport_result.ApiLoadError)) {
   case result {
     Ok(value) -> Ok(value)
     Error(errors) ->
       Error(
         list.map(errors, fn(error) {
-          let LoadError(message:) = error
+          let runtime_load.LoadError(message:) = error
           transport_result.ApiLoadError(message:)
         }),
       )

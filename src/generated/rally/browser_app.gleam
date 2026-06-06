@@ -59,6 +59,8 @@ import public/pages/home_ as public_pages_home__page
 import public/pages/standings as public_standings_wire
 @target(javascript)
 import public/pages/teams/slug_ as public_team_detail_wire
+@target(javascript)
+import rally/runtime/load as runtime_load
 
 @target(javascript)
 pub type AdminLoadRoute {
@@ -110,9 +112,7 @@ pub fn admin_load_route(route route: admin_routes.Route) -> AdminLoadRoute {
             Error(errors) ->
               admin_pages.AdminGamesMsg(
                 admin_games_wire.Loaded(
-                  Error(
-                    admin_games_wire.LoadError(message: api_load_error(errors)),
-                  ),
+                  Error(runtime_load.LoadError(message: api_load_error(errors))),
                 ),
               )
           }
@@ -128,9 +128,7 @@ pub fn admin_load_route(route route: admin_routes.Route) -> AdminLoadRoute {
             Error(errors) ->
               admin_pages.AdminHomeMsg(
                 admin_games_wire.Loaded(
-                  Error(
-                    admin_games_wire.LoadError(message: api_load_error(errors)),
-                  ),
+                  Error(runtime_load.LoadError(message: api_load_error(errors))),
                 ),
               )
           }
@@ -158,9 +156,7 @@ pub fn public_load_route(route route: public_routes.Route) -> PublicLoadRoute {
                   public_pages.GamesIdMsg(
                     public_game_detail_wire.Loaded(
                       Error(
-                        public_game_detail_wire.LoadError(
-                          message: api_load_error(errors),
-                        ),
+                        runtime_load.LoadError(message: api_load_error(errors)),
                       ),
                     ),
                   )
@@ -179,9 +175,7 @@ pub fn public_load_route(route route: public_routes.Route) -> PublicLoadRoute {
             Error(errors) ->
               public_pages.GamesMsg(
                 public_games_wire.Loaded(
-                  Error(
-                    public_games_wire.LoadError(message: api_load_error(errors)),
-                  ),
+                  Error(runtime_load.LoadError(message: api_load_error(errors))),
                 ),
               )
           }
@@ -197,9 +191,7 @@ pub fn public_load_route(route route: public_routes.Route) -> PublicLoadRoute {
             Error(errors) ->
               public_pages.HomeMsg(
                 public_games_wire.Loaded(
-                  Error(
-                    public_games_wire.LoadError(message: api_load_error(errors)),
-                  ),
+                  Error(runtime_load.LoadError(message: api_load_error(errors))),
                 ),
               )
           }
@@ -215,11 +207,7 @@ pub fn public_load_route(route route: public_routes.Route) -> PublicLoadRoute {
             Error(errors) ->
               public_pages.StandingsMsg(
                 public_standings_wire.Loaded(
-                  Error(
-                    public_standings_wire.LoadError(message: api_load_error(
-                      errors,
-                    )),
-                  ),
+                  Error(runtime_load.LoadError(message: api_load_error(errors))),
                 ),
               )
           }
@@ -237,11 +225,7 @@ pub fn public_load_route(route route: public_routes.Route) -> PublicLoadRoute {
             Error(errors) ->
               public_pages.TeamsSlugMsg(
                 public_team_detail_wire.Loaded(
-                  Error(
-                    public_team_detail_wire.LoadError(message: api_load_error(
-                      errors,
-                    )),
-                  ),
+                  Error(runtime_load.LoadError(message: api_load_error(errors))),
                 ),
               )
           }

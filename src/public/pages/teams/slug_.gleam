@@ -10,6 +10,7 @@ import lustre/element.{type Element}
 import lustre/element/html
 import lustre/event
 import public/page_shared_state.{type PublicPageSharedState}
+import rally/runtime/load as runtime_load
 
 @target(erlang)
 import generated/sql/public/pages/games_sql
@@ -64,13 +65,6 @@ pub type TeamDetail {
   )
 }
 
-/// Page-local load error carried by Message.Loaded.
-/// Browser and SSR load adapters translate Rally/Libero load failures into this
-/// type before calling update.
-pub type LoadError {
-  LoadError(message: String)
-}
-
 /// Rally load request message.
 /// generated/rally browser and server protocol code encodes this for team detail
 /// load requests, and load_route builds it from Proute route params.
@@ -95,7 +89,7 @@ pub type Model {
 /// generated/proute/public/pages wraps this as TeamsSlugMsg and routes it back
 /// into this module's update function.
 pub type Message {
-  Loaded(Result(TeamDetail, LoadError))
+  Loaded(Result(TeamDetail, runtime_load.LoadError))
   NavigateTeam(slug: String)
   NavigateGame(id: Int)
 }
@@ -410,12 +404,12 @@ fn status_badge(status: GameStatus) -> Element(msg) {
 pub fn load(
   db: sqlight.Connection,
   slug: String,
-) -> Result(TeamDetail, LoadError) {
+) -> Result(TeamDetail, runtime_load.LoadError) {
   case teams_sql.get_team_by_slug(db:, slug:) {
     Ok([row, ..]) -> load_team_games(db, row)
-    Ok([]) -> Error(LoadError(message: "Team not found."))
+    Ok([]) -> Error(runtime_load.LoadError(message: "Team not found."))
     Error(sqlight.SqlightError(..)) ->
-      Error(LoadError(message: "Could not load team."))
+      Error(runtime_load.LoadError(message: "Could not load team."))
   }
 }
 
@@ -423,7 +417,7 @@ pub fn load(
 fn load_team_games(
   db: sqlight.Connection,
   row: teams_sql.GetTeamBySlugRow,
-) -> Result(TeamDetail, LoadError) {
+) -> Result(TeamDetail, runtime_load.LoadError) {
   let team_code = optional_string(row.code)
 
   case games_sql.list_public_games(db:, team_filter: team_code) {
@@ -439,7 +433,7 @@ fn load_team_games(
         recent_games: list.map(games, game_summary_from_row),
       ))
     Error(sqlight.SqlightError(..)) ->
-      Error(LoadError(message: "Could not load team games."))
+      Error(runtime_load.LoadError(message: "Could not load team games."))
   }
 }
 
