@@ -100,7 +100,7 @@ pub fn load(ctx, params) -> Result(List(Game), runtime_load.LoadError) {
 }
 
 @target(erlang)
-pub fn handle(ctx, msg: ServerMsg) -> Result(Game, SaveError) {
+pub fn handle_save(ctx, msg: ServerMsg) -> Result(Game, SaveError) {
   todo
 }
 ```

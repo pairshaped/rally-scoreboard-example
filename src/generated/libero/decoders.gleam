@@ -3,6 +3,6 @@
 //// Gleam wrapper for the typed decoder FFI. Importing this module
 //// triggers constructor and decoder registration on the JavaScript target.
 
-@external(erlang, "libero_etf_ffi", "ensure_decoders")
+@external(erlang, "libero_ffi", "ensure_decoders")
 @external(javascript, "./decoders_ffi.mjs", "ensure_decoders")
 pub fn ensure_decoders() -> Bool

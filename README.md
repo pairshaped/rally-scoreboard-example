@@ -27,7 +27,7 @@ Generated source is checked in while this project proves the shape. That include
 
 ## Page Contract
 
-Pages own their local `Model`, browser `Msg`, page-local `ServerMsg`, pure `initial_model`, shared `view`, browser `update`, optional `init`, and Erlang-only `load` and `handle` functions. Most pages omit `init`; use it only for page-specific browser startup effects such as browser APIs, local storage, focus, measurement, or one-off DOM effects.
+Pages own their local `Model`, browser `Msg`, page-local `ServerMsg`, pure `initial_model`, shared `view`, browser `update`, optional `init`, and Erlang-only `load` and `handle_save` functions. Most pages omit `init`; use it only for page-specific browser startup effects such as browser APIs, local storage, focus, measurement, or one-off DOM effects.
 
 Page data shapes belong to the page that renders and updates them. Shared types are reserved for stable app concepts independent of a page.
 

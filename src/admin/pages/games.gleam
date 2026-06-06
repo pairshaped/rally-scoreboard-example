@@ -56,7 +56,7 @@ pub type LoadResult {
   AdminGamesLoadResult(games: List(AdminGameSummary))
 }
 
-/// Page-local save error carried by Message.Saved and returned by handle.
+/// Page-local save error carried by Message.Saved and returned by handle_save.
 /// app_ws translates this into generated Rally websocket SaveError values for
 /// browser responses.
 pub type SaveError {
@@ -344,7 +344,7 @@ fn message_effect(msg: Message) -> Effect(Message) {
 }
 
 @target(erlang)
-/// Server-side no-op because admin mutations are handled in `handle`.
+/// Server-side no-op because admin mutations are handled in `handle_save`.
 fn message_effect(_msg: Message) -> Effect(Message) {
   effect.none()
 }
@@ -389,7 +389,7 @@ pub fn load(
 @target(erlang)
 /// Required because generated/rally/server_ws module calls this after decoding
 /// an admin save request and verifying that the connection is authorized.
-pub fn handle(
+pub fn handle_save(
   db: sqlight.Connection,
   msg: ServerMsg,
 ) -> Result(GameUpdate, SaveError) {
