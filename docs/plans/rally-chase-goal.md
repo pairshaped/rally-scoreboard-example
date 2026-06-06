@@ -12,7 +12,7 @@ The target is not to make the current app prettier in place. The target is to ma
 4. Erlang-only load and server request handlers appear under `// SERVER`.
 5. Page data shapes stay page-local.
 6. Pages do not import domain models from other pages.
-7. Wire-crossing types can reference only page-local types, `src/wire/**` types, primitives, and standard containers.
+7. Wire-crossing types can reference only page-local types, `src/wire/**` types, `src/broadcasts.gleam`, primitives, and standard containers.
 8. Proute owns route discovery, route params, query params, page enums, and page dispatch shape.
 9. Proute identifies the page, action, or channel before Rally decodes page-local wire payloads.
 10. Rally-generated framework glue lives under `src/generated/rally`.
@@ -40,7 +40,7 @@ The target is not to make the current app prettier in place. The target is to ma
 
 ### Target Annotations
 
-The chase must test one central authored `src/` tree that uses `@target(erlang)` and `@target(javascript)` where platform behavior begins. It must not test the old generated-client-package model.
+The chase must test one central authored `src/` tree that uses `@target(erlang)` and `@target(javascript)` where platform behavior begins. It must not test a separate generated-client-package model.
 
 ### Wire Type Ownership
 
@@ -48,6 +48,7 @@ Wire-visible page protocols may reference:
 
 - types defined in the owning page module
 - types defined under `src/wire/**`
+- types defined in `src/broadcasts.gleam`
 - primitives
 - standard containers such as `List`, `Result`, `Option`, tuples, and records that contain approved wire-visible types
 
@@ -146,10 +147,10 @@ Expected changes:
 
 - Move admin list data and save response data into the page module.
 - Replace app-level update dispatch with page-local `ServerMsg`.
-- Keep score adjustment and finalization as browser `Msg` constructors.
+- Keep score adjustment and finalization as browser `Message` constructors.
 - Return save result data directly inside `Result`.
-- Send page-local server messages with a Rally API/RPC effect whose `on_result` callback receives `Result(success, error)` and dispatches the selected local browser `Msg`.
-- Treat current `send_load` and `send_save` helpers as temporary bridge code. The target Rally API is `server.send(ServerMsg, on_result: ...)` once page-local result generation owns the result type.
+- Send page-local server messages with a generated Rally save effect whose `on_result` callback receives `Result(success, error)` and dispatches the selected local browser `Message`.
+- Use generated page-specific save helpers such as `server.save_admin_games(message:, on_result:)` once page-local result generation owns the result type.
 - Keep server DB writes under `// SERVER`.
 
 Acceptance:
@@ -212,7 +213,7 @@ Make the chase prove Rally can reject the wrong wire shapes.
 
 Expected changes:
 
-- Use `src/wire/**` as the only approved root wire namespace.
+- Use page-local types, `src/wire/**`, and `src/broadcasts.gleam` as approved wire roots.
 - Keep page-local payloads local to their page modules.
 - Add fixture or example failures for helper, service, query, business, and display types crossing the wire.
 - Add fixture or example failures for target-specific imports leaking into the wrong target.
@@ -224,10 +225,10 @@ Acceptance:
 ```sh
 gleam build --target javascript
 gleam build --target erlang
-rg "src/wire" README.md docs src
+rg "src/wire|src/broadcasts.gleam" README.md docs src
 ```
 
-The `rg` command should show `src/wire/**` as the approved root wire namespace.
+The `rg` command should show the approved wire roots.
 
 ## Slice 6: Prove Route-First Decoding
 
@@ -349,10 +350,11 @@ Expected changes:
 Acceptance:
 
 ```sh
-rg "api/to_server|api/to_client|ToServer|ToClient|superseded|legacy" README.md docs
+rg "api/to_server|api/to_client|ToServer|ToClient" README.md docs
 ```
 
-The command should find no matches.
+The command should find no live design or source dependency on global API
+message roots.
 
 ## Final Acceptance
 
@@ -361,7 +363,8 @@ Run:
 ```sh
 gleam run -m marmot
 gleam run -m proute
-gleam run -m rally load-rpc
+gleam run -m rally regen
+gleam run -m rally build
 gleam build --target javascript
 gleam build --target erlang
 gleam test

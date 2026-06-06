@@ -23,68 +23,82 @@ A page module should read like a basic TEA SPA page with server handlers at the 
 
 ```gleam
 import components/ui
-import generated/proute/public/page_input
+import admin/page_shared_state.{type AdminPageSharedState}
+import generated/proute/admin/page_input
 import lustre/effect.{type Effect}
 import lustre/element.{type Element}
-import public/page_shared_state.{type PublicPageSharedState}
 import rally/runtime/load as runtime_load
 
 @target(erlang)
-import generated/sql/games_sql
+import generated/sql/admin/pages/games_sql
 
 @target(javascript)
-import rally/server
+import generated/rally/server
 
 pub type Model {
-  Model(games: List(Game), saving: Bool)
+  Model(games: List(AdminGameSummary), saving: Bool)
 }
 
-pub type Msg {
-  AdjustHome(id: Int, delta: Int)
-  Loaded(Result(List(Game), runtime_load.LoadError))
-  Saved(Result(Game, SaveError))
+pub type Message {
+  AdjustHome(id: Int, home_score: Int, away_score: Int, delta: Int)
+  Loaded(Result(List(AdminGameSummary), runtime_load.LoadError))
+  Saved(Result(GameUpdate, SaveError))
 }
 
 pub type ServerMsg {
-  ServerAdjustHome(id: Int, delta: Int)
+  AdminGamesUpdateScore(
+    game_id: Int,
+    home_score: Int,
+    away_score: Int,
+    period: String,
+  )
 }
 
-pub fn view(model: Model) -> Element(Msg) {
+pub fn view(model: Model) -> Element(Message) {
   todo
 }
 
 // INIT
 
-/// generated/proute/public/pages module calls this to construct an empty page
+/// generated/proute/admin/pages module calls this to construct an empty page
 /// before Rally applies hydrated or freshly loaded data.
 pub fn initial_model(
-  _page_shared_state: PublicPageSharedState,
+  _page_shared_state: AdminPageSharedState,
   _query_params: page_input.QueryParams,
 ) -> Model {
   Model(games: [], saving: False)
 }
 
-/// generated/proute/public/pages module calls this when the route first builds
+/// generated/proute/admin/pages module calls this when the route first builds
 /// the page.
 /// Most Rally pages omit this. Use it only for page-specific client startup
 /// effects such as browser APIs, local storage, focus, measurement, or one-off
 /// DOM effects. Standard page data loading is owned by generated Rally glue.
 pub fn init(
-  page_shared_state page_shared_state: PublicPageSharedState,
+  page_shared_state page_shared_state: AdminPageSharedState,
   query_params query_params: page_input.QueryParams,
-) -> #(Model, Effect(Msg)) {
+) -> #(Model, Effect(Message)) {
   #(initial_model(page_shared_state, query_params), effect.none())
 }
 
 // CLIENT
 
 @target(javascript)
-pub fn update(msg: Msg, model: Model) -> #(Model, Effect(Msg)) {
+pub fn update(
+  _page_shared_state: AdminPageSharedState,
+  model model: Model,
+  msg msg: Message,
+) -> #(Model, Effect(Message)) {
   case msg {
-    AdjustHome(id, delta) -> #(
+    AdjustHome(id, home_score, away_score, delta) -> #(
       Model(..model, saving: True),
-      server.send(
-        ServerAdjustHome(id:, delta:),
+      server.save_admin_games(
+        message: AdminGamesUpdateScore(
+          game_id: id,
+          home_score: home_score + delta,
+          away_score: away_score,
+          period: "Live",
+        ),
         on_result: fn(result) { Saved(result) },
       ),
     )
@@ -95,12 +109,12 @@ pub fn update(msg: Msg, model: Model) -> #(Model, Effect(Msg)) {
 // SERVER
 
 @target(erlang)
-pub fn load(ctx, params) -> Result(List(Game), runtime_load.LoadError) {
+pub fn load(ctx) -> Result(List(AdminGameSummary), runtime_load.LoadError) {
   todo
 }
 
 @target(erlang)
-pub fn handle_save(ctx, msg: ServerMsg) -> Result(Game, SaveError) {
+pub fn handle_save(ctx, msg: ServerMsg) -> Result(GameUpdate, SaveError) {
   todo
 }
 ```
@@ -111,30 +125,41 @@ The section comments are for humans. Rally validates the page contract by functi
 
 `initial_model` is the normal starting point for a page. `init` is optional. A page should define `init` only when it needs page-local browser startup work that cannot be represented as loaded page data or normal update behavior. Rally-generated browser glue calls `init` when it exists; otherwise it constructs the page with `initial_model` and no effect. Rally-generated SSR glue uses `initial_model` so server rendering never depends on browser-only effects.
 
-## API/RPC Effects
+## Generated Save Effects
 
-Page code sends page-local `ServerMsg` values through a Rally API/RPC effect:
+Page code sends page-local `ServerMsg` values through a generated Rally save
+effect:
 
 ```gleam
-server.send(ServerSave(form), on_result: Saved)
+server.save_admin_games(
+  message: AdminGamesMarkFinal(id),
+  on_result: fn(result) { Saved(result) },
+)
 ```
 
-The effect returns Lustre `Effect(Msg)`. Rally owns request id generation, pending callback registration, wire encoding, result decoding, and dispatching the selected local `Msg`.
+The effect returns Lustre `Effect(Message)`. Rally owns request id generation,
+pending callback registration, wire encoding, result decoding, and dispatching
+the selected local `Message`.
 
-`on_result` receives a normal `Result(success, error)` and returns a local browser `Msg`. A save with no success payload uses `Result(Nil, SaveError)`. A create flow can use `Result(Item, SaveError)`.
+`on_result` receives a normal `Result(success, error)` and returns a local
+browser `Message`. A save with no success payload uses `Result(Nil, SaveError)`.
+A create flow can use `Result(Item, SaveError)`.
 
 Page code carries local context in the completion message only when it needs that context:
 
 ```gleam
-server.send(
-  ServerUpdateScore(game_id:, home_score:, away_score:),
+server.save_admin_games(
+  message: AdminGamesUpdateScore(game_id:, home_score:, away_score:, period:),
   on_result: fn(result) { ScoreSaved(game_id, result) },
 )
 ```
 
 Server-originated state events should be delivered to other subscribed clients, excluding the connection that initiated the mutation. Request results manage request lifecycle for the initiating page. Broadcast events carry server-authoritative state for subscribed peers.
 
-Generated load/save transport helpers are internal Rally glue. Authored page code uses `server.send(ServerMsg, on_result: ...)` for page-local server commands, while generated Rally browser glue owns standard page data loading.
+Generated load/save transport helpers are internal Rally glue. Authored page
+code uses generated page-specific save functions such as
+`server.save_admin_games(message:, on_result:)` for page-local server commands,
+while generated Rally browser glue owns standard page data loading.
 
 ## Authoring Style
 
@@ -168,7 +193,10 @@ Page data shapes belong to the page that renders and updates them. A list page, 
 
 Shared types are reserved for stable app concepts independent of a page, such as identifiers, enums, or value objects. Page payloads, form models, table rows, detail data, and save responses stay page local.
 
-The approved root wire namespace is `src/wire/**`. Wire-visible page protocols may reference page-local types, `src/wire/**` types, primitives, and standard containers. They may not reference helper, service, query, business, formatting, or display types, even transitively.
+The approved root wire namespaces are page-local types, `src/wire/**`, and
+`src/broadcasts.gleam`. Wire-visible page protocols may reference those types,
+primitives, and standard containers. They may not reference helper, service,
+query, business, formatting, or display types, even transitively.
 
 Helpers are still allowed as behavior. A page may call helpers and services, but their owned shapes cannot become wire contract shapes.
 
@@ -179,10 +207,16 @@ Generated source lives under `src/generated`:
 ```text
 src/generated/proute/**/*.gleam
 src/generated/rally/**/*.gleam
+src/generated/libero/**/*.gleam
+src/generated/libero/**/*.erl
 src/generated/sql/**/*.gleam
 ```
 
-Proute owns file routes, page enums, route params, query params, and page dispatch shape. Rally consumes Proute output and generates page protocol code, browser boot, hydration, SSR, client transport, and server dispatch. Marmot writes typed SQL modules for Erlang-only server paths.
+Proute owns file routes, page enums, route params, query params, and page
+dispatch shape. Rally consumes Proute output and generates page protocol code,
+browser boot, hydration, SSR, client transport, and server dispatch. Libero
+writes codec, atom, wire, decoder, and contract artifacts. Marmot writes typed
+SQL modules for Erlang-only server paths.
 
 Generated modules use the same target annotation rules as user-authored modules.
 
