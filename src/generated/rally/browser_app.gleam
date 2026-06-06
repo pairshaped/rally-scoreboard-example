@@ -337,11 +337,13 @@ pub fn public_page_topics(
   page page: public_pages.Page,
 ) -> List(push_payload.Topic) {
   case page {
-    public_pages.GamesIdPage(model) -> public_game_detail_wire.topics(model)
+    public_pages.GamesIdPage(route_params:, model:) ->
+      public_game_detail_wire.topics(route_params, model)
     public_pages.GamesPage(model) -> public_games_wire.topics(model)
     public_pages.HomePage(model) -> public_pages_home__page.topics(model)
     public_pages.StandingsPage(model) -> public_standings_wire.topics(model)
-    public_pages.TeamsSlugPage(model) -> public_team_detail_wire.topics(model)
+    public_pages.TeamsSlugPage(route_params:, model:) ->
+      public_team_detail_wire.topics(route_params, model)
     _ -> []
   }
 }
@@ -353,11 +355,11 @@ pub fn public_apply_push(
   message message: push_payload.Event,
 ) -> #(public_pages.Page, Effect(public_pages.Message)) {
   case page {
-    public_pages.GamesIdPage(model) -> {
+    public_pages.GamesIdPage(route_params:, model:) -> {
       let #(model, page_effect) =
         public_game_detail_wire.apply_push(model, message)
       #(
-        public_pages.GamesIdPage(model),
+        public_pages.GamesIdPage(route_params:, model: model),
         effect.map(page_effect, public_pages.GamesIdMsg),
       )
     }
@@ -384,11 +386,11 @@ pub fn public_apply_push(
         effect.map(page_effect, public_pages.StandingsMsg),
       )
     }
-    public_pages.TeamsSlugPage(model) -> {
+    public_pages.TeamsSlugPage(route_params:, model:) -> {
       let #(model, page_effect) =
         public_team_detail_wire.apply_push(model, message)
       #(
-        public_pages.TeamsSlugPage(model),
+        public_pages.TeamsSlugPage(route_params:, model: model),
         effect.map(page_effect, public_pages.TeamsSlugMsg),
       )
     }

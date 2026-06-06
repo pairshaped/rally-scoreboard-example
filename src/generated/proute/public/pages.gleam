@@ -28,10 +28,16 @@ import public/pages/teams/slug_ as teams_slug_page
 pub type Page {
   HomePage(model: home_page.Model)
   GamesPage(model: games_page.Model)
-  GamesIdPage(model: games_id_page.Model)
+  GamesIdPage(
+    route_params: page_input.GamesIdRouteParams,
+    model: games_id_page.Model,
+  )
   SignInPage(model: sign_in_page.Model)
   StandingsPage(model: standings_page.Model)
-  TeamsSlugPage(model: teams_slug_page.Model)
+  TeamsSlugPage(
+    route_params: page_input.TeamsSlugRouteParams,
+    model: teams_slug_page.Model,
+  )
   NotFoundPage(model: not_found_page.Model)
 }
 
@@ -75,7 +81,7 @@ pub fn load(
       let route_params = page_input.GamesIdRouteParams(id:)
       let #(page_model, page_effect) =
         games_id_page.init(page_context, route_params, query_params)
-      #(GamesIdPage(page_model), effect.map(page_effect, GamesIdMsg))
+      #(GamesIdPage(route_params:, model: page_model), effect.map(page_effect, GamesIdMsg))
     }
     routes.SignIn -> {
       let #(page_model, page_effect) =
@@ -91,7 +97,7 @@ pub fn load(
       let route_params = page_input.TeamsSlugRouteParams(slug:)
       let #(page_model, page_effect) =
         teams_slug_page.init(page_context, route_params, query_params)
-      #(TeamsSlugPage(page_model), effect.map(page_effect, TeamsSlugMsg))
+      #(TeamsSlugPage(route_params:, model: page_model), effect.map(page_effect, TeamsSlugMsg))
     }
     routes.NotFound -> {
       let #(page_model, page_effect) =
@@ -121,11 +127,12 @@ pub fn load_sync(
     }
     routes.GamesId(id) -> {
       let route_params = page_input.GamesIdRouteParams(id:)
-      GamesIdPage(games_id_page.initial_model(
+      let page_model = games_id_page.initial_model(
         page_context,
         route_params,
         query_params,
-      ))
+      )
+      GamesIdPage(route_params:, model: page_model)
     }
     routes.SignIn -> {
       SignInPage(sign_in_page.initial_model(page_context, query_params))
@@ -135,11 +142,12 @@ pub fn load_sync(
     }
     routes.TeamsSlug(slug) -> {
       let route_params = page_input.TeamsSlugRouteParams(slug:)
-      TeamsSlugPage(teams_slug_page.initial_model(
+      let page_model = teams_slug_page.initial_model(
         page_context,
         route_params,
         query_params,
-      ))
+      )
+      TeamsSlugPage(route_params:, model: page_model)
     }
     routes.NotFound -> {
       NotFoundPage(not_found_page.initial_model(page_context, query_params))
@@ -167,9 +175,9 @@ pub fn update(
       let page = GamesPage(new_model)
       #(page, effect.map(page_effect, GamesMsg))
     }
-    GamesIdPage(page_model), GamesIdMsg(inner) -> {
+    GamesIdPage(route_params:, model: page_model), GamesIdMsg(inner) -> {
       let #(new_model, page_effect) = games_id_page.update(page_model, inner)
-      let page = GamesIdPage(new_model)
+      let page = GamesIdPage(route_params:, model: new_model)
       #(page, effect.map(page_effect, GamesIdMsg))
     }
     SignInPage(page_model), SignInMsg(inner) -> {
@@ -182,9 +190,9 @@ pub fn update(
       let page = StandingsPage(new_model)
       #(page, effect.map(page_effect, StandingsMsg))
     }
-    TeamsSlugPage(page_model), TeamsSlugMsg(inner) -> {
+    TeamsSlugPage(route_params:, model: page_model), TeamsSlugMsg(inner) -> {
       let #(new_model, page_effect) = teams_slug_page.update(page_model, inner)
-      let page = TeamsSlugPage(new_model)
+      let page = TeamsSlugPage(route_params:, model: new_model)
       #(page, effect.map(page_effect, TeamsSlugMsg))
     }
     NotFoundPage(page_model), NotFoundMsg(inner) -> {
@@ -208,7 +216,7 @@ pub fn view(page: Page) -> element.Element(Message) {
     GamesPage(page_model) ->
       games_page.view(page_model)
       |> element.map(GamesMsg)
-    GamesIdPage(page_model) ->
+    GamesIdPage(route_params: _, model: page_model) ->
       games_id_page.view(page_model)
       |> element.map(GamesIdMsg)
     SignInPage(page_model) ->
@@ -217,7 +225,7 @@ pub fn view(page: Page) -> element.Element(Message) {
     StandingsPage(page_model) ->
       standings_page.view(page_model)
       |> element.map(StandingsMsg)
-    TeamsSlugPage(page_model) ->
+    TeamsSlugPage(route_params: _, model: page_model) ->
       teams_slug_page.view(page_model)
       |> element.map(TeamsSlugMsg)
     NotFoundPage(page_model) ->

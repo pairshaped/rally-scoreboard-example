@@ -6,6 +6,8 @@ let listeners = new Set();
 let reconnectTimer = null;
 let reconnectAttempts = 0;
 let requestId = 0;
+let currentTopicFrame = null;
+let sentTopicFrame = null;
 
 import { BitArray, Ok } from "../../gleam.mjs";
 import { decode_result_envelope } from "./client_protocol.mjs";
@@ -42,13 +44,18 @@ export function send_frame(frame) {
 }
 
 export function send_topic_frame(topics) {
-  const text = "rally:topics:" + Array.from(topics).join(",");
+  const names = Array.from(topics);
+  const text = names.length === 0 ? "unsub" : "sub:" + names.join(",");
+  currentTopicFrame = text;
 
   if (socket && socket.readyState === WebSocket.OPEN) {
+    if (text === sentTopicFrame) return undefined;
     socket.send(text);
+    sentTopicFrame = text;
     return undefined;
   }
 
+  pending = pending.filter(frame => !is_topic_frame(frame));
   pending.push(text);
   ensure_socket();
   return undefined;
@@ -82,9 +89,17 @@ function ensure_socket() {
 
   socket.addEventListener("open", () => {
     reconnectAttempts = 0;
+    sentTopicFrame = null;
     const queued = pending;
     pending = [];
-    for (const frame of queued) socket.send(frame);
+    for (const frame of queued) {
+      socket.send(frame);
+      if (is_topic_frame(frame)) sentTopicFrame = frame;
+    }
+    if (currentTopicFrame && currentTopicFrame !== sentTopicFrame) {
+      socket.send(currentTopicFrame);
+      sentTopicFrame = currentTopicFrame;
+    }
   });
 
   socket.addEventListener("message", event => {
@@ -105,15 +120,21 @@ function ensure_socket() {
 
   socket.addEventListener("close", () => {
     socket = null;
+    sentTopicFrame = null;
     schedule_reconnect();
   });
 
   socket.addEventListener("error", () => {
     const current = socket;
     socket = null;
+    sentTopicFrame = null;
     if (current) current.close();
     schedule_reconnect();
   });
+}
+
+function is_topic_frame(frame) {
+  return typeof frame === "string" && (frame === "unsub" || frame.startsWith("sub:"));
 }
 
 function dispatch_result_frame(frame) {

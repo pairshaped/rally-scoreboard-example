@@ -201,7 +201,7 @@ pub fn update(
 
 /// Page-owned broadcast hook.
 /// Generated Rally browser push dispatch calls this after a game update frame
-/// is decoded for this page's loaded team topic.
+/// is decoded for this page's route team topic.
 pub fn apply_push(
   model model: Model,
   message message: broadcasts.Event,
@@ -211,11 +211,11 @@ pub fn apply_push(
   }
 }
 
-pub fn topics(model: Model) -> List(broadcasts.Topic) {
-  case model.team {
-    Some(team) -> [broadcasts.team_topic(team.slug)]
-    None -> []
-  }
+pub fn topics(
+  route_params: page_input.TeamsSlugRouteParams,
+  _model: Model,
+) -> List(broadcasts.Topic) {
+  [broadcasts.team_topic(route_params.slug)]
 }
 
 pub fn game_updated(

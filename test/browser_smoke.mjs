@@ -62,7 +62,7 @@ try {
     "hydrated direct /games load should not send an initial websocket load request",
   );
   assert.ok(
-    topicFrames(sentFrames).includes("rally:topics:games"),
+    topicFrames(sentFrames).includes("sub:games"),
     "hydrated direct /games should sync the games topic",
   );
 
@@ -115,7 +115,7 @@ try {
       "hydrated direct /standings load should not send an initial websocket load request",
     );
     assert.ok(
-      topicFrames(sentFrames).includes("rally:topics:games"),
+      topicFrames(sentFrames).includes("sub:games"),
       "hydrated direct /standings should sync the games topic",
     );
   });
@@ -196,7 +196,7 @@ try {
       "hydrated direct /games/1 load should not send an initial websocket load request",
     );
     assert.ok(
-      topicFrames(sentFrames).includes("rally:topics:game:1"),
+      topicFrames(sentFrames).includes("sub:game:1"),
       "hydrated direct /games/1 should sync the game detail topic",
     );
   });
@@ -204,14 +204,27 @@ try {
   await step("navigate to game detail", async () => {
     await page.getByRole("link", { name: "Games" }).click();
     await page.waitForURL("**/games");
+    await page.getByRole("heading", { name: "Today" }).waitFor();
+    await page.getByText("Toronto Towers").first().waitFor();
+    await page.waitForTimeout(250);
+    sentFrames.length = 0;
+    receivedFrames.length = 0;
+
     await page.getByRole("link", { name: "Details" }).first().click();
     await page.waitForURL("**/games/1");
     await page.getByRole("heading", { name: "Game detail" }).waitFor();
     await page.getByText("Toronto Towers").first().waitFor();
+    await page.waitForTimeout(500);
   });
-  assert.ok(
-    binaryFrames(sentFrames).length > 0,
-    "SPA navigation should send a websocket load request for the destination page",
+  assert.equal(
+    binaryFrames(sentFrames).length,
+    1,
+    "SPA detail navigation should send one websocket load request",
+  );
+  assert.deepEqual(
+    topicFrames(sentFrames),
+    ["sub:game:1"],
+    "SPA detail navigation should subscribe from route params without a temporary unsub",
   );
 
   await step("browser back returns to games", async () => {
@@ -244,7 +257,7 @@ try {
       "hydrated direct /teams/toronto-towers load should not send an initial websocket load request",
     );
     assert.ok(
-      topicFrames(sentFrames).includes("rally:topics:team:toronto-towers"),
+      topicFrames(sentFrames).includes("sub:team:toronto-towers"),
       "hydrated direct team detail should sync the team topic",
     );
   });
@@ -294,6 +307,11 @@ try {
       binaryFrames(sentFrames).length,
       1,
       "admin score click should send one websocket save request",
+    );
+    assert.ok(
+      topicFrames(sentFrames).length <= 1,
+      "admin score click should not duplicate unchanged topic sync frames: "
+        + topicFrames(sentFrames).join(", "),
     );
     const resultFrames = receivedFrames.filter(frame =>
       frameKind(frame) === "result"
@@ -471,7 +489,7 @@ function binaryFrames(frames) {
 
 function topicFrames(frames) {
   return frames.filter(frame =>
-    typeof frame === "string" && frame.startsWith("rally:topics:")
+    typeof frame === "string" && (frame === "unsub" || frame.startsWith("sub:"))
   );
 }
 

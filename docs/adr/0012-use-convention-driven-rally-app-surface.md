@@ -9,6 +9,7 @@ The app-owned surface is:
 - Page load/save behavior and the domain rules inside those handlers.
 - Auth policy callbacks: user lookup, role checks, provider-specific product policy, and route narrowing where the product cares.
 - Broadcast topics, broadcast events, broadcast payload data, and page interest in those events.
+- Page-level interpretation of route params when those params have domain meaning.
 
 Rally owns the standard framework surface around that app code:
 
@@ -23,6 +24,13 @@ Rally owns the standard framework surface around that app code:
 - Browser lifecycle ceremony: mount startup, current-path boot, page effect wiring, server-frame handling, navigation effects, browser navigation listeners, dark-mode runtime effects, and topic sync.
 - Websocket transport ceremony: upgrade handler shape, per-connection state threading, topic selector setup, topic joins/leaves, custom-frame forwarding, load/save dispatch, request/result encoding, and broadcast delivery.
 - Generated route/page dispatch by consuming Proute output.
+- Generated page route context retention for dynamic routes, so route-backed page hooks can use route params without pushing that state into unrelated app shared state.
+
+Topic sync follows [0010: Separate Mutation Results From Broadcast Events](0010-separate-mutation-results-from-broadcast-events.md). App code declares typed topics and topic keys. Rally-generated glue maps those values to the text control frames used to keep each websocket connection's server-side topic set current. Rally owns the sync mechanics; the app owns the topic vocabulary and meaning.
+
+Dynamic route params stay strings at the generated routing boundary. URLs are strings, and typed params such as integers, UUIDs, or slugs need explicit product semantics. Rally and Proute should not infer those semantics from names such as `id_`. Pages parse route params when a domain-specific type is needed.
+
+Generated page state retains route params for dynamic pages. Route-derived hooks such as page topics may accept route params and the current model, following the Elm Land-style page construction idea that route context belongs to the page. Page models should not need to carry route identity solely to make framework lifecycle hooks work.
 
 An authored root module is acceptable only when it expresses a product decision. If the code would be copied almost unchanged into another Rally template app, it belongs in Rally runtime or generated Rally glue.
 
