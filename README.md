@@ -1,8 +1,8 @@
 # Rally Scoreboard
 
-Rally Scoreboard is the unified-source scoreboard app.
+Rally Scoreboard is the definitive Rally example app.
 
-The project is testing one authored Gleam source tree that compiles for both supported targets:
+The project illustrates how Rally, Proute, Libero, and Marmot can be used to create a client and server from one source tree.
 
 ```sh
 gleam build --target javascript
@@ -73,6 +73,6 @@ Admin routes are generated from `src/admin/pages`.
 
 ## Design Notes
 
-The main design note is [docs/unified-target-source.md](/Users/daverapin/projects/gleam/rally-scoreboard-example/docs/unified-target-source.md).
+The main design note is [docs/unified-target-source.md](docs/unified-target-source.md).
 
-The primary architecture decision is [ADR 0001: Use Page Local Rally Contracts](/Users/daverapin/projects/gleam/rally-scoreboard-example/docs/adr/0001-use-page-local-rally-contracts.md).
+The primary architecture decision is [ADR 0001: Use Page Local Rally Contracts](docs/adr/0001-use-page-local-rally-contracts.md).
