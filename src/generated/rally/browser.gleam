@@ -52,24 +52,6 @@ pub fn query_string_for_path(_path: String) -> String {
 }
 
 @target(javascript)
-@external(javascript, "./browser_ffi.mjs", "push_path")
-pub fn push_path(_path: String) -> Nil {
-  Nil
-}
-
-@target(javascript)
-@external(javascript, "./browser_ffi.mjs", "listen_popstate")
-pub fn listen_popstate(_dispatch: fn(String) -> Nil) -> Nil {
-  Nil
-}
-
-@target(javascript)
-@external(javascript, "./browser_ffi.mjs", "listen_spa_navigation")
-pub fn listen_spa_navigation(_dispatch: fn(String) -> Nil) -> Nil {
-  Nil
-}
-
-@target(javascript)
 @external(javascript, "./browser_ffi.mjs", "device_dark_mode")
 pub fn device_dark_mode() -> Bool {
   False

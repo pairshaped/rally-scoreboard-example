@@ -80,7 +80,7 @@ try {
 
     const cookies = await context.cookies(url("/games"));
     assert.equal(
-      cookies.find(cookie => cookie.name === "__rally_dark_mode")?.value,
+      cookies.find(cookie => cookie.name === "dark")?.value,
       "1",
       "dark-mode toggle should persist through the Rally cookie",
     );

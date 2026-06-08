@@ -45,52 +45,11 @@ export function query_string_for_path(path) {
   return new URL(path, base).searchParams.toString();
 }
 
-export function push_path(path) {
-  const history = globalThis.history;
-  const location = globalThis.location;
-  if (!history || !location) return;
-  const current = location.pathname + location.search;
-  if (current === path) return;
-  history.pushState(null, "", path);
-}
-
-export function listen_popstate(dispatch) {
-  globalThis.addEventListener?.("popstate", () => {
-    dispatch(path());
-  });
-}
-
-export function listen_spa_navigation(dispatch) {
-  globalThis.document?.addEventListener?.("click", event => {
-    if (event.defaultPrevented || event.button !== 0) return;
-    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-
-    const link = event.target?.closest?.("a[data-rally-spa-nav]");
-    if (!link) return;
-
-    const location = globalThis.location;
-    if (!location) return;
-
-    const url = new URL(link.href, location.href);
-    if (url.origin !== location.origin) return;
-
-    const destination = url.pathname + url.search;
-    if (destination === location.pathname + location.search) {
-      event.preventDefault();
-      return;
-    }
-
-    event.preventDefault();
-    dispatch(destination);
-  });
-}
-
-const darkModeCookie = "__rally_dark_mode";
+const darkModeCookie = "dark";
 
 export function device_dark_mode() {
   const raw = getCookie(darkModeCookie);
   if (raw === "1") return true;
-  if (raw === "0") return false;
 
   return typeof globalThis.matchMedia === "function"
     ? globalThis.matchMedia("(prefers-color-scheme: dark)").matches

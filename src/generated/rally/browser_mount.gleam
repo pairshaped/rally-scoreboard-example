@@ -13,6 +13,8 @@ import gleam/result
 import gleam/uri
 @target(javascript)
 import lustre/effect.{type Effect}
+@target(javascript)
+import rally/runtime/browser_navigation
 
 @target(javascript)
 pub fn device_dark_mode() -> Bool {
@@ -54,21 +56,17 @@ pub fn startup_effects(
 
 @target(javascript)
 pub fn push_path(path: String) -> Effect(msg) {
-  effect.from(fn(_dispatch) { browser.push_path(path) })
+  browser_navigation.push_path(path)
 }
 
 @target(javascript)
 fn listen_for_browser_navigation(to_message: fn(String) -> msg) -> Effect(msg) {
-  effect.from(fn(dispatch) {
-    browser.listen_popstate(fn(path) { dispatch(to_message(path)) })
-  })
+  browser_navigation.listen_browser_navigation(to_message)
 }
 
 @target(javascript)
 fn listen_for_shell_navigation(to_message: fn(String) -> msg) -> Effect(msg) {
-  effect.from(fn(dispatch) {
-    browser.listen_spa_navigation(fn(path) { dispatch(to_message(path)) })
-  })
+  browser_navigation.listen_shell_navigation(to_message)
 }
 
 @target(javascript)
